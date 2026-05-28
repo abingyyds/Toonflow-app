@@ -14,9 +14,9 @@
     "email": "ltlctools@outlook.com"
   },
   "main": "build/main.js",
-  "packageManager": "yarn@1.0.0",
+  "packageManager": "pnpm@11.4.0",
   "engines": {
-    "node": ">=1.0.0"
+    "node": "24.15.0"
   },
   "scripts": {
     "dev": "nodemon --inspect --exec tsx src/app.ts",
