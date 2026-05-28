@@ -250,6 +250,7 @@ class AiImage {
     this.key = key;
   }
   async run(input: ImageConfig, taskRecord?: TaskRecord) {
+    console.log("%c Line:253 🍌 input", "background:#2eafb0", input);
     const modelName = await resolveModelName(this.key);
     const exec = async (mn: `${string}:${string}`) => {
       const fn = await getVendorTemplateFn("imageRequest", mn);

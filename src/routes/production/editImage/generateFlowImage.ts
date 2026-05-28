@@ -35,7 +35,8 @@ export default router.post(
           referenceList: await (async () => {
             const list: { type: "image"; base64: string }[] = [];
             for (const url of references) {
-              list.push({ type: "image" as const, base64: await urlToBase64(url) });
+              const base64 = url.startsWith("data:") ? url : await urlToBase64(url);
+              list.push({ type: "image" as const, base64 });
             }
             return list;
           })(),
@@ -52,9 +53,11 @@ export default router.post(
       const savePath = `${projectId}/workFlow/${u.uuid()}.jpg`;
       await imageClass.save(savePath);
 
+      console.log("%c Line:57 🥟", "background:#42b983");
       const url = await u.oss.getSmallImageUrl(savePath);
       return res.status(200).send(success({ url }));
     } catch (e) {
+      console.log("%c Line:58 🎂", "background:#6ec1c2");
       res.status(400).send(error(u.error(e).message))
     }
 
