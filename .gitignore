@@ -36,8 +36,6 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
 build/*
 
-data/serve/
-
 upload/*
 uploads/*
 

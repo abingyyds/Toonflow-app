@@ -1,3 +1,5 @@
+<img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=6,11,20&height=200&section=header&text=Toonflow&fontSize=90&fontColor=ffffff&animation=fadeIn&fontAlignY=50" width="100%"/>
+
 <p>
   <a href="https://github.com/HBAI-Ltd/Toonflow-app">
     <img src="https://img.shields.io/badge/GitHub-181717?style=flat-square&logo=github&logoColor=white" alt="GitHub" />
@@ -26,17 +28,8 @@
 
 <img src="./logo.png" alt="Toonflow Logo" height="120"/>
 
-# Toonflow
+[![Typing SVG](https://readme-typing-svg.demolab.com?font=Fira+Code&size=40&duration=3000&pause=1000&color=000000&center=true&vCenter=true&width=600&lines=Toonflow;AI%E7%9F%AD%E5%89%A7%E5%B7%A5%E5%8E%82;%E5%8A%A8%E5%8A%A8%E6%89%8B%E6%8C%87%EF%BC%8C%E5%B0%8F%E8%AF%B4%E7%A7%92%E5%8F%98%E5%89%A7%E9%9B%86%EF%BC%81)](https://git.io/typing-svg)
 
-  <p align="center">
-    <b>
-      AI ショートドラマ制作スタジオ
-      <br />
-      指先一つで、小説があっという間にドラマに！
-      <br />
-      AI脚本 × AI映像 × 超高速生成 🔥
-    </b>
-  </p>
   <p align="center">
     <a href="https://github.com/HBAI-Ltd/Toonflow-app/stargazers">
       <img src="https://img.shields.io/github/stars/HBAI-Ltd/Toonflow-app?style=for-the-badge&logo=github" alt="Stars Badge" />
@@ -48,163 +41,278 @@
       <img alt="release" src="https://img.shields.io/github/v/release/HBAI-Ltd/Toonflow-app?style=for-the-badge" />
     </a>
   </p>
+  <p align="center">
+    <a href="https://github.com/HBAI-Ltd/Toonflow-app/network/members">
+      <img src="https://img.shields.io/github/forks/HBAI-Ltd/Toonflow-app?style=for-the-badge&logo=github&color=orange" alt="Forks Badge" />
+    </a>
+    <a href="https://atomgit.com/HBAI-Ltd/Toonflow-app">
+      <img src="https://img.shields.io/badge/AtomGit-G--Star%20No.540-FF6B35?style=for-the-badge&logo=git&logoColor=white" alt="AtomGit G-Star No.540" />
+    </a>
+    <a href="https://discord.gg/HEjKmpNpAZ">
+      <img src="https://img.shields.io/badge/Discord-Community-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Discord" />
+    </a>
+  </p>
+  <p align="center">
+    <a href="https://github.com/HBAI-Ltd/Toonflow-app/issues">
+      <img src="https://img.shields.io/github/issues/HBAI-Ltd/Toonflow-app?style=for-the-badge&color=F48D73" alt="Issues" />
+    </a>
+    <a href="https://github.com/HBAI-Ltd/Toonflow-app/graphs/contributors">
+      <img src="https://img.shields.io/github/contributors/HBAI-Ltd/Toonflow-app?style=for-the-badge&color=2088FF" alt="Contributors" />
+    </a>
+    <a href="https://github.com/HBAI-Ltd/Toonflow-app/commits">
+      <img src="https://img.shields.io/github/last-commit/HBAI-Ltd/Toonflow-app?style=for-the-badge&color=blueviolet" alt="Last Commit" />
+    </a>
+  </p>
+  <p align="center">
+    <img src="https://ziadoua.github.io/m3-Markdown-Badges/badges/TypeScript/typescript2.svg" alt="TypeScript" />&nbsp;
+    <img src="https://ziadoua.github.io/m3-Markdown-Badges/badges/NodeJS/nodejs2.svg" alt="Node.js" />&nbsp;
+    <img src="https://ziadoua.github.io/m3-Markdown-Badges/badges/Docker/docker2.svg" alt="Docker" />&nbsp;
+    <img src="https://ziadoua.github.io/m3-Markdown-Badges/badges/Electron/electron2.svg" alt="Electron" />
+  </p>
+  <p align="center">
+    <img src="https://mobaicons.com/icons/typescript,nodejs,electron,docker,socket?perline=5" alt="Tech Stack Icons" />
+  </p>
+  <p align="center">
+    <img src="https://widgetbite.com/stats/HBAI-Ltd" alt="Visitors" />
+  </p>
   
-  > 🚀 **オールインワン制作環境**：テキストからキャラクター、絵コンテから動画まで。
-  専門知識ゼロでも全プロセスをAIが**アシスト**し、創作効率を10倍以上に引き上げます！
+  > 🚀 **オールインワンのショートドラマエンジン**：テキストからキャラクター、絵コンテから動画まで、ゼロハードルで全工程をAI化、制作効率10倍以上！
+</div>
+
+<div align="center">
+  <a href="./g-star.png" target="_blank">
+    <img src="./g-star.png" alt="AtomGit G-Star 認証証明書" width="100%"/>
+  </a>
 </div>
 
 ---
 
-# 🌐 多言語対応
+# 🌐 多言語サポート
 
-Toonflow は以下の言語インターフェースに対応しています：
+Toonflow は以下の言語のインターフェースに対応しています：
 
-| 言語 | Language |
-|------|----------|
-| 简体中文 | Chinese (Simplified) |
-| 繁體中文 | Chinese (Traditional) |
-| English | English |
-| ไทย | Thai |
-| Tiếng Việt | Vietnamese |
-| 日本語 | Japanese |
-| Русский | Russian |
+| 言語       | Language              |
+| ---------- | --------------------- |
+| 简体中文   | Chinese (Simplified)  |
+| 繁體中文   | Chinese (Traditional) |
+| English    | English               |
+| ไทย        | Thai                  |
+| Tiếng Việt | Vietnamese            |
+| 日本語     | Japanese              |
+| Русский    | Russian               |
 
-> 💡 さらに多くの言語に対応予定です。多言語翻訳へのご協力（貢献）を歓迎します！
+> 💡 他の言語も準備中です。翻訳のご協力をお待ちしています！
 
 ---
 
 # 🌟 主な機能
 
-Toonflow は、AI技術を活用して小説を自動的に脚本へ変換し、AIが生成した画像や動画と組み合わせることで、効率的なショートドラマ制作を強力に**アシスト**するツールです。Toonflow を使えば、テキストから映像までの全工程を簡単に完結でき、ドラマ制作がよりスマートで便利になります。
+Toonflow はショートドラマ制作のためのAIワークベンチです。「企画→脚本→絵コンテ→映像出力」の完全なクローズドループを構築し、ローカライズ・プログラマブル・持続的イテレーションが可能な制作フローをサポートします。
 
-- ✅ **キャラクター生成** 原作の小説テキストを自動分析し、容姿、性格、身分などの詳細情報をインテリジェントに認識・生成します。これにより、後の脚本や画面作りにおいて信頼できる土台を提供します。
-
-- ✅ **脚本生成** 選択したイベントや章に基づき、セリフ、シーンの描写、ストーリー展開を含む構造化された脚本を自動生成します。文学テキストから映像用脚本への高効率な変換を**アシスト**します。
-
-- ✅ **絵コンテ制作** 脚本の内容から、絵コンテ用のプロンプト（指示文）と画面構成をインテリジェントに生成します。前景・中景・背景、キャラクターの動き、小道具の配置などを細分化し、動画制作の道筋を完全に**アシスト**します。
-
-- ✅ **動画合成** AI画像および動画技術を統合し、AIによる動画クリップ生成を可能にします。オンライン編集機能も備えており、個別の微調整に対応。映像制作の効率的な連携とスピーディな完成を**アシスト**します。
-
----
-
-# 📦 活用シーン
-
-- ショート動画コンテンツの制作
-- 小説の映像化テスト
-- AIによる文学作品の翻案（脚色）ツール
-- 脚本開発および迅速なプロトタイプ作成
-- 動画素材の生成
+- ✅ **無限キャンバス制作ワークベンチ**  
+  無限キャンバス状に脚本、キャラクター、絵コンテ、素材、動画ノードを整理。自由な配置、巻き戻し、並行制作が可能で、線形ステップに制限されません。
+- ✅ **3層エージェント協調システム**  
+  意思決定層、実行層、監督層が連携し、タスク分解、コンテンツ生成、品質レビュー、修正フィードバックをカバー。安定性と出力の一貫性を向上します。
+- ✅ **永続化エージェントメモリ**  
+  ローカルONNXベクトル検索によるセッションを跨ぐメモリシステム。短期メッセージ、長期要約、意味検索をサポートし、複数ラウンドの創作の連続性を確保します。
+- ✅ **プログラマブルベンダーシステム**  
+  設定センターでベンダーのTypeScriptロジックを直接記述し、即座に反映。ソースコードの変更や再起動は不要で、プライベート化や複数モデルの統合に便利です。
+- ✅ **章イベントグラフ駆動の翻案**  
+  原作の各章のイベントを自動抽出して構造化保存。脚本翻案はイベントグラフに基づいてコンテキストを正確に呼び出し、長文の情報損失を低減します。
+- ✅ **Skill ファイル化構成**  
+  ScriptAgent と ProductionAgent の核心プロンプトをMarkdown Skillファイルとして外部化。オンライン編集と迅速なチューニングが可能です。
 
 ---
 
-# 🔰 ご利用ガイド
+# 📦 応用シーン
 
-## 📺 動画チュートリアル
+- ショート動画コンテンツ制作
+- 小説の映像化実験
+- AI文学翻案ツール
+- 脚本開発とラピッドプロトタイピング
+- 動画素材生成
 
-[https://www.bilibili.com/video/BV1oXD7BqEqJ](https://www.bilibili.com/video/BV1oXD7BqEqJ)
-[![Toonflow 12分でわかるAI動画作成](./videoCover.jpg)](https://www.bilibili.com/video/BV1oXD7BqEqJ)
+---
 
-**Toonflow 12分でわかるクイックスタート AI動画作成**
-👉 [クリックして視聴](https://www.bilibili.com/video/BV1oXD7BqEqJ/?share_source=copy_web&vd_source=5b718c25439a901a34c7bc0c1d35b38e)
+# 🔰 使い方ガイド
 
-📱 QRコードをスキャンして視聴
+## クイックスタート
 
-<img src="./videoQR.png" alt="WeChat スキャンして視聴" width="150"/>
+1. アプリを起動しログイン（デフォルトアカウント：`admin` / `admin123`）。
+2. 設定センターでモデルベンダーを設定（テキスト/画像/動画モデル）。
+3. 新規プロジェクトを作成し原作をインポート、章イベント抽出を実行。
+4. ScriptAgent に入り、ストーリー骨格、翻案戦略、構造化脚本を生成。
+5. ProductionAgent に切り替え、無限キャンバス上で絵コンテ、素材、動画ノードを整理。
+6. 絵コンテ画像をノード化して微調整後、ワークベンチに戻し動画結合とエクスポートを完了。
+
+## 📺 ビデオチュートリアル
+
+https://www.bilibili.com/video/BV1oXD7BqEqJ
+[![Toonflow 12分でわかるAI動画クイックスタート](./videoCover.jpg)](https://www.bilibili.com/video/BV1oXD7BqEqJ)
+
+**Toonflow 12分でわかるAI動画クイックスタート**
+👉 [クリックして視聴](https://www.bilibili.com/video/BV1oXD7BqEqJ)
+
+📱 スマホでWeChatスキャンして視聴
+
+<img src="./videoQR.png" alt="WeChatスキャンで視聴" width="150"/>
+
+---
+
+# 📸 デモスクリーンショットと動画
+
+以下のスクリーンショットと動画は、Toonflow を使って制作したAIショートドラマデモです。全体で約2時間で完成し、脚本生成、絵コンテ制作、編集を含みます。
+
+<div align="center">
+<table>
+  <tr>
+    <td width="50%"><a href="./screenshot/1.png" target="_blank"><img src="./screenshot/1.png" width="100%"/></a></td>
+    <td width="50%"><a href="./screenshot/2.png" target="_blank"><img src="./screenshot/2.png" width="100%"/></a></td>
+  </tr>
+  <tr>
+    <td width="50%"><a href="./screenshot/3.png" target="_blank"><img src="./screenshot/3.png" width="100%"/></a></td>
+    <td width="50%"><a href="./screenshot/4.png" target="_blank"><img src="./screenshot/4.png" width="100%"/></a></td>
+  </tr>
+  <tr>
+    <td width="50%"><a href="./screenshot/5.png" target="_blank"><img src="./screenshot/5.png" width="100%"/></a></td>
+    <td width="50%"><a href="./screenshot/6.png" target="_blank"><img src="./screenshot/6.png" width="100%"/></a></td>
+  </tr>
+  <tr>
+    <td width="50%"><a href="./screenshot/7.png" target="_blank"><img src="./screenshot/7.png" width="100%"/></a></td>
+    <td width="50%"><a href="./screenshot/8.png" target="_blank"><img src="./screenshot/8.png" width="100%"/></a></td>
+  </tr>
+  <tr>
+    <td width="50%"><a href="./screenshot/9.png" target="_blank"><img src="./screenshot/9.png" width="100%"/></a></td>
+    <td width="50%"><a href="./screenshot/10.png" target="_blank"><img src="./screenshot/10.png" width="100%"/></a></td>
+  </tr>
+</table>
+</div>
+
+## 🎬 デモ動画
+
+<div align="center">
+
+https://github.com/user-attachments/assets/2d9fddac-dfdf-4640-b030-b09d7f7287e9
+
+再生できない場合は、[動画をダウンロード](./screenshot/demo.mp4) してください。
+
+</div>
+
+## デモ情報
+
+| 項目 | 詳細 |
+| :--- | :--- |
+| 制作期間 | 約2時間 |
+| 動画モデル | Seedance 2.0 |
+| 画像モデル | GPT Image 2 |
+| 言語モデル | Claude Opus 4.6 |
+| 完成動画長 | 約2分（元素材3分、不要部分を約1分カット） |
+
+## コスト明細
+
+| モデル種類 | 費用 |
+| :--- | :--- |
+| 言語モデル | 約 ¥10 |
+| 動画モデル（全量生成） | 約 ¥120 |
+| 画像モデル | ¥1未満 |
+| **合計** | **約 ¥130** |
+
+> **声明**：デモの元解像度は1080×1882、公開版は480pに圧縮しています。著作権に関する問題があれば、お問い合わせいただければ削除対応いたします。
 
 ---
 
 # 🚀 インストール
 
-## 必須環境（前提条件）
+## 前提条件
 
-本ソフトウェアをインストールして使用する前に、以下の準備をお願いします：
+本ソフトウェアをインストールして使用する前に、以下を準備してください：
 
-- ✅ 大規模言語モデル (LLM) の AI サービス API エンドポイント
-- ✅ Sora または 豆包 (Doubao) の動画サービス API エンドポイント
-- ✅ Nano Banana Pro の画像生成モデルサービス API エンドポイント
+- ✅ 大規模言語モデルAIサービスのAPIエンドポイント
+- ✅ Sora または 豆包 動画サービスのAPIエンドポイント
+- ✅ Nano Banana Pro 画像生成モデルサービスのエンドポイント
 
-## ローカル環境へのインストール
+## ローカルインストール
 
 ### 1. ダウンロードとインストール
 
-| OS | GitHub | Atomgit | Quark Drive | 説明 |
-| :------: | :----------------------------------------------------------- | :------------------------------------------------------------ | :---------------------------------------------- | :------------- |
-| Windows  | [Release](https://github.com/HBAI-Ltd/Toonflow-app/releases) | [Release](https://gitcode.com/HBAI-Ltd/Toonflow-app/releases) | [Quark Drive](https://pan.quark.cn/s/94ef07509df0) | 公式インストーラ |
-|  Linux   | [Release](https://github.com/HBAI-Ltd/Toonflow-app/releases) | [Release](https://gitcode.com/HBAI-Ltd/Toonflow-app/releases) | [Quark Drive](https://pan.quark.cn/s/94ef07509df0) | 公式インストーラ |
-|  macOS   | [Release](https://github.com/HBAI-Ltd/Toonflow-app/releases) | [Release](https://gitcode.com/HBAI-Ltd/Toonflow-app/releases) | [Quark Drive](https://pan.quark.cn/s/94ef07509df0) | 公式インストーラ |
+| オペレーティングシステム | GitHub                                                       | 説明                   |
+| :------: | :----------------------------------------------------------- | :--------------------- |
+| Windows  | [Release](https://github.com/HBAI-Ltd/Toonflow-app/releases) | 公式リリースインストーラ |
+|  Linux   | [Release](https://github.com/HBAI-Ltd/Toonflow-app/releases) | 公式リリースインストーラ |
+|  macOS   | [Release](https://github.com/HBAI-Ltd/Toonflow-app/releases) | 公式リリースインストーラ |
 
 > [!CAUTION]
-> MacOS システムをご利用の場合、「システム設定」-「プライバシーとセキュリティ」からセキュリティ設定を行ってください。そうしないと、証明書の問題で正常に開けない場合があります。
+> MacOS システムの場合は、設定→プライバシーとセキュリティ でセキュリティ設定を行ってください。証明書の問題で正常に開けない場合があります。
 >
-> 参考ドキュメント（Zhihu）：[https://www.zhihu.com/question/433389276](https://www.zhihu.com/question/433389276)
+> 参考：知乎ドキュメント：[https://www.zhihu.com/question/433389276](https://www.zhihu.com/question/433389276)
 
-> Gitee OS 環境の制限および Release ファイルのアップロード容量制限により、現在 Gitee Release のダウンロードリンクは提供していません。
+> Gitee OS 環境の制限および Release ファイルのアップロードサイズ制限のため、Gitee Release のダウンロードリンクは現在提供しておりません。
 
 ### 2. サービスの起動
 
-インストール完了後、プログラムを起動すればサービスを利用開始できます。
+インストール完了後、プログラムを起動してサービスをご利用いただけます。
 
-> ⚠️ **初回ログイン** 
-> ユーザー名：`admin`  
+> ⚠️ **初回ログイン**  
+> アカウント：`admin`  
 > パスワード：`admin123`
 
-## Docker を利用した導入
+## Docker デプロイ
 
-### 必須環境
+### 前提条件
 
-- [Docker](https://docs.docker.com/get-docker/) がインストール済みであること（バージョン 20.10+）
+- [Docker](https://docs.docker.com/get-docker/) がインストール済み（バージョン20.10以上）
 
-### 方法1：オンライン展開
+### 方法1：オンラインデプロイ
 
-現在準備中です。一時的にローカルでのビルドをご利用ください。
+準備中です。当面はローカルビルドをご利用ください。
 
-### 方法2：ローカルでのビルド
+### 方法2：ローカルビルド
 
-既存のソースコードを使用して直接ビルドします。開発者やリポジトリをクローンしたユーザーに適しています（ローカルに git がインストールされている必要があります）：
+ローカルのソースコードを使って直接ビルドします。開発者やリポジトリをクローン済みのユーザー向けです。事前にgitをインストールしておく必要があります：
 
 ```shell
-# まずプロジェクトをクローン（既に存在する場合はスキップ）
+# プロジェクトをクローン（既にある場合はスキップ）
 git clone https://github.com/HBAI-Ltd/Toonflow-app.git
 cd Toonflow-app
 
-# docker-compose を使用してローカルでビルド・起動
+# docker-compose でローカルビルド＆起動
 yarn docker:local
 
-# または手動でビルド
+# または手動ビルド
 docker build -t toonflow .
 docker run -d -p <ローカルポート>:10588 -v <ローカルデータパス>:/app/data toonflow
 
-# これで指定したポートの /web/index.html にアクセスできます
-# 例: http://localhost:10588/web/index.html
+# 該当ポートの /web/index.html にアクセス
+# 例：http://localhost:10588/web/index.html
 ```
 
-### サービスポートの説明
+### サービスポート説明
 
-| ポート | 用途 | デプロイマッピング |
-| ------- | -------- | ------------- |
-| `10588` | ソフトウェア画面 | `10588:10588` |
+| ポート   | 用途          | デプロイマッピング |
+| -------- | ------------- | ------------------ |
+| `10588`  | ソフトウェアUI | `10588:10588`      |
 
 **環境変数の説明：**
 
-| 変数名     | 説明                               |
-| ---------- | ---------------------------------- |
-| `NODE_ENV` | 実行環境。`prod` は本番環境を示します |
-| `PORT`     | サービスの待受ポート（デフォルト 10588） |
-| `OSSURL`   | ファイルストレージのアクセスURL（静的リソース用） |
+| 変数       | 説明                             |
+| ---------- | -------------------------------- |
+| `NODE_ENV` | 実行環境。`prod`は本番環境       |
+| `PORT`     | サービス待受ポート（デフォルト10588） |
+| `OSSURL`   | ファイルストレージアクセスURL（静的リソース用） |
 
 ---
 
-## クラウド（サーバー）への導入
+## クラウドデプロイ
 
-### 1. サーバー環境の要件
+### 一、サーバー環境要件
 
 - **OS**：Ubuntu 20.04+ / CentOS 7+
-- **Node.js**：24.x（推奨、最低 23.11.1+）
+- **Node.js**：24.x（推奨、最低23.11.1以上）
 - **メモリ**：2GB以上
 
-### 2. サーバーへの配置
+### 二、サーバーデプロイ
 
-#### 1. 環境構築
+#### 1. 環境インストール
 
 ```bash
 # Node.js のインストール
@@ -215,7 +323,7 @@ nvm install 24
 npm install -g yarn pm2
 ```
 
-#### 2. プロジェクトの配置
+#### 2. プロジェクトのデプロイ
 
 **GitHub からクローン：**
 
@@ -227,7 +335,7 @@ yarn install
 yarn build
 ```
 
-**Gitee からクローン（中国国内推奨）：**
+**Gitee からクローン（国内ユーザー向け）：**
 
 ```bash
 cd /opt
@@ -239,7 +347,7 @@ yarn build
 
 #### 3. PM2 の設定
 
-`pm2.json` ファイルを作成します：
+`pm2.json` ファイルを作成：
 
 ```json
 {
@@ -257,11 +365,11 @@ yarn build
 
 **環境変数の説明：**
 
-| 変数名     | 説明                               |
-| ---------- | ---------------------------------- |
-| `NODE_ENV` | 実行環境。`prod` は本番環境を示します |
-| `PORT`     | サービスの待受ポート               |
-| `OSSURL`   | ファイルストレージのアクセスURL（静的リソース用） |
+| 変数       | 説明                             |
+| ---------- | -------------------------------- |
+| `NODE_ENV` | 実行環境。`prod`は本番環境       |
+| `PORT`     | サービス待受ポート               |
+| `OSSURL`   | ファイルストレージアクセスURL（静的リソース用） |
 
 ---
 
@@ -276,54 +384,54 @@ pm2 save
 #### 5. よく使うコマンド
 
 ```bash
-pm2 list              # プロセス一覧の確認
-pm2 logs toonflow-app # ログの確認
-pm2 restart all       # サービスの再起動
-pm2 monit             # 監視パネルの表示
+pm2 list              # プロセス一覧
+pm2 logs toonflow-app # ログ表示
+pm2 restart all       # サービス再起動
+pm2 monit             # モニタリングパネル
 ```
 
-> ⚠️ **初回ログイン** 
-> ユーザー名：`admin`  
+> ⚠️ **初回ログイン**  
+> アカウント：`admin`  
 > パスワード：`admin123`
 
-#### 6. フロントエンドサイトの配置
+#### 6. フロントエンドのデプロイ
 
-フロントエンド画面を単独で配置、またはカスタマイズしたい場合は、フロントエンドのリポジトリを参照してください：
+フロントエンドを個別にデプロイまたはカスタマイズする場合は、フロントエンドリポジトリを参照してください：
 
 - **GitHub**：[Toonflow-web](https://github.com/HBAI-Ltd/Toonflow-web)
 - **Gitee**：[Toonflow-web](https://gitee.com/HBAI-Ltd/Toonflow-web)
 
-> 💡 **補足**：本リポジトリには既にコンパイル済みのフロントエンド成果物が組み込まれているため、一般ユーザーはフロントエンドを個別に配置する必要はありません。フロントエンドのリポジトリは、二次開発を行う開発者向けです。
+> 💡 **説明**：本リポジトリにはコンパイル済みのフロントエンドリソースが組み込まれているため、一般ユーザーはフロントエンドを個別にデプロイする必要はありません。フロントエンドリポジトリは二次開発を行う開発者向けです。
 
 ---
 
 # 🔧 開発フローガイド
 
 > [!CAUTION]
-> 🚧 **PR（プルリクエスト）提出のルール** 🚧
+> 🚧 **PR 提出ルール** 🚧
 >
-> ⛔ `master` ブランチへの PR は受け付けていません ｜ ✅ PR は `develop` ブランチへ提出してください
+> ⛔ `master` ブランチへのPRは受け付けていません。✅  `develop` ブランチにPRを提出してください。
 >
-> 開発者の皆様の Toonflow への共同参加を歓迎します。興味のある方は、交流グループ内で管理者の ACT までご連絡ください。
+> 開発者の皆様のToonflowへの共同参加を歓迎します。参加ご希望の方は、交流グループ内で主催者ACTまでご連絡ください。
 
-## 🛠️ 採用技術
+## 🛠️ 技術スタック
 
-| カテゴリ   | 技術                                                                                      |
-| ---------- | ----------------------------------------------------------------------------------------- |
-| 実行環境   | Node.js 23.11.1+                                                                          |
-| 言語       | TypeScript 5.x                                                                            |
+| カテゴリ     | 技術                                                                                      |
+| ------------ | ----------------------------------------------------------------------------------------- |
+| ランタイム   | Node.js 23.11.1+                                                                          |
+| 言語         | TypeScript 5.x                                                                            |
 | バックエンド | Express 5                                                                                 |
 | データベース | SQLite（better-sqlite3 / knex）                                                           |
-| AI 統合    | Vercel AI SDK（OpenAI / Anthropic / Google / DeepSeek / 智譜 / MiniMax / 通義千問 / xAI） |
+| AI統合       | Vercel AI SDK（OpenAI / Anthropic / Google / DeepSeek / 智谱 / MiniMax / 通义千问 / xAI） |
 | ローカル推論 | @huggingface/transformers（ONNX）                                                         |
-| リアルタイム通信 | Socket.IO                                                                                 |
-| デスクトップアプリ | Electron 40                                                                               |
-| 画像処理   | Sharp                                                                                     |
-| コンテナ化 | Docker                                                                                    |
+| リアルタイム通信 | Socket.IO                                                                             |
+| デスクトップクライアント | Electron 40                                                                       |
+| 画像処理     | Sharp                                                                                     |
+| コンテナ化   | Docker                                                                                    |
 
 ## 開発環境の準備
 
-- **Node.js**：バージョン 23.11.1 以上が必要
+- **Node.js**：バージョン23.11.1以上
 - **Yarn**：プロジェクトのパッケージマネージャーとして推奨
 
 ## プロジェクトのクイックスタート
@@ -337,16 +445,16 @@ pm2 monit             # 監視パネルの表示
    cd Toonflow-app
    ```
 
-   **Gitee からクローン（中国国内推奨）：**
+   **Gitee からクローン（国内ユーザー向け）：**
 
    ```bash
    git clone https://gitee.com/HBAI-Ltd/Toonflow-app.git
    cd Toonflow-app
    ```
 
-2. **依存関係（パッケージ）のインストール**
+2. **依存関係のインストール**
 
-   プロジェクトのルートディレクトリで以下のコマンドを実行します：
+   プロジェクトルートで以下のコマンドを実行して依存関係をインストールしてください：
 
    ```bash
    yarn install
@@ -354,7 +462,7 @@ pm2 monit             # 監視パネルの表示
 
 3. **開発環境の起動**
 
-   本プロジェクトは **バックエンド API サービス** と **フロントエンド画面** の2つの部分を含みます。必要に応じて起動方法を選択してください：
+   本プロジェクトは **バックエンドAPIサービス** と **フロントエンドページ** の2つの部分からなります。必要に応じて起動方法を選択してください：
 
    - **方法1：バックエンドサービスのみ起動**
 
@@ -362,7 +470,7 @@ pm2 monit             # 監視パネルの表示
      yarn dev
      ```
 
-     > ⚠️ このコマンドはバックエンド API サービス（ポート 10588）のみを起動し、**フロントエンド画面は含まれません**。直接 `http://localhost:10588` にアクセスしても API を呼び出せるだけで、完全な Web 画面は見えません。画面を利用する場合はフロントエンドプロジェクトを別途起動するか、以下の GUI モードを使用してください。
+     > ⚠️ このコマンドはバックエンドAPIサービスのみ起動（ポート10588）し、**フロントエンドページは含みません**。`http://localhost:10588` に直接アクセスするとAPIインターフェースのみ呼び出せ、完全なWebインターフェースは表示されません。フロントエンドページも使用する場合は、フロントエンドプロジェクトを別途起動するか、下記のGUIモードを使用してください。
 
    - **方法2：Electron デスクトップクライアントの起動**
 
@@ -370,45 +478,45 @@ pm2 monit             # 監視パネルの表示
      yarn dev:gui
      ```
 
-     > このコマンドはバックエンドサービスと Electron のデスクトップウィンドウを同時に起動します。フロントエンド画面が内蔵されており、追加の設定なしですぐに使えます。すべての機能を体験したい開発者に最適です。
+     > このコマンドはバックエンドサービスとElectronデスクトップウィンドウを同時に起動します。組み込みのフロントエンドページが含まれており、追加設定なしで即座に使用できます。全機能を完全に体験したい開発者に適しています。
 
-   - **方法3：本番（Production）モードで起動**
+   - **方法3：本番モードでの起動**
 
      ```bash
      yarn start
      ```
 
-     > コンパイル済みのサービスを本番モードで直接実行します（事前に `yarn build` を実行しておく必要があります）。
+     > 本番モードでコンパイル済みのサービスを直接実行します（事前に `yarn build` が必要です）。
 
-4. **プロジェクトのパッケージ化（ビルド）**
+4. **プロジェクトのパッケージング**
 
-   - コンパイルして TypeScript ファイルを生成：
+   - TypeScriptファイルのコンパイルと生成：
 
      ```bash
      yarn build
      ```
 
-   - Windows 用の実行ファイルをパッケージ化：
+   - Windows プラットフォーム用実行可能プログラムのパッケージング：
 
      ```bash
      yarn dist:win
      ```
 
-   - Mac 用の実行ファイルをパッケージ化：
+   - Mac プラットフォーム用実行可能プログラムのパッケージング：
 
      ```bash
      yarn dist:mac
      ```
 
-   - Linux 用の実行ファイルをパッケージ化：
+   - Linux プラットフォーム用実行可能プログラムのパッケージング：
 
      ```bash
      yarn dist:linux
      ```
 
-5. **コード品質チェック（Lint）**
+5. **コード品質チェック**
 
-   - グローバルな構文およびコーディング規約のチェックを実行：
+   - グローバルな構文と規約のチェック：
 
      ```bash
      yarn lint
@@ -416,7 +524,7 @@ pm2 monit             # 監視パネルの表示
 
 6. **AI デバッグパネル（オプション）**
 
-   AI SDK のビジュアルデバッグツールを起動し、AI の呼び出しを簡単にデバッグできます：
+   AI SDKの可視化デバッグツールを起動し、AI呼び出しをデバッグしやすくします：
 
    ```bash
    yarn debug:ai
@@ -424,66 +532,66 @@ pm2 monit             # 監視パネルの表示
 
 ## フロントエンド開発
 
-フロントエンド画面を修正する必要がある場合は、フロントエンドのリポジトリで開発を行ってください：
+フロントエンドインターフェースを変更する場合は、フロントエンドリポジトリで開発を行ってください：
 
 - **GitHub**：[Toonflow-web](https://github.com/HBAI-Ltd/Toonflow-web)
 - **Gitee**：[Toonflow-web](https://gitee.com/HBAI-Ltd/Toonflow-web)
 
-フロントエンドのビルド後、`dist` ディレクトリの内容を本プロジェクトの `data/web` ディレクトリにコピーするだけで統合できます。
+フロントエンドをビルド後、`dist` ディレクトリの内容を本プロジェクトの `data/web` ディレクトリにコピーすれば統合完了です。
 
-## プロジェクト構成
+## プロジェクト構造
 
 ```
 📂 build/                    # ビルド成果物
-📂 data/                     # 実行時データ
-│  ├─ 📂 models/             # ローカル推論モデル（ONNX）
-│  ├─ 📂 oss/                # オブジェクトストレージ（素材/キャラクター/背景）
-│  ├─ 📂 serve/              # 本番環境のエントリー
-│  ├─ 📂 skills/             # Agent スキルのプロンプト
-│  └─ 📂 web/                # フロントエンドビルド成果物（内蔵）
-📂 docs/                     # ドキュメントや画像リソース
+📂 data/                     # ランタイムデータ
+│  ├─ 📂 models/            # ローカル推論モデル（ONNX）
+│  ├─ 📂 oss/               # オブジェクトストレージ（素材/キャラクター/シーン）
+│  ├─ 📂 serve/             # 本番環境エントリ
+│  ├─ 📂 skills/            # Agent スキルプロンプト
+│  └─ 📂 web/               # フロントエンドビルド成果物（組み込み）
+📂 docs/                     # ドキュメントリソース
 📂 env/                      # 環境設定
-📂 scripts/                  # ビルドや補助スクリプト
+📂 scripts/                  # ビルドと補助スクリプト
 📂 src/
-├─ 📂 agents/                # AI Agent モジュール
-│  ├─ 📂 productionAgent/    # 制作 Agent
-│  └─ 📂 scriptAgent/        # 脚本 Agent
-├─ 📂 lib/                   # 共通ライブラリ（DB初期化、レスポンス形式など）
+├─ 📂 agents/               # AI Agent モジュール
+│  ├─ 📂 productionAgent/   # プロダクション Agent
+│  └─ 📂 scriptAgent/       # 脚本 Agent
+├─ 📂 lib/                  # 共通ライブラリ（DB初期化、レスポンスフォーマット）
 ├─ 📂 middleware/            # ミドルウェア
-├─ 📂 routes/                # ルーティングモジュール
-│  ├─ 📂 agents/             # Agent メモリ管理
-│  ├─ 📂 artStyle/           # 画風（アートスタイル）管理
-│  ├─ 📂 assets/             # 素材管理
-│  ├─ 📂 assetsGenerate/     # 素材生成
-│  ├─ 📂 cornerScape/        # 絵コンテ管理
-│  ├─ 📂 general/            # 汎用 API
-│  ├─ 📂 login/              # ログイン認証
-│  ├─ 📂 migrate/            # データ移行
-│  ├─ 📂 modelSelect/        # モデル選択
-│  ├─ 📂 novel/              # 小説管理
-│  ├─ 📂 other/              # その他機能
-│  ├─ 📂 production/         # 制作進行管理
-│  ├─ 📂 project/            # プロジェクト管理
-│  ├─ 📂 script/             # 脚本生成
-│  ├─ 📂 scriptAgent/        # 脚本 Agent インターフェース
-│  ├─ 📂 setting/            # システム設定
-│  ├─ 📂 task/               # タスク管理
-│  └─ 📂 test/               # テスト用 API
-├─ 📂 socket/                # WebSocket リアルタイム通信
-├─ 📂 types/                 # TypeScript 型定義
-├─ 📂 utils/                 # ユーティリティ関数
-├─ 📄 app.ts                 # アプリケーションエントリー
-├─ 📄 core.ts                # コア初期化
-├─ 📄 env.ts                 # 環境変数の処理
-├─ 📄 err.ts                 # エラーハンドリング
-├─ 📄 logger.ts              # ログモジュール
-├─ 📄 router.ts              # ルーティング登録
-└─ 📄 utils.ts               # 汎用ツール
+├─ 📂 routes/               # ルートモジュール
+│  ├─ 📂 agents/            # Agent メモリ管理
+│  ├─ 📂 artStyle/          # 画風管理
+│  ├─ 📂 assets/            # 素材管理
+│  ├─ 📂 assetsGenerate/    # 素材生成
+│  ├─ 📂 cornerScape/       # 絵コンテ管理
+│  ├─ 📂 general/           # 汎用インターフェース
+│  ├─ 📂 login/             # ログイン認証
+│  ├─ 📂 migrate/           # データマイグレーション
+│  ├─ 📂 modelSelect/       # モデル選択
+│  ├─ 📂 novel/             # 小説管理
+│  ├─ 📂 other/             # その他機能
+│  ├─ 📂 production/        # 制作管理
+│  ├─ 📂 project/           # プロジェクト管理
+│  ├─ 📂 script/            # 脚本生成
+│  ├─ 📂 scriptAgent/       # 脚本 Agent インターフェース
+│  ├─ 📂 setting/           # システム設定
+│  ├─ 📂 task/              # タスク管理
+│  └─ 📂 test/              # テストインターフェース
+├─ 📂 socket/               # WebSocket リアルタイム通信
+├─ 📂 types/                # TypeScript 型宣言
+├─ 📂 utils/                # ユーティリティ関数
+├─ 📄 app.ts                # アプリケーションエントリ
+├─ 📄 core.ts               # コア初期化
+├─ 📄 env.ts                # 環境変数処理
+├─ 📄 err.ts                # エラー処理
+├─ 📄 logger.ts             # ログモジュール
+├─ 📄 router.ts             # ルート登録
+└─ 📄 utils.ts              # 汎用ツール
 📄 Dockerfile                # Docker ビルドファイル
-📄 electron-builder.yml      # Electron パッケージ設定
-📄 skillList.json            # スキルリスト
+📄 electron-builder.yml      # Electron パッケージング設定
+📄 skillList.json            # スキル一覧
 📄 LICENSE                   # ライセンス（Apache-2.0）
-📄 NOTICES.txt               # 依存パッケージに関する表記
+📄 NOTICES.txt               # サードパーティ依存関係の声明
 📄 package.json              # プロジェクト設定
 📄 tsconfig.json             # TypeScript 設定
 ```
@@ -492,100 +600,134 @@ pm2 monit             # 監視パネルの表示
 
 # 🔗 関連リポジトリ
 
-| リポジトリ         | 説明                               | GitHub                                             | Gitee                                            |
+| リポジトリ       | 説明                               | GitHub                                             | Gitee                                            |
 | ---------------- | ---------------------------------- | -------------------------------------------------- | ------------------------------------------------ |
-| **Toonflow-app** | 完全版クライアント（本リポジトリ、一般ユーザー向け） | [GitHub](https://github.com/HBAI-Ltd/Toonflow-app) | [Gitee](https://gitee.com/HBAI-Ltd/Toonflow-app) |
-| **Toonflow-web** | フロントエンドソースコード（フロントエンド開発者向け） | [GitHub](https://github.com/HBAI-Ltd/Toonflow-web) | [Gitee](https://gitee.com/HBAI-Ltd/Toonflow-web) |
+| **Toonflow-app** | 完全なクライアント（本リポジトリ、一般ユーザー向け） | [GitHub](https://github.com/HBAI-Ltd/Toonflow-app) | [Gitee](https://gitee.com/HBAI-Ltd/Toonflow-app) |
+| **Toonflow-web** | フロントエンドソース（フロントエンド開発者向け）       | [GitHub](https://github.com/HBAI-Ltd/Toonflow-web) | [Gitee](https://gitee.com/HBAI-Ltd/Toonflow-web) |
 
-> 💡 **ヒント**：Toonflow を使用するだけであれば、本リポジトリのクライアントを直接ダウンロードするだけで十分です。フロントエンドのリポジトリは、二次開発やフロントエンド画面のカスタマイズが必要な開発者向けです。
+> 💡 **ヒント**：Toonflow をただ使いたいだけの場合は、本リポジトリのクライアントをダウンロードしてください。フロントエンドリポジトリは二次開発やフロントエンドのカスタマイズを行う開発者向けです。
 
 ---
 
-# 👨‍👩‍👧‍👦 Discord 交流グループ
+# 👨‍👩‍👧‍👦 WeChat 交流グループ
 
-下のアイコンをクリックして Discord に参加：
+グループ追加用アシスタント：
+
+<img src="./QR.png" alt="Toonflow QR" height="400"/>
+
+アイコンをクリックして Discord に参加することもできます：
 
 [![Join our Discord](https://cdn.prod.website-files.com/6257adef93867e50d84d30e2/67d00cf7266d2c75571aebde_Example.svg)](https://discord.gg/HEjKmpNpAZ)
 
-または直接リンクをクリック： [https://discord.gg/HEjKmpNpAZ](https://discord.gg/HEjKmpNpAZ)
+または招待リンク： [https://discord.gg/HEjKmpNpAZ](https://discord.gg/HEjKmpNpAZ)
 
 ---
 
 # 💌 お問い合わせ
 
-📧 メール：[ltlctools@outlook.com](mailto:ltlctools@outlook.com?subject=Toonflowのお問い合わせ)
+📧 メール：[ltlctools@outlook.com](mailto:ltlctools@outlook.com?subject=Toonflow問い合わせ)
 
 ---
 
 # 📜 ライセンス
 
-Toonflow は Apache-2.0 ライセンスに基づいてオープンソースとして公開されており、補足的な商業契約が付随しています。
+Toonflow は Apache-2.0 ライセンスのもとでオープンソース公開されており、補足的な商用利用規約が付帯しています。
 
-ライセンスの詳細：https://www.apache.org/licenses/LICENSE-2.0
+ライセンス詳細：https://www.apache.org/licenses/LICENSE-2.0
 
-## 補足条項
+## 補足契約
 
-- 本ソフトウェアを製品として **2つ以上の独立した第三者** に配布・提供する場合、HBAI-Ltd からの **書面による商業ライセンス（許諾）** を取得する必要があります。
-- **5法人以下** が共同で運営し、外部にサービスを提供せずに内部利用のみとする場合は、内部利用と見なされ、**商業ライセンスの取得は不要**です。
-- Toonflow 内のロゴや著作権情報を削除または変更することは禁止されています。
+- 本ソフトウェアを製品として **2つ以上の独立した第三者** に配布する場合は、HBAI-Ltd の **書面による商用ライセンス** を取得する必要があります。
+- **5法人以下** が共同運営で内部利用し、外部にサービスを提供しない場合は内部利用とみなし、**ライセンスは不要** です。
+- Toonflow の識別表示や著作権情報を削除または変更してはなりません。
 
-## 永久無料となるケース
+## 永久無料のケース
 
-- ✅ Toonflow を利用してコンテンツを制作し、プラットフォームから収益分配を得る場合
-- ✅ 自分のチーム内で使用するために二次開発を行う場合
-- ✅ 5法人以下の共同運営による内部利用
-- ✅ 個人の学習、研究、非営利目的
+- ✅ Toonflow を使ってコンテンツを制作し、プラットフォームから収益を得る
+- ✅ 二次開発して自分のチーム内で使用する
+- ✅ 5法人以下が共同運営で内部利用する
+- ✅ 個人の学習、研究、非商用利用
 
-## 商業ライセンス価格
+## 商用ライセンス価格
 
-| フェーズ | 年間売上高 | 年間費用 |
-|------|---------|------|
-| 🌱 支援期 | 200万円 未満 | **無料** |
-| 🚀 創業期 | 200万円 ～ 1,000万円 | 108,000 円/年 |
-| 📈 成長期 | 1,000万円 ～ 3,000万円 | 420,000 円/年 |
-| 🏢 規模拡大期 | 3,000万円 ～ 1億円 | 1,680,000 円/年 |
-| 🌐 エンタープライズ | 1億円 超 | 応相談 |
+| 段階 | 年間売上 | 年会費 |
+|------|---------|--------|
+| 🌱 支援期 | < ¥10万 | **申請すれば無料ライセンス** |
+| 🚀 創業期 | ¥10–50万 | ¥5,000/年 |
+| 📈 成長期 | ¥50–150万 | ¥20,000/年 |
+| 🏢 規模期 | ¥150–500万 | ¥80,000/年 |
+| 🌐 エンタープライズ | > ¥500万 | 要相談 |
 
-> **遡及（そきゅう）適用除外条項**：v1.0.8 リリース以前に AGPL-3.0 に基づいて使用していたユーザーは、引き続き AGPL-3.0 に従い、本契約変更の制約を受けません。
+> **不遡及条項**：v1.0.8 リリース前に AGPL-3.0 に基づいて使用していたユーザーは、引き続き AGPL-3.0 に従うものとし、本契約の変更の影響を受けません。
 
-契約の全文については [LICENSE](./LICENSE) ファイルを参照してください。
+完全な契約は [LICENSE](./LICENSE) ファイルを参照してください。
 
 ---
 
-# ⭐️ Star 獲得履歴
+# ⭐️ スター履歴
+
+[![Star History Rank](https://api.star-history.com/badge?repo=HBAI-Ltd/Toonflow-app)](https://www.star-history.com/#HBAI-Ltd/Toonflow-app)
 
 [![Star History Chart](https://api.star-history.com/svg?repos=HBAI-Ltd/Toonflow-app&type=timeline&legend=top-left)](https://www.star-history.com/#HBAI-Ltd/Toonflow-app&type=timeline&legend=top-left)
 
 ---
 
+
 # 🙏 謝辞
 
-Toonflow に強力なサポートを提供してくださる以下のオープンソースプロジェクトに感謝いたします：
+以下のオープンソースプロジェクトが Toonflow に強力なサポートを提供しています：
 
-- [Express](https://expressjs.com/) - 高速でオープン、ミニマルな Node.js Web フレームワーク
+- [Express](https://expressjs.com/) - 高速でオープンな Node.js Web フレームワーク
 - [AI SDK](https://ai-sdk.dev/) - TypeScript 向け AI ツールキット
 - [Better-SQLite3](https://github.com/WiseLibs/better-sqlite3) - 高性能 SQLite3 バインディングライブラリ
 - [Sharp](https://sharp.pixelplumbing.com/) - 高性能 Node.js 画像処理ライブラリ
 - [Axios](https://axios-http.com/) - Promise ベースの HTTP クライアント
-- [Zod](https://zod.dev/) - TypeScript ファーストのスキーマ検証ライブラリ
-- [Socket.IO](https://socket.io/) - リアルタイムの双方向イベント通信エンジン
+- [Zod](https://zod.dev/) - TypeScript ファーストのスキーマバリデーションライブラリ
+- [Socket.IO](https://socket.io/) - リアルタイム双方向イベント通信エンジン
 - [Electron](https://www.electronjs.org/) - クロスプラットフォームデスクトップアプリ開発フレームワーク
 - [Hugging Face Transformers](https://huggingface.co/docs/transformers.js) - ローカル ML 推論ライブラリ
 
-Toonflow を支援してくださる以下の組織・団体・個人に感謝いたします：
+以下の組織・団体・個人が Toonflow をサポートしています：
 
 <table>
-  <tr>
-    <td>
-      <img src="./sponsored/sophnet.png" alt="算能雲 Logo" width="48">
-    </td>
-    <td>
-      <b>算能雲 (Sophnet)</b> 様より計算リソースの提供をいただいております
-      <a href="[https://www.sophnet.com/](https://www.sophnet.com/)">[公式サイト]</a>
-    </td>
-  </tr>
+  <thead>
+    <tr>
+      <th align="center">ロゴ</th>
+      <th align="center">名称</th>
+      <th align="center">サポート方法</th>
+      <th>概要</th>
+      <th align="center">公式サイト</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td align="center"><img src="./sponsored/sophnet.png" alt="算能雲 ロゴ" width="48"></td>
+      <td align="center"><b>算能雲</b></td>
+      <td align="center">💻 計算リソーススポンサー</td>
+      <td>より速く、より安定し、より経済的なワンストップモデル推論APIサービスの提供を目指す</td>
+      <td align="center"><a href="https://www.sophnet.com/">公式サイト</a></td>
+    </tr>
+    <tr>
+      <td align="center"><img src="./sponsored/atlascloud.png" alt="Atlas Cloud ロゴ" width="48"></td>
+      <td align="center"><b>Atlas Cloud</b></td>
+      <td align="center">💻 計算リソーススポンサー</td>
+      <td>世界初の全モーダル推論プラットフォーム。対話、画像、動画、音声—すべて統一API。300以上のモデル、OpenAI互換。</td>
+      <td align="center"><a href="https://www.atlascloud.ai/">公式サイト</a></td>
+    </tr>
+    <tr>
+      <td align="center"><img src="./sponsored/hunyuan.webp" alt="Tencent Hunyuan 3D ロゴ" width="48"></td>
+      <td align="center"><b>Tencent Hunyuan 3D</b></td>
+      <td align="center">🌐 ワールドモデル技術サポート</td>
+      <td>Tencent Hunyuan 3D AI 創作エンジンは、Hunyuan 3D 生成大モデル v2.5 をベースにした、業界初のワンストップ3DコンテンツAI創作プラットフォーム。テキストからの3D生成、画像からの3D生成、3Dアニメーション生成、テクスチャ生成などをサポートし、スケッチからの3D生成、3Dキャラクター生成、ローポリゴンモデル生成に強み。</td>
+      <td align="center"><a href="https://3d.hunyuan.tencent.com/">公式サイト</a></td>
+    </tr>
+  </tbody>
 </table>
 
-完全なサードパーティの依存関係リストについては `NOTICES.txt` をご参照ください。
+完全なサードパーティ依存関係リストは `NOTICES.txt` を参照してください。
 
-##### copyright © Huaibei AIA Network Technology Co., Ltd.
+##### copyright © 北京愛阿科技有限公司
+
+
+
+<img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=6,11,20&height=100&section=footer" width="100%"/>

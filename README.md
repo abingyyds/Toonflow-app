@@ -1,3 +1,5 @@
+﻿<img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=6,11,20&height=200&section=header&text=Toonflow&fontSize=90&fontColor=ffffff&animation=fadeIn&fontAlignY=50" width="100%"/>
+
 <p>
   <a href="https://github.com/HBAI-Ltd/Toonflow-app">
     <img src="https://img.shields.io/badge/GitHub-181717?style=flat-square&logo=github&logoColor=white" alt="GitHub" />
@@ -26,17 +28,8 @@
 
 <img src="./docs/logo.png" alt="Toonflow Logo" height="120"/>
 
-# Toonflow
+[![Typing SVG](https://readme-typing-svg.demolab.com?font=Fira+Code&size=40&duration=3000&pause=1000&color=000000&center=true&vCenter=true&width=600&lines=Toonflow;AI%E7%9F%AD%E5%89%A7%E5%B7%A5%E5%8E%82;%E5%8A%A8%E5%8A%A8%E6%89%8B%E6%8C%87%EF%BC%8C%E5%B0%8F%E8%AF%B4%E7%A7%92%E5%8F%98%E5%89%A7%E9%9B%86%EF%BC%81)](https://git.io/typing-svg)
 
-  <p align="center">
-    <b>
-      AI短剧工厂
-      <br />
-      动动手指，小说秒变剧集！
-      <br />
-      AI剧本 × AI影像 × 极速生成 🔥
-    </b>
-  </p>
   <p align="center">
     <a href="https://github.com/HBAI-Ltd/Toonflow-app/stargazers">
       <img src="https://img.shields.io/github/stars/HBAI-Ltd/Toonflow-app?style=for-the-badge&logo=github" alt="Stars Badge" />
@@ -48,8 +41,48 @@
       <img alt="release" src="https://img.shields.io/github/v/release/HBAI-Ltd/Toonflow-app?style=for-the-badge" />
     </a>
   </p>
+  <p align="center">
+    <a href="https://github.com/HBAI-Ltd/Toonflow-app/network/members">
+      <img src="https://img.shields.io/github/forks/HBAI-Ltd/Toonflow-app?style=for-the-badge&logo=github&color=orange" alt="Forks Badge" />
+    </a>
+    <a href="https://atomgit.com/HBAI-Ltd/Toonflow-app">
+      <img src="https://img.shields.io/badge/AtomGit-G--Star%20No.540-FF6B35?style=for-the-badge&logo=git&logoColor=white" alt="AtomGit G-Star No.540" />
+    </a>
+    <a href="https://discord.gg/HEjKmpNpAZ">
+      <img src="https://img.shields.io/badge/Discord-Community-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Discord" />
+    </a>
+  </p>
+  <p align="center">
+    <a href="https://github.com/HBAI-Ltd/Toonflow-app/issues">
+      <img src="https://img.shields.io/github/issues/HBAI-Ltd/Toonflow-app?style=for-the-badge&color=F48D73" alt="Issues" />
+    </a>
+    <a href="https://github.com/HBAI-Ltd/Toonflow-app/graphs/contributors">
+      <img src="https://img.shields.io/github/contributors/HBAI-Ltd/Toonflow-app?style=for-the-badge&color=2088FF" alt="Contributors" />
+    </a>
+    <a href="https://github.com/HBAI-Ltd/Toonflow-app/commits">
+      <img src="https://img.shields.io/github/last-commit/HBAI-Ltd/Toonflow-app?style=for-the-badge&color=blueviolet" alt="Last Commit" />
+    </a>
+  </p>
+  <p align="center">
+    <img src="https://ziadoua.github.io/m3-Markdown-Badges/badges/TypeScript/typescript2.svg" alt="TypeScript" />&nbsp;
+    <img src="https://ziadoua.github.io/m3-Markdown-Badges/badges/NodeJS/nodejs2.svg" alt="Node.js" />&nbsp;
+    <img src="https://ziadoua.github.io/m3-Markdown-Badges/badges/Docker/docker2.svg" alt="Docker" />&nbsp;
+    <img src="https://ziadoua.github.io/m3-Markdown-Badges/badges/Electron/electron2.svg" alt="Electron" />
+  </p>
+  <p align="center">
+    <img src="https://mobaicons.com/icons/typescript,nodejs,electron,docker,socket?perline=5" alt="Tech Stack Icons" />
+  </p>
+  <p align="center">
+    <img src="https://widgetbite.com/stats/HBAI-Ltd" alt="Visitors" />
+  </p>
   
   > 🚀 **一站式短剧工程**：从文本到角色，从分镜到视频，0门槛全流程AI化，创作效率提升10倍+！
+</div>
+
+<div align="center">
+  <a href="./docs/g-star.png" target="_blank">
+    <img src="./docs/g-star.png" alt="AtomGit G-Star 认证证书" width="100%"/>
+  </a>
 </div>
 
 ---
@@ -103,7 +136,7 @@ Toonflow 是面向短剧生产的 AI 工作台，围绕“策划 → 编剧 → 
 
 # 🔰 使用指南
 
-## 🚀 v1.0.8 快速上手
+## 快速上手
 
 1. 启动应用并登录（默认账号：`admin` / `admin123`）。
 2. 在设置中心完成模型供应商配置（文本/图像/视频模型）。
@@ -126,6 +159,68 @@ https://www.bilibili.com/video/BV1oXD7BqEqJ
 
 ---
 
+# 📸 演示截图与视频
+
+以下截图及视频来自使用 Toonflow 制作的一段 AI 短剧 Demo，全程约 2 小时完成，涵盖剧本生成、分镜制作及剪辑环节。
+
+<div align="center">
+<table>
+  <tr>
+    <td width="50%"><a href="./docs/screenshot/1.png" target="_blank"><img src="./docs/screenshot/1.png" width="100%"/></a></td>
+    <td width="50%"><a href="./docs/screenshot/2.png" target="_blank"><img src="./docs/screenshot/2.png" width="100%"/></a></td>
+  </tr>
+  <tr>
+    <td width="50%"><a href="./docs/screenshot/3.png" target="_blank"><img src="./docs/screenshot/3.png" width="100%"/></a></td>
+    <td width="50%"><a href="./docs/screenshot/4.png" target="_blank"><img src="./docs/screenshot/4.png" width="100%"/></a></td>
+  </tr>
+  <tr>
+    <td width="50%"><a href="./docs/screenshot/5.png" target="_blank"><img src="./docs/screenshot/5.png" width="100%"/></a></td>
+    <td width="50%"><a href="./docs/screenshot/6.png" target="_blank"><img src="./docs/screenshot/6.png" width="100%"/></a></td>
+  </tr>
+  <tr>
+    <td width="50%"><a href="./docs/screenshot/7.png" target="_blank"><img src="./docs/screenshot/7.png" width="100%"/></a></td>
+    <td width="50%"><a href="./docs/screenshot/8.png" target="_blank"><img src="./docs/screenshot/8.png" width="100%"/></a></td>
+  </tr>
+  <tr>
+    <td width="50%"><a href="./docs/screenshot/9.png" target="_blank"><img src="./docs/screenshot/9.png" width="100%"/></a></td>
+    <td width="50%"><a href="./docs/screenshot/10.png" target="_blank"><img src="./docs/screenshot/10.png" width="100%"/></a></td>
+  </tr>
+</table>
+</div>
+
+## 🎬 Demo 视频
+
+<div align="center">
+
+https://github.com/user-attachments/assets/2d9fddac-dfdf-4640-b030-b09d7f7287e9
+
+如无法播放，请[点击下载视频](./docs/screenshot/demo.mp4)
+
+</div>
+
+## Demo 信息
+
+| 项目 | 详情 |
+| :--- | :--- |
+| 制作周期 | 约 2 小时 |
+| 视频模型 | Seedance 2.0 |
+| 图片模型 | GPT Image 2 |
+| 语言模型 | Claude Opus 4.6 |
+| 成片总时长 | 约 2 分钟（原始素材 3 分钟，剪除废片约 1 分钟） |
+
+## 成本明细
+
+| 模型类型 | 费用 |
+| :--- | :--- |
+| 语言模型 | 约 ¥10 |
+| 视频模型（全量生成） | 约 ¥120 |
+| 图片模型 | 不足 ¥1 |
+| **合计** | **约 ¥130** |
+
+> **声明**：Demo 原始分辨率为 1080×1882，发布版本已压缩至 480p。如涉及版权问题，请联系我们删除处理。
+
+---
+
 # 🚀 安装
 
 ## 前置条件
@@ -140,11 +235,11 @@ https://www.bilibili.com/video/BV1oXD7BqEqJ
 
 ### 1. 下载与安装
 
-| 操作系统 | GitHub                                                       | Atomgit                                                       | 夸克网盘下载                                    | 说明           |
-| :------: | :----------------------------------------------------------- | :------------------------------------------------------------ | :---------------------------------------------- | :------------- |
-| Windows  | [Release](https://github.com/HBAI-Ltd/Toonflow-app/releases) | [Release](https://gitcode.com/HBAI-Ltd/Toonflow-app/releases) | [夸克网盘](https://pan.quark.cn/s/94ef07509df0) | 官方发布安装包 |
-|  Linux   | [Release](https://github.com/HBAI-Ltd/Toonflow-app/releases) | [Release](https://gitcode.com/HBAI-Ltd/Toonflow-app/releases) | [夸克网盘](https://pan.quark.cn/s/94ef07509df0) | 官方发布安装包 |
-|  macOS   | [Release](https://github.com/HBAI-Ltd/Toonflow-app/releases) | [Release](https://gitcode.com/HBAI-Ltd/Toonflow-app/releases) | [夸克网盘](https://pan.quark.cn/s/94ef07509df0) | 官方发布安装包 |
+| 操作系统 | GitHub                                                       | 说明           |
+| :------: | :----------------------------------------------------------- | :------------- |
+| Windows  | [Release](https://github.com/HBAI-Ltd/Toonflow-app/releases) | 官方发布安装包 |
+|  Linux   | [Release](https://github.com/HBAI-Ltd/Toonflow-app/releases) | 官方发布安装包 |
+|  macOS   | [Release](https://github.com/HBAI-Ltd/Toonflow-app/releases) | 官方发布安装包 |
 
 > [!CAUTION]
 > MacOS 系统请到 设置-隐私与安全性 配置安全性否则可能因证书问题无法正常打开
@@ -571,9 +666,12 @@ Toonflow 基于 Apache-2.0 协议开源发布，并附有补充商业协议。
 
 # ⭐️ 星标历史
 
+[![Star History Rank](https://api.star-history.com/badge?repo=HBAI-Ltd/Toonflow-app)](https://www.star-history.com/#HBAI-Ltd/Toonflow-app)
+
 [![Star History Chart](https://api.star-history.com/svg?repos=HBAI-Ltd/Toonflow-app&type=timeline&legend=top-left)](https://www.star-history.com/#HBAI-Ltd/Toonflow-app&type=timeline&legend=top-left)
 
 ---
+
 
 # 🙏 致谢
 
@@ -592,17 +690,44 @@ Toonflow 基于 Apache-2.0 协议开源发布，并附有补充商业协议。
 感谢以下组织/单位/个人为 Toonflow 提供支持：
 
 <table>
-  <tr>
-    <td>
-      <img src="./docs/sponsored/sophnet.png" alt="算能云 Logo" width="48">
-    </td>
-    <td>
-      <b>算能云</b> 提供算力赞助
-      <a href="https://www.sophnet.com/">[官网]</a>
-    </td>
-  </tr>
+  <thead>
+    <tr>
+      <th align="center">Logo</th>
+      <th align="center">名称</th>
+      <th align="center">支持方式</th>
+      <th>简介</th>
+      <th align="center">官网</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td align="center"><img src="./docs/sponsored/sophnet.png" alt="算能云 Logo" width="48"></td>
+      <td align="center"><b>算能云</b></td>
+      <td align="center">💻 算力赞助</td>
+      <td>致力于打造更快、更稳、更省的一站式模型推理API服务平台</td>
+      <td align="center"><a href="https://www.sophnet.com/">官网</a></td>
+    </tr>
+    <tr>
+      <td align="center"><img src="./docs/sponsored/atlascloud.png" alt="Atlas Cloud Logo" width="48"></td>
+      <td align="center"><b>Atlas Cloud</b></td>
+      <td align="center">💻 算力赞助</td>
+      <td>全球首个全模态推理平台。对话、图像、视频、音频——全部统一 API。300+ 模型，OpenAI 兼容。</td>
+      <td align="center"><a href="https://www.atlascloud.ai/">官网</a></td>
+    </tr>
+    <tr>
+      <td align="center"><img src="./docs/sponsored/hunyuan.webp" alt="腾讯混元3D Logo" width="48"></td>
+      <td align="center"><b>腾讯混元3D</b></td>
+      <td align="center">🌐 世界模型技术支持</td>
+      <td>腾讯混元3D AI创作引擎基于腾讯混元3D生成大模型2.5版本，业界首个一站式3D内容AI创作平台。具备文生、图生3D、3D动画生成、纹理生成等功能，支持草图生3D、3D人物生成，有低多边形模型生成优势。</td>
+      <td align="center"><a href="https://3d.hunyuan.tencent.com/">官网</a></td>
+    </tr>
+  </tbody>
 </table>
 
 完整的第三方依赖清单请查阅 `NOTICES.txt`
 
-##### copyright © 淮北艾阿网络科技有限公司
+##### copyright © 北京爱阿科技有限公司
+
+
+
+<img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=6,11,20&height=100&section=footer" width="100%"/>
