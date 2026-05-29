@@ -1,45 +1,6 @@
-// @db-hash 537625bba263517d947d4009f1a0155d
+// @db-hash 46c86c97b2ffc399387f42c5b7c014eb
 //该文件由脚本自动生成，请勿手动修改
 
-export interface _o_assets_old_20260428 {
-  'assetsId'?: number | null;
-  'describe'?: string | null;
-  'flowId'?: number | null;
-  'id'?: number;
-  'imageId'?: number | null;
-  'name'?: string | null;
-  'projectId'?: number | null;
-  'prompt'?: string | null;
-  'promptErrorReason'?: string | null;
-  'promptState'?: string | null;
-  'remark'?: string | null;
-  'scriptId'?: number | null;
-  'startTime'?: number | null;
-  'type'?: string | null;
-}
-export interface _o_flowProject_old_20260529 {
-  'id'?: number;
-  'intro'?: string | null;
-  'name'?: string | null;
-  'workFlow'?: string | null;
-}
-export interface _o_project_old_20260529 {
-  'artStyle'?: string | null;
-  'createTime'?: number | null;
-  'directorManual'?: string | null;
-  'id'?: number | null;
-  'imageModel'?: string | null;
-  'imageQuality'?: string | null;
-  'intro'?: string | null;
-  'mode'?: string | null;
-  'name'?: string | null;
-  'projectType'?: string | null;
-  'type'?: string | null;
-  'userId'?: number | null;
-  'videoModel'?: string | null;
-  'videoRatio'?: string | null;
-  'workMode'?: string | null;
-}
 export interface memories {
   'content': string;
   'createTime': number;
@@ -62,6 +23,7 @@ export interface o_agentDeploy {
   'modelName'?: string | null;
   'name'?: string | null;
   'temperature'?: number | null;
+  'topP'?: number | null;
   'type'?: string | null;
   'vendorId'?: string | null;
 }
@@ -116,13 +78,6 @@ export interface o_eventChapter {
   'eventId'?: number | null;
   'id'?: number;
   'novelId'?: number | null;
-}
-export interface o_flowProject {
-  'createTime': number;
-  'id'?: number;
-  'intro'?: string | null;
-  'name'?: string | null;
-  'workFlow'?: string | null;
 }
 export interface o_image {
   'assetsId'?: number | null;
@@ -184,7 +139,6 @@ export interface o_project {
   'userId'?: number | null;
   'videoModel'?: string | null;
   'videoRatio'?: string | null;
-  'workMode'?: string | null;
 }
 export interface o_prompt {
   'data'?: string | null;
@@ -260,7 +214,6 @@ export interface o_user {
   'password'?: string | null;
 }
 export interface o_vendorConfig {
-  'code'?: string | null;
   'enable'?: number | null;
   'id'?: string;
   'inputValues'?: string | null;
@@ -289,9 +242,6 @@ export interface o_videoTrack {
 }
 
 export interface DB {
-  "_o_assets_old_20260428": _o_assets_old_20260428;
-  "_o_flowProject_old_20260529": _o_flowProject_old_20260529;
-  "_o_project_old_20260529": _o_project_old_20260529;
   "memories": memories;
   "o_agentDeploy": o_agentDeploy;
   "o_agentWorkData": o_agentWorkData;
@@ -301,7 +251,6 @@ export interface DB {
   "o_assetsRole2Audio": o_assetsRole2Audio;
   "o_event": o_event;
   "o_eventChapter": o_eventChapter;
-  "o_flowProject": o_flowProject;
   "o_image": o_image;
   "o_imageFlow": o_imageFlow;
   "o_modelPrompt": o_modelPrompt;
