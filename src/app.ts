@@ -65,6 +65,15 @@ export default async function startServe(randomPort: Boolean = false) {
   }
   console.log("文件目录:", ossDir);
   app.use("/oss", express.static(ossDir, { acceptRanges: false }));
+
+  const pluginDir = u.getPath("plugin");
+
+  if (!fs.existsSync(pluginDir)) {
+    fs.mkdirSync(pluginDir, { recursive: true });
+  }
+  console.log("文件目录:", pluginDir);
+  app.use("/plugin", express.static(pluginDir, { acceptRanges: false }));
+
   // skills 静态资源
   const skillsDir = u.getPath("skills");
   if (!fs.existsSync(skillsDir)) {
@@ -91,12 +100,11 @@ export default async function startServe(randomPort: Boolean = false) {
   // data/web 静态网站
   const webDir = u.getPath("web");
   if (fs.existsSync(webDir)) {
-    console.log("静态网站目录:", webDir);
     app.use(express.static(webDir, { acceptRanges: false }));
   } else {
     console.warn("静态网站目录不存在:", webDir);
   }
-
+  console.log("静态网站目录:", webDir);
   app.use(async (req, res, next) => {
     const setting = await u.db("o_setting").where("key", "tokenKey").select("value").first();
     if (!setting) return res.status(444).send({ message: "服务器秘钥未配置，请联系管理员" });

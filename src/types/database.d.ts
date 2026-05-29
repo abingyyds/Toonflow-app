@@ -1,4 +1,4 @@
-// @db-hash 17b50430f27f3b720ad137e6c30cc477
+// @db-hash 537625bba263517d947d4009f1a0155d
 //该文件由脚本自动生成，请勿手动修改
 
 export interface _o_assets_old_20260428 {
@@ -16,6 +16,29 @@ export interface _o_assets_old_20260428 {
   'scriptId'?: number | null;
   'startTime'?: number | null;
   'type'?: string | null;
+}
+export interface _o_flowProject_old_20260529 {
+  'id'?: number;
+  'intro'?: string | null;
+  'name'?: string | null;
+  'workFlow'?: string | null;
+}
+export interface _o_project_old_20260529 {
+  'artStyle'?: string | null;
+  'createTime'?: number | null;
+  'directorManual'?: string | null;
+  'id'?: number | null;
+  'imageModel'?: string | null;
+  'imageQuality'?: string | null;
+  'intro'?: string | null;
+  'mode'?: string | null;
+  'name'?: string | null;
+  'projectType'?: string | null;
+  'type'?: string | null;
+  'userId'?: number | null;
+  'videoModel'?: string | null;
+  'videoRatio'?: string | null;
+  'workMode'?: string | null;
 }
 export interface memories {
   'content': string;
@@ -94,6 +117,13 @@ export interface o_eventChapter {
   'id'?: number;
   'novelId'?: number | null;
 }
+export interface o_flowProject {
+  'createTime': number;
+  'id'?: number;
+  'intro'?: string | null;
+  'name'?: string | null;
+  'workFlow'?: string | null;
+}
 export interface o_image {
   'assetsId'?: number | null;
   'errorReason'?: string | null;
@@ -154,6 +184,7 @@ export interface o_project {
   'userId'?: number | null;
   'videoModel'?: string | null;
   'videoRatio'?: string | null;
+  'workMode'?: string | null;
 }
 export interface o_prompt {
   'data'?: string | null;
@@ -259,6 +290,8 @@ export interface o_videoTrack {
 
 export interface DB {
   "_o_assets_old_20260428": _o_assets_old_20260428;
+  "_o_flowProject_old_20260529": _o_flowProject_old_20260529;
+  "_o_project_old_20260529": _o_project_old_20260529;
   "memories": memories;
   "o_agentDeploy": o_agentDeploy;
   "o_agentWorkData": o_agentWorkData;
@@ -268,6 +301,7 @@ export interface DB {
   "o_assetsRole2Audio": o_assetsRole2Audio;
   "o_event": o_event;
   "o_eventChapter": o_eventChapter;
+  "o_flowProject": o_flowProject;
   "o_image": o_image;
   "o_imageFlow": o_imageFlow;
   "o_modelPrompt": o_modelPrompt;

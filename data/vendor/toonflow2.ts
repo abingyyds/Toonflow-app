@@ -139,10 +139,7 @@ const vendor: VendorConfig = {
   description:
     "## Toonflow官方中转平台\n\nToonflow官方中转平台，提供**文本、图像、视频、音频**等多模态生成能力的中转服务，支持接入多个大模型供应商，方便用户统一管理和调用不同供应商的生成能力。\n\n🔗 [前往中转平台](https://api.toonflow.net/)\n\n如果这个项目对你有帮助，可以考虑支持一下我们的开发工作 ☕",
   icon: "",
-  inputs: [
-    { key: "apiKey", label: "API密钥", type: "password", required: true },
-    { key: "baseUrl", label: "baseUrl", type: "text", required: true },
-  ],
+  inputs: [{ key: "apiKey", label: "API密钥", type: "password", required: true }],
   inputValues: {
     apiKey: "",
     baseUrl: "https://api.toonflow.net/v1",
@@ -152,8 +149,8 @@ const vendor: VendorConfig = {
       name: "Wan2.6 (支持真人)",
       type: "video",
       modelName: "wan2.6",
-      mode: ["text", "startEndRequired"],
-      durationResolutionMap: [{ duration: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], resolution: ["720p", "1080p"] }],
+      mode: ["singleImage"],
+      durationResolutionMap: [{ duration: [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], resolution: ["720p", "1080p"] }],
       audio: true,
     },
     {
@@ -167,14 +164,6 @@ const vendor: VendorConfig = {
     {
       name: "Seedance-2.0",
       modelName: "Seedance 2.0",
-      type: "video",
-      mode: ["text", "startFrameOptional", ["imageReference:9", "videoReference:3", "audioReference:3"]],
-      audio: "optional",
-      durationResolutionMap: [{ duration: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], resolution: ["480p", "720p"] }],
-    },
-    {
-      name: "Seedance-2.0 fast",
-      modelName: "Seedance 2.0 fast",
       type: "video",
       mode: ["text", "startFrameOptional", ["imageReference:9", "videoReference:3", "audioReference:3"]],
       audio: "optional",
