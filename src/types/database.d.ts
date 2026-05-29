@@ -1,4 +1,4 @@
-// @db-hash 46c86c97b2ffc399387f42c5b7c014eb
+// @db-hash d5b39bf42d3e4ccbe969f9ffa36adbe1
 //该文件由脚本自动生成，请勿手动修改
 
 export interface memories {
@@ -78,6 +78,13 @@ export interface o_eventChapter {
   'eventId'?: number | null;
   'id'?: number;
   'novelId'?: number | null;
+}
+export interface o_flowProject {
+  'createTime': number;
+  'id'?: number;
+  'intro'?: string | null;
+  'name'?: string | null;
+  'workFlow'?: string | null;
 }
 export interface o_image {
   'assetsId'?: number | null;
@@ -251,6 +258,7 @@ export interface DB {
   "o_assetsRole2Audio": o_assetsRole2Audio;
   "o_event": o_event;
   "o_eventChapter": o_eventChapter;
+  "o_flowProject": o_flowProject;
   "o_image": o_image;
   "o_imageFlow": o_imageFlow;
   "o_modelPrompt": o_modelPrompt;
