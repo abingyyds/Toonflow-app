@@ -1,22 +1,6 @@
-// @db-hash 17b50430f27f3b720ad137e6c30cc477
+// @db-hash 46c86c97b2ffc399387f42c5b7c014eb
 //该文件由脚本自动生成，请勿手动修改
 
-export interface _o_assets_old_20260428 {
-  'assetsId'?: number | null;
-  'describe'?: string | null;
-  'flowId'?: number | null;
-  'id'?: number;
-  'imageId'?: number | null;
-  'name'?: string | null;
-  'projectId'?: number | null;
-  'prompt'?: string | null;
-  'promptErrorReason'?: string | null;
-  'promptState'?: string | null;
-  'remark'?: string | null;
-  'scriptId'?: number | null;
-  'startTime'?: number | null;
-  'type'?: string | null;
-}
 export interface memories {
   'content': string;
   'createTime': number;
@@ -39,6 +23,7 @@ export interface o_agentDeploy {
   'modelName'?: string | null;
   'name'?: string | null;
   'temperature'?: number | null;
+  'topP'?: number | null;
   'type'?: string | null;
   'vendorId'?: string | null;
 }
@@ -229,7 +214,6 @@ export interface o_user {
   'password'?: string | null;
 }
 export interface o_vendorConfig {
-  'code'?: string | null;
   'enable'?: number | null;
   'id'?: string;
   'inputValues'?: string | null;
@@ -258,7 +242,6 @@ export interface o_videoTrack {
 }
 
 export interface DB {
-  "_o_assets_old_20260428": _o_assets_old_20260428;
   "memories": memories;
   "o_agentDeploy": o_agentDeploy;
   "o_agentWorkData": o_agentWorkData;
