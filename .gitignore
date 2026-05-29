@@ -55,3 +55,4 @@ database.d.ts
 data/oss/*
 data/test.sqlite
 version.txt
+data/plugin/*
