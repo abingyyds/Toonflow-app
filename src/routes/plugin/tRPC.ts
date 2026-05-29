@@ -1,5 +1,6 @@
+
 import express from "express";
-import u from "@/utils";
+import { error, success } from "@/lib/responseFormat";
 import { z } from "zod";
 import { validateFields } from "@/middleware/middleware";
 const router = express.Router();

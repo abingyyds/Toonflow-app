@@ -17,17 +17,20 @@ export default router.post(
     try {
       if (type === "get") {
         const fileData = await u.oss.getFile(path);
-        return res.json(success({ data: fileData.toString("base64") }));
+        return res.status(200).send(success({ data: fileData.toString("base64") }));
       } else if (type === "write") {
-        if (!data) return res.json(error("写入内容不能为空"));
-        await u.oss.writeFile(path, data);
-        return res.json(success(null, "写入成功"));
+        if (!data) return res.status(400).send(error("写入内容不能为空"));
+        const buf = /^data:[^;]+;base64,/.test(data)
+          ? Buffer.from(data.replace(/^data:[^;]+;base64,/, ""), "base64")
+          : Buffer.from(data, "utf8");
+        await u.oss.writeFile(path, buf);
+        return res.status(200).send(success(null, "写入成功"));
       } else if (type === "delete") {
         await u.oss.deleteFile(path);
-        return res.json(success(null, "删除成功"));
+        return res.status(200).send(success(null, "删除成功"));
       }
     } catch (e: any) {
-      return res.json(error(e?.message ?? "操作失败"));
+      return res.status(400).send(error(e?.message ?? "操作失败"));
     }
   },
 );
