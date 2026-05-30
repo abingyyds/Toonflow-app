@@ -179,21 +179,9 @@ class OSS {
    * @param userRelPath 用户传入的相对文件路径（使用 / 作为分隔符）
    * @returns 缩略图 URL（已存在或生成成功）或原图 URL（生成失败时）
    */
-  async getSmallImageUrl(userRelPath: string): Promise<string> {
-    // 构造缩略图相对路径：在原路径的目录层级前插入 smallImage 目录
-    // 例如：123/abc.jpg => smallImage/123/abc.jpg
-    // const smallImageRelPath = `smallImage/${userRelPath.replace(/^[/\\]+/, "")}`;
-
-    // await this.ensureInit();
-    // const srcAbsPath = resolveSafeLocalPath(userRelPath, this.rootDir);
-    // const dstAbsPath = resolveSafeLocalPath(smallImageRelPath, this.rootDir);
-
-    // const thumbnailPath = await ensureThumbnail(srcAbsPath, dstAbsPath);
-    // if (thumbnailPath) {
-    //   return this.getFileUrl(smallImageRelPath);
-    // }
+  async getSmallImageUrl(userRelPath: string, size: string = "20"): Promise<string> {
     // // 生成失败返回原图
-    return await this.getFileUrl(userRelPath);
+    return await this.getFileUrl(userRelPath) + `?size=${size}`;
   }
 }
 

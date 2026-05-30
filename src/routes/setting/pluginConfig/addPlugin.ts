@@ -13,17 +13,47 @@ const router = express.Router();
 export default router.post(
   "/",
   validateFields({
-    base64Data: z.string(),
+    base64Data: z.string().optional(),
+    link: z.string().optional(),
   }),
   async (req, res) => {
-    const { base64Data } = req.body;
+    const { base64Data, link } = req.body;
+    if (!base64Data && !link) return res.status(400).send(error("参数错误"));
 
-    // 解析 base64 数据
-    const base64Match = base64Data.match(/base64,([A-Za-z0-9+/=]+)/);
-    if (!base64Match) {
-      return res.status(400).send(error("无效的 base64 数据"));
+    let zipBuffer: Buffer;
+
+    if (link) {
+      // 从链接获取内容，可能为二进制压缩包或 base64 文本
+      const response = await fetch(link);
+      if (!response.ok) {
+        return res.status(400).send(error(`获取链接失败: ${response.status} ${response.statusText}`));
+      }
+      const arrayBuffer = await response.arrayBuffer();
+      const rawBuffer = Buffer.from(arrayBuffer);
+
+      // 尝试判断是否为 base64 文本
+      const textContent = rawBuffer.toString("utf-8").trim();
+      // 匹配 data:...;base64,... 格式
+      const base64DataMatch = textContent.match(/^(?:data:[^;]*;)?base64,([A-Za-z0-9+/=]+)$/);
+      if (base64DataMatch) {
+        zipBuffer = Buffer.from(base64DataMatch[1], "base64");
+      } else if (/^[A-Za-z0-9+/=]+$/.test(textContent) && textContent.length > 100) {
+        // 纯 base64 字符串（较长时判定为 base64）
+        zipBuffer = Buffer.from(textContent, "base64");
+      } else {
+        // 二进制压缩包
+        zipBuffer = rawBuffer;
+      }
+    } else if (base64Data) {
+      // 解析 base64 数据
+      const base64Match = base64Data.match(/base64,([A-Za-z0-9+/=]+)/);
+      if (!base64Match) {
+        return res.status(400).send(error("无效的 base64 数据"));
+      }
+      zipBuffer = Buffer.from(base64Match[1], "base64");
+    } else {
+      return res.status(400).send(error("参数错误"));
     }
-    const zipBuffer = Buffer.from(base64Match[1], "base64");
 
     // 写入临时目录
     const tempDir = u.getPath(["temp", "plugin", u.uuid()]);

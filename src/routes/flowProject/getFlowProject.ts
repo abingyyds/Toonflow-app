@@ -5,6 +5,6 @@ const router = express.Router();
 
 // 获取项目
 export default router.post("/", async (req, res) => {
-  const data = await u.db("o_flowProject").select("*");
+  const data = await u.db("o_flowProject").select("id", "createTime", "intro", "name");
   res.status(200).send(success(data));
 });
