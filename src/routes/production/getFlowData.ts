@@ -53,7 +53,7 @@ export default router.post(
             type: item.type ?? "",
             prompt: item.prompt ?? "",
             desc: item.describe ?? "",
-            src: item.filePath && (await u.oss.getSmallImageUrl(item.filePath!)),
+            src: item.filePath && (await u.oss.getFileUrl(item.filePath!)),
             derive: await Promise.all(
               childAssetsData
                 .filter((child) => child.assetsId === item.id)
@@ -64,7 +64,7 @@ export default router.post(
                   type: child.type,
                   prompt: child.prompt,
                   desc: child.describe ?? "",
-                  src: child.filePath && (await u.oss.getSmallImageUrl(child.filePath!)),
+                  src: child.filePath && (await u.oss.getFileUrl(child.filePath!)),
                   state: child.state ?? "未生成", //todo：矫正状态值
                 })),
             ),
@@ -91,7 +91,7 @@ export default router.post(
           storyboardData.map(async (i) => {
             if (i.filePath) {
               try {
-                i.filePath = await u.oss.getSmallImageUrl(i.filePath);
+                i.filePath = await u.oss.getFileUrl(i.filePath);
               } catch {
                 i.filePath = "";
               }
@@ -118,7 +118,7 @@ export default router.post(
             type: item.type ?? "",
             prompt: item.prompt ?? "",
             desc: item.describe ?? "",
-            src: item.filePath && (await u.oss.getSmallImageUrl(item.filePath!)),
+            src: item.filePath && (await u.oss.getFileUrl(item.filePath!)),
             flowId: item.flowId,
             derive: await Promise.all(
               childAssetsData
@@ -130,7 +130,7 @@ export default router.post(
                   prompt: child.prompt,
                   type: child.type,
                   desc: child.describe ?? "",
-                  src: child.filePath && (await u.oss.getSmallImageUrl(child.filePath!)),
+                  src: child.filePath && (await u.oss.getFileUrl(child.filePath!)),
                   state: child.state ?? "未生成",
                   errorReason: child?.errorReason ?? "",
                   flowId: child.flowId,

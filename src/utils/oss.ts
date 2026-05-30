@@ -2,7 +2,7 @@ import isPathInside from "is-path-inside";
 import getPath, { isEletron } from "@/utils/getPath";
 import fs from "node:fs/promises";
 import path from "node:path";
-import sharp from "sharp";
+import { ensureThumbnail } from "@/utils/image";
 
 // 规范化路径：去除前导斜杠，并将路径分隔符统一转换为系统分隔符
 function normalizeUserPath(userPath: string): string {
@@ -54,7 +54,7 @@ class OSS {
     let url = `/${prefix}/`;
     if (process.env.ossURL && process.env.ossURL !== "") url = process.env.ossURL + `/${prefix}/`;
     if (process.env.NODE_ENV == "dev") url = `http://localhost:10588/${prefix}/`;
-    if (isEletron()) url = `http://localhost:${process.env.PORT}/${prefix}/`;
+    if (isEletron()) url = `/${prefix}/`;
     return `${url}${safePath.split(path.sep).join("/")}`;
   }
 
@@ -182,30 +182,18 @@ class OSS {
   async getSmallImageUrl(userRelPath: string): Promise<string> {
     // 构造缩略图相对路径：在原路径的目录层级前插入 smallImage 目录
     // 例如：123/abc.jpg => smallImage/123/abc.jpg
-    const smallImageRelPath = `smallImage/${userRelPath.replace(/^[/\\]+/, "")}`;
+    // const smallImageRelPath = `smallImage/${userRelPath.replace(/^[/\\]+/, "")}`;
 
-    if (await this.fileExists(smallImageRelPath)) {
-      return this.getFileUrl(smallImageRelPath);
-    }
+    // await this.ensureInit();
+    // const srcAbsPath = resolveSafeLocalPath(userRelPath, this.rootDir);
+    // const dstAbsPath = resolveSafeLocalPath(smallImageRelPath, this.rootDir);
 
-    // 缩略图不存在：同步生成，生成失败则返回原图 URL
-    const originalUrl = await this.getFileUrl(userRelPath);
-
-    try {
-      await this.ensureInit();
-      const srcAbsPath = resolveSafeLocalPath(userRelPath, this.rootDir);
-      const dstAbsPath = resolveSafeLocalPath(smallImageRelPath, this.rootDir);
-      await fs.mkdir(path.dirname(dstAbsPath), { recursive: true });
-      await sharp(srcAbsPath)
-        .resize(512, 512, { fit: "inside", withoutEnlargement: true })
-        .toFile(dstAbsPath);
-      console.info(`[${dstAbsPath}]小图写入成功`);
-      return this.getFileUrl(smallImageRelPath);
-    } catch (e) {
-      // 生成失败返回原图
-      console.warn("[OSS] 生成缩略图失败:", e);
-      return originalUrl;
-    }
+    // const thumbnailPath = await ensureThumbnail(srcAbsPath, dstAbsPath);
+    // if (thumbnailPath) {
+    //   return this.getFileUrl(smallImageRelPath);
+    // }
+    // // 生成失败返回原图
+    return await this.getFileUrl(userRelPath);
   }
 }
 
