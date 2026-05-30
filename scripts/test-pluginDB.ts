@@ -23,7 +23,7 @@ import { Parser } from "@/utils/umd/sqlite.umd.js";
 // ============================================================
 // 复制最小版 checkSQL（与 pluginDB.ts 保持同步）
 // ============================================================
-const BLOCKED = new Set(["o_assets", "sqlite_master", "sqlite_schema", "sqlite_temp_master", "sqlite_temp_schema"]);
+const BLOCKED = new Set(["o_user", "o_setting", "o_vendorConfig", "sqlite_master", "sqlite_schema", "sqlite_temp_master", "sqlite_temp_schema"]);
 const DDL_OPS = new Set(["create", "drop", "alter", "rename", "truncate", "attach", "detach", "vacuum", "reindex"]);
 const DENY_RE =
   /^\s*(create|drop|alter|truncate|attach|detach|vacuum|reindex|rename)\b|^\s*pragma\s+(writable_schema|legacy_alter_table|journal_mode|secure_delete|trusted_schema|locking_mode|synchronous|temp_store|cache_size)\b/i;
@@ -217,10 +217,7 @@ function section(name: string) {
   // ============================================================
   section("J. 注入向量与极端 SQL");
   // 经典 UNION 注入：合法 SQL 后追加 UNION 拉取黑名单数据
-  expectBlocked(
-    "SELECT * FROM users WHERE name = 'admin' UNION SELECT data, NULL FROM o_assets",
-    "UNION 注入拉取 o_assets",
-  );
+  expectBlocked("SELECT * FROM users WHERE name = 'admin' UNION SELECT data, NULL FROM o_assets", "UNION 注入拉取 o_assets");
   // 注释截断 + 多语句 stacked
   expectBlocked("SELECT * FROM users WHERE id=1; DROP TABLE users -- ", "注释截断 + stacked DROP");
   expectBlocked("SELECT * FROM users; DELETE FROM o_assets; --", "stacked DELETE 黑名单 + 注释");
@@ -229,10 +226,7 @@ function section(name: string) {
   expectBlocked("SELECT sql FROM sqlite_master", "sqlite_master 列 DDL");
   expectBlocked("SELECT sql FROM sqlite_schema WHERE name='o_assets'", "sqlite_schema 查目标表 DDL");
   expectBlocked("SELECT * FROM sqlite_temp_master", "sqlite_temp_master");
-  expectBlocked(
-    "SELECT * FROM users JOIN sqlite_master m ON m.name=users.name",
-    "JOIN sqlite_master 旁路",
-  );
+  expectBlocked("SELECT * FROM users JOIN sqlite_master m ON m.name=users.name", "JOIN sqlite_master 旁路");
   // 危险 SQLite 函数
   expectBlocked("SELECT load_extension('evil.so')", "load_extension");
   expectBlocked("SELECT readfile('/etc/passwd')", "readfile");
@@ -243,22 +237,13 @@ function section(name: string) {
   expectAllowed("SELECT 'load_extension is evil' AS msg FROM users", "load_extension 在字符串字面量");
   expectAllowed("SELECT * FROM users WHERE note = 'readfile()'", "readfile 在字面量");
   // 递归 CTE 引用黑名单
-  expectBlocked(
-    "WITH RECURSIVE r(n) AS (SELECT 1 UNION SELECT n+1 FROM r WHERE n<5) SELECT * FROM r, o_assets",
-    "递归 CTE 中混入黑名单",
-  );
+  expectBlocked("WITH RECURSIVE r(n) AS (SELECT 1 UNION SELECT n+1 FROM r WHERE n<5) SELECT * FROM r, o_assets", "递归 CTE 中混入黑名单");
   // 深度嵌套子查询
   expectBlocked("SELECT * FROM ((((SELECT * FROM o_assets))))", "4 层括号嵌套子查询");
-  expectBlocked(
-    "SELECT * FROM users WHERE id IN (SELECT id FROM (SELECT uid AS id FROM (SELECT * FROM o_assets)))",
-    "3 层 IN-FROM 嵌套",
-  );
+  expectBlocked("SELECT * FROM users WHERE id IN (SELECT id FROM (SELECT uid AS id FROM (SELECT * FROM o_assets)))", "3 层 IN-FROM 嵌套");
   // 引号转义攻击：参数已正确转义 → 内容只是字面量，应放行
   expectAllowed("SELECT * FROM users WHERE name = 'O''Brien'", "SQL 标准转义 ''");
-  expectAllowed(
-    "SELECT * FROM users WHERE name = 'foo'';DROP TABLE users--'",
-    "字面量内含 DROP 语法（已正确转义）",
-  );
+  expectAllowed("SELECT * FROM users WHERE name = 'foo'';DROP TABLE users--'", "字面量内含 DROP 语法（已正确转义）");
   // 拼接构造表名（SQLite 不支持，parser 应当 fail-closed）
   expectBlocked("SELECT * FROM ('o_' || 'assets')", "动态构造表名（parser 失败 → 拒）");
   // 非可打印字符 / BOM / 全角
@@ -267,10 +252,7 @@ function section(name: string) {
   expectBlocked("SELECT * FROM o\u0000_assets", "表名含 NULL 字节（parser 失败 → 拒）");
   // 完整 OWASP 风格 payload
   expectBlocked("SELECT * FROM users WHERE id='1' OR 1=1; DROP TABLE users--", "OR 1=1 + stacked DROP");
-  expectBlocked(
-    "SELECT * FROM users WHERE id='1' UNION ALL SELECT name, sql FROM sqlite_master--",
-    "UNION + sqlite_master + 注释",
-  );
+  expectBlocked("SELECT * FROM users WHERE id='1' UNION ALL SELECT name, sql FROM sqlite_master--", "UNION + sqlite_master + 注释");
   // 经典 payload 但 SQL 是纯参数化（payload 在 ? 绑定里）→ 应放行（SQL 本身合法）
   expectAllowed("SELECT * FROM users WHERE name = ?", "参数化 SELECT（payload 在绑定值中，与 SQL 解析无关）");
   // EXPLAIN 黑名单（parser 不支持 EXPLAIN → fail-closed 拒）
@@ -282,10 +264,7 @@ function section(name: string) {
   const huge = "SELECT * FROM users WHERE id IN (" + Array(5000).fill("?").join(",") + ")";
   expectAllowed(huge, `极大 IN 列表 (${huge.length} chars)`);
   // 多个黑名单表混合
-  expectBlocked(
-    "SELECT * FROM o_assets a, sqlite_master m WHERE a.id=m.rootpage",
-    "同时访问 o_assets 和 sqlite_master",
-  );
+  expectBlocked("SELECT * FROM o_assets a, sqlite_master m WHERE a.id=m.rootpage", "同时访问 o_assets 和 sqlite_master");
 
   // ============================================================
   // H. Knex 集成测试
@@ -356,108 +335,240 @@ function section(name: string) {
   }
 
   // 合法
-  await knexCase("基础 SELECT", async () => {
-    const rows = await sb("o_image").orderBy("id", "desc").limit(10).offset(0).select("*");
-    assert.equal(rows.length, 3);
-  }, false);
-  await knexCase("COUNT 聚合", async () => {
-    const rows = await sb("users").count<{ cnt: number }[]>({ cnt: "*" });
-    assert.equal(Number(rows[0].cnt), 2);
-  }, false);
-  await knexCase("GROUP BY", async () => {
-    const rows = await sb("o_image").select("uid").count({ c: "*" }).groupBy("uid");
-    assert.equal(rows.length, 2);
-  }, false);
-  await knexCase("LEFT JOIN", async () => {
-    const rows = await sb("o_image as i").leftJoin("users as u", "i.uid", "u.id").select("i.id", "u.name");
-    assert.equal(rows.length, 3);
-  }, false);
-  await knexCase("whereIn 字面量", async () => {
-    const rows = await sb("users").whereIn("id", [1, 2]).select("*");
-    assert.equal(rows.length, 2);
-  }, false);
-  await knexCase("whereIn 子查询", async () => {
-    const rows = await sb("users").whereIn("id", sb("o_image").select("uid")).select("*");
-    assert.ok(rows.length >= 1);
-  }, false);
-  await knexCase("INSERT + RETURNING", async () => {
-    const ret = await sb("users").insert({ name: "carol" }).returning(["id", "name"]);
-    assert.equal((ret[0] as any).name, "carol");
-  }, false);
-  await knexCase("UPDATE", async () => {
-    const n = await sb("users").where({ name: "bob" }).update({ name: "bob2" });
-    assert.equal(n, 1);
-  }, false);
-  await knexCase("DELETE", async () => {
-    const n = await sb("users").where({ name: "carol" }).del();
-    assert.equal(n, 1);
-  }, false);
-  await knexCase("事务 commit", async () => {
-    await sb.transaction(async (trx) => {
-      await trx("users").insert({ name: "tx1" });
-    });
-    const r = await sb("users").where({ name: "tx1" }).count<{ c: number }[]>({ c: "*" });
-    assert.equal(Number(r[0].c), 1);
-  }, false);
-  await knexCase("事务 rollback", async () => {
-    try {
+  await knexCase(
+    "基础 SELECT",
+    async () => {
+      const rows = await sb("o_image").orderBy("id", "desc").limit(10).offset(0).select("*");
+      assert.equal(rows.length, 3);
+    },
+    false,
+  );
+  await knexCase(
+    "COUNT 聚合",
+    async () => {
+      const rows = await sb("users").count<{ cnt: number }[]>({ cnt: "*" });
+      assert.equal(Number(rows[0].cnt), 2);
+    },
+    false,
+  );
+  await knexCase(
+    "GROUP BY",
+    async () => {
+      const rows = await sb("o_image").select("uid").count({ c: "*" }).groupBy("uid");
+      assert.equal(rows.length, 2);
+    },
+    false,
+  );
+  await knexCase(
+    "LEFT JOIN",
+    async () => {
+      const rows = await sb("o_image as i").leftJoin("users as u", "i.uid", "u.id").select("i.id", "u.name");
+      assert.equal(rows.length, 3);
+    },
+    false,
+  );
+  await knexCase(
+    "whereIn 字面量",
+    async () => {
+      const rows = await sb("users").whereIn("id", [1, 2]).select("*");
+      assert.equal(rows.length, 2);
+    },
+    false,
+  );
+  await knexCase(
+    "whereIn 子查询",
+    async () => {
+      const rows = await sb("users").whereIn("id", sb("o_image").select("uid")).select("*");
+      assert.ok(rows.length >= 1);
+    },
+    false,
+  );
+  await knexCase(
+    "INSERT + RETURNING",
+    async () => {
+      const ret = await sb("users").insert({ name: "carol" }).returning(["id", "name"]);
+      assert.equal((ret[0] as any).name, "carol");
+    },
+    false,
+  );
+  await knexCase(
+    "UPDATE",
+    async () => {
+      const n = await sb("users").where({ name: "bob" }).update({ name: "bob2" });
+      assert.equal(n, 1);
+    },
+    false,
+  );
+  await knexCase(
+    "DELETE",
+    async () => {
+      const n = await sb("users").where({ name: "carol" }).del();
+      assert.equal(n, 1);
+    },
+    false,
+  );
+  await knexCase(
+    "事务 commit",
+    async () => {
       await sb.transaction(async (trx) => {
-        await trx("users").insert({ name: "tx2" });
-        throw new Error("force rollback");
+        await trx("users").insert({ name: "tx1" });
       });
-    } catch {}
-    const r = await sb("users").where({ name: "tx2" }).count<{ c: number }[]>({ c: "*" });
-    assert.equal(Number(r[0].c), 0);
-  }, false);
-  await knexCase("batchInsert", async () => {
-    await sb.batchInsert("users", [{ name: "b1" }, { name: "b2" }, { name: "b3" }], 2);
-    const r = await sb("users").whereIn("name", ["b1", "b2", "b3"]).count<{ c: number }[]>({ c: "*" });
-    assert.equal(Number(r[0].c), 3);
-  }, false);
-  await knexCase("raw 合法 SELECT", async () => {
-    const result = await sb.raw("SELECT COUNT(*) AS c FROM users");
-    assert.ok(Array.isArray(result));
-  }, false);
+      const r = await sb("users").where({ name: "tx1" }).count<{ c: number }[]>({ c: "*" });
+      assert.equal(Number(r[0].c), 1);
+    },
+    false,
+  );
+  await knexCase(
+    "事务 rollback",
+    async () => {
+      try {
+        await sb.transaction(async (trx) => {
+          await trx("users").insert({ name: "tx2" });
+          throw new Error("force rollback");
+        });
+      } catch {}
+      const r = await sb("users").where({ name: "tx2" }).count<{ c: number }[]>({ c: "*" });
+      assert.equal(Number(r[0].c), 0);
+    },
+    false,
+  );
+  await knexCase(
+    "batchInsert",
+    async () => {
+      await sb.batchInsert("users", [{ name: "b1" }, { name: "b2" }, { name: "b3" }], 2);
+      const r = await sb("users").whereIn("name", ["b1", "b2", "b3"]).count<{ c: number }[]>({ c: "*" });
+      assert.equal(Number(r[0].c), 3);
+    },
+    false,
+  );
+  await knexCase(
+    "raw 合法 SELECT",
+    async () => {
+      const result = await sb.raw("SELECT COUNT(*) AS c FROM users");
+      assert.ok(Array.isArray(result));
+    },
+    false,
+  );
 
   // 应被拒
-  await knexCase("访问 o_assets", async () => { await sb("o_assets").select("*"); }, true);
-  await knexCase("INSERT o_assets", async () => { await sb("o_assets").insert({ data: "x" }); }, true);
-  await knexCase("UPDATE o_assets", async () => { await sb("o_assets").update({ data: "x" }); }, true);
-  await knexCase("DELETE o_assets", async () => { await sb("o_assets").del(); }, true);
-  await knexCase("schema.createTable", async () => {
-    await sb.schema.createTable("evil", (t) => t.increments());
-  }, true);
-  await knexCase("schema.dropTable", async () => { await sb.schema.dropTable("users"); }, true);
-  await knexCase("raw DELETE o_assets", async () => { await sb.raw("DELETE FROM o_assets"); }, true);
-  await knexCase("raw 危险 PRAGMA", async () => { await sb.raw("PRAGMA writable_schema = 1"); }, true);
-  await knexCase("raw ATTACH", async () => { await sb.raw("ATTACH DATABASE 'x' AS y"); }, true);
-  await knexCase("raw 子查询访问黑名单", async () => {
-    await sb.raw("SELECT * FROM users WHERE id IN (SELECT uid FROM o_assets)");
-  }, true);
-  await knexCase("事务内访问黑名单（整事务回滚）", async () => {
-    await sb.transaction(async (trx) => {
-      await trx("o_assets").select("*");
-    });
-  }, true);
+  await knexCase(
+    "访问 o_assets",
+    async () => {
+      await sb("o_assets").select("*");
+    },
+    true,
+  );
+  await knexCase(
+    "INSERT o_assets",
+    async () => {
+      await sb("o_assets").insert({ data: "x" });
+    },
+    true,
+  );
+  await knexCase(
+    "UPDATE o_assets",
+    async () => {
+      await sb("o_assets").update({ data: "x" });
+    },
+    true,
+  );
+  await knexCase(
+    "DELETE o_assets",
+    async () => {
+      await sb("o_assets").del();
+    },
+    true,
+  );
+  await knexCase(
+    "schema.createTable",
+    async () => {
+      await sb.schema.createTable("evil", (t) => t.increments());
+    },
+    true,
+  );
+  await knexCase(
+    "schema.dropTable",
+    async () => {
+      await sb.schema.dropTable("users");
+    },
+    true,
+  );
+  await knexCase(
+    "raw DELETE o_assets",
+    async () => {
+      await sb.raw("DELETE FROM o_assets");
+    },
+    true,
+  );
+  await knexCase(
+    "raw 危险 PRAGMA",
+    async () => {
+      await sb.raw("PRAGMA writable_schema = 1");
+    },
+    true,
+  );
+  await knexCase(
+    "raw ATTACH",
+    async () => {
+      await sb.raw("ATTACH DATABASE 'x' AS y");
+    },
+    true,
+  );
+  await knexCase(
+    "raw 子查询访问黑名单",
+    async () => {
+      await sb.raw("SELECT * FROM users WHERE id IN (SELECT uid FROM o_assets)");
+    },
+    true,
+  );
+  await knexCase(
+    "事务内访问黑名单（整事务回滚）",
+    async () => {
+      await sb.transaction(async (trx) => {
+        await trx("o_assets").select("*");
+      });
+    },
+    true,
+  );
   // 注入相关
-  await knexCase("raw UNION 注入 o_assets", async () => {
-    await sb.raw("SELECT id FROM users UNION SELECT id FROM o_assets");
-  }, true);
-  await knexCase("raw sqlite_master 查 DDL", async () => {
-    await sb.raw("SELECT sql FROM sqlite_master WHERE name=?", ["o_assets"]);
-  }, true);
-  await knexCase("raw load_extension", async () => {
-    await sb.raw("SELECT load_extension('evil.so')");
-  }, true);
-  await knexCase("raw stacked DROP via exec", async () => {
-    // 通过 .raw 走 prepare；多语句 SQLite prepare 会报错，但拦截器在更前面
-    await sb.raw("SELECT 1; DROP TABLE users");
-  }, true);
+  await knexCase(
+    "raw UNION 注入 o_assets",
+    async () => {
+      await sb.raw("SELECT id FROM users UNION SELECT id FROM o_assets");
+    },
+    true,
+  );
+  await knexCase(
+    "raw sqlite_master 查 DDL",
+    async () => {
+      await sb.raw("SELECT sql FROM sqlite_master WHERE name=?", ["o_assets"]);
+    },
+    true,
+  );
+  await knexCase(
+    "raw load_extension",
+    async () => {
+      await sb.raw("SELECT load_extension('evil.so')");
+    },
+    true,
+  );
+  await knexCase(
+    "raw stacked DROP via exec",
+    async () => {
+      // 通过 .raw 走 prepare；多语句 SQLite prepare 会报错，但拦截器在更前面
+      await sb.raw("SELECT 1; DROP TABLE users");
+    },
+    true,
+  );
   // 注入 payload 在参数里（合法）— 应正常返回 0 行
-  await knexCase("参数化拒绝注入（payload 在 ? 绑定）", async () => {
-    const rows = await sb("users").where({ name: "alice'; DROP TABLE users--" }).select("*");
-    assert.equal(rows.length, 0);
-  }, false);
+  await knexCase(
+    "参数化拒绝注入（payload 在 ? 绑定）",
+    async () => {
+      const rows = await sb("users").where({ name: "alice'; DROP TABLE users--" }).select("*");
+      assert.equal(rows.length, 0);
+    },
+    false,
+  );
 
   await sb.destroy();
   fs.unlinkSync(tmpDb);
