@@ -4,7 +4,7 @@ import path from "path";
 import getPath from "@/utils/getPath";
 import { Parser } from "@/utils/umd/sqlite.umd.js";
 
-const BLOCKED = new Set(["o_assets", "o_user", "o_setting", "o_vendorConfig", "sqlite_master", "sqlite_schema", "sqlite_temp_master", "sqlite_temp_schema"]);
+const BLOCKED = new Set(["o_user", "o_setting", "o_vendorConfig", "sqlite_master", "sqlite_schema", "sqlite_temp_master", "sqlite_temp_schema"]);
 const DDL_OPS = new Set(["create", "drop", "alter", "rename", "truncate", "attach", "detach", "vacuum", "reindex"]);
 // 直接拒绝：DDL+ 危险 PRAGMA
 const DENY_RE =
