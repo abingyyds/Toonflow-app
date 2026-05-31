@@ -10,7 +10,7 @@ async function urlToBase64(imageUrl: string): Promise<string> {
   if (imageUrl.startsWith("/oss/")) {
     return await u.oss.getImageBase64(u.replaceUrl(imageUrl).replace("/smallImage", ""));
   }
-  imageUrl = await u.oss.getFileUrl(u.replaceUrl(imageUrl))
+  imageUrl = await u.oss.getFileUrl(u.replaceUrl(imageUrl));
   const response = await axios.get(imageUrl, { responseType: "arraybuffer" });
   const contentType = response.headers["content-type"] || "image/png";
   const base64 = Buffer.from(response.data, "binary").toString("base64");
@@ -53,13 +53,11 @@ export default router.post(
       const savePath = `${projectId}/workFlow/${u.uuid()}.jpg`;
       await imageClass.save(savePath);
 
-      console.log("%c Line:57 🥟", "background:#42b983");
       const url = await u.oss.getSmallImageUrl(savePath);
       return res.status(200).send(success({ url }));
     } catch (e) {
       console.log("%c Line:58 🎂", "background:#6ec1c2");
-      res.status(400).send(error(u.error(e).message))
+      res.status(400).send(error(u.error(e).message));
     }
-
   },
 );

@@ -151,7 +151,7 @@ export default router.post(
     }
 
     const artStyle = projectData?.artStyle || "无";
-          console.log("%c Line:158 🍢", "background:#ffdd4d",assets);
+    console.log("%c Line:158 🍢", "background:#ffdd4d", assets);
 
     const visualManual = u.getArtPrompt(artStyle, "art_skills", "art_storyboard_video");
     const content = `

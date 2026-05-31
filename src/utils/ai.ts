@@ -117,12 +117,18 @@ async function getVendorTemplateFn(
 async function getVendorTemplateFn(fnName: Exclude<FnName, "textRequest">, modelName: `${string}:${string}`): Promise<(input: any) => any>;
 async function getVendorTemplateFn(fnName: FnName, modelName: `${string}:${string}`): Promise<any> {
   const [id, name] = modelName.split(/:(.+)/);
+
   const vendorConfigData = await u.db("o_vendorConfig").where("id", id).first();
+
   if (!vendorConfigData) throw new Error(`未找到供应商配置 id=${id}`);
+
   const modelList = await u.vendor.getModelList(id);
+
   const selectedModel = modelList.find((i: any) => i.modelName == name);
+
   if (!selectedModel) throw new Error(`未找到模型 ${name} id=${id}`);
   const code = u.vendor.getCode(id);
+
   const jsCode = transform(code, { transforms: ["typescript"] }).code;
   const running = u.vm(jsCode);
   if (running.vendor) {
@@ -149,6 +155,7 @@ async function withTaskRecord<T>(
 ): Promise<T> {
   const modelName = await resolveModelName(modelKey);
   const [_, model] = modelName.split(/:(.+)/);
+
   const taskRecord = await u.task(projectId, taskClass, model, { describe: describe, content: relatedObjects });
   try {
     const result = await fn(modelName, false, 0);
@@ -166,8 +173,12 @@ async function urlToBase64(url: string, retries = 3, delay = 1000): Promise<stri
     try {
       const res = await axios.get(url, { responseType: "arraybuffer" });
       const base64 = Buffer.from(res.data).toString("base64");
+
+      console.log("%c Line:177 🌭", "background:#3f7cff");
       return `${base64}`;
     } catch (e) {
+      console.log("%c Line:178 🥕 e", "background:#e41a6a", e);
+
       if (attempt === retries) throw e;
       await new Promise((resolve) => setTimeout(resolve, delay * attempt));
     }
@@ -303,8 +314,10 @@ class AiVideo {
         await referenceList2imageBase642(mn.split(/:(.+)/)[0], input);
 
         this.result = await fn(input);
+        console.log("%c Line:313 🍩 this.result", "background:#42b983", this.result);
 
         if (this.result.startsWith("http")) this.result = await urlToBase64(this.result);
+        console.log("%c Line:316 🍇", "background:#3f7cff");
       };
       if (taskRecord) {
         await withTaskRecord(this.key, taskRecord.taskClass, taskRecord.describe, taskRecord.relatedObjects, taskRecord.projectId, exec);
@@ -317,7 +330,9 @@ class AiVideo {
     }
   }
   async save(path: string) {
+    console.log("%c Line:327 🍰", "background:#42b983");
     await u.oss.writeFile(path, this.result);
+    console.log("%c Line:328 🍇", "background:#7f2b82");
     return this;
   }
 }

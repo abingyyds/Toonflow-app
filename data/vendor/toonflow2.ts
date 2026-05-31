@@ -139,7 +139,7 @@ const vendor: VendorConfig = {
   description:
     "## Toonflow官方中转平台\n\nToonflow官方中转平台，提供**文本、图像、视频、音频**等多模态生成能力的中转服务，支持接入多个大模型供应商，方便用户统一管理和调用不同供应商的生成能力。\n\n🔗 [前往中转平台](https://api.toonflow.net/)\n\n如果这个项目对你有帮助，可以考虑支持一下我们的开发工作 ☕",
   icon: "",
-  inputs: [{ key: "apiKey", label: "API密钥", type: "password", required: true }],
+  inputs: [{ key: "apiKey", label: "API密钥", type: "password", required: true },{ key: "baseUrl", label: "baseUrl", type: "text", required: true }],
   inputValues: {
     apiKey: "",
     baseUrl: "https://api.toonflow.net/v1",
@@ -487,7 +487,9 @@ const videoRequest = async (config: VideoConfig, model: VideoModel): Promise<str
         throw new Error(`轮询失败，状态码: ${queryResponse.status}, 错误信息: ${errorText}`);
       }
       const queryData = await queryResponse.json();
+      logger(queryData)
       const status = queryData?.status ?? queryData?.data?.status;
+      logger(status)
       switch (status) {
         case "completed":
         case "SUCCESS":
@@ -500,8 +502,9 @@ const videoRequest = async (config: VideoConfig, model: VideoModel): Promise<str
           return { completed: false };
       }
     });
+    logger(res)
     if (res.error) throw new Error(res.error);
-    return await urlToBase64(res.data!);
+    return res.data!;
   }
 
   if (lowerName.includes("doubao") || lowerName.includes("seedance")) {

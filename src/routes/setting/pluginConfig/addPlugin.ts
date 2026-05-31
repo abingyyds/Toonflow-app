@@ -38,10 +38,8 @@ export default router.post(
       if (base64DataMatch) {
         zipBuffer = Buffer.from(base64DataMatch[1], "base64");
       } else if (/^[A-Za-z0-9+/=]+$/.test(textContent) && textContent.length > 100) {
-        // 纯 base64 字符串（较长时判定为 base64）
         zipBuffer = Buffer.from(textContent, "base64");
       } else {
-        // 二进制压缩包
         zipBuffer = rawBuffer;
       }
     } else if (base64Data) {
