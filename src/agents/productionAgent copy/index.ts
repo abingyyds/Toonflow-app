@@ -72,19 +72,10 @@ function subAgent(ctx: GlobalContext) {
       prompt: z.string().describe("交给子Agent的任务简约描述，100字以内"),
     }),
     execute: async ({ prompt }) => {
-      const remoteToolsString = ctx.remoteTools
-        .map((t) => {
-          return `工具名称：${t.path}\n工具描述：${t.description}\n工具参数：${t.jsonSchema ? JSON.stringify(t.jsonSchema) : "无"}`;
-        })
-        .join("\n\n");
-      const systemPrompt = `你可以使用runRemoteTool工具运行如下方法：\n\n${remoteToolsString}\n\n当你需要使用工具时，调用runRemoteTools并传入工具名称和字符串参数即可。`;
-
       const { fullStream } = await u.Ai.Text("productionAgent", ctx.thinkLevel).stream({
-        system: systemPrompt,
+        system: "",
         messages: [{ role: "user", content: prompt }],
-        tools: {
-          runRemoteTool: runRemoteTool(ctx),
-        },
+        // tools: { ...extraTools, ...useTools({ resTool, msg: subMsg }) },
       });
       const result = await consumeStream(ctx, fullStream, "执行");
       return result;
@@ -152,22 +143,4 @@ async function consumeStream(ctx: GlobalContext, fullStream: AsyncIterable<any>,
   }
   flushStep();
   return fullResponse;
-}
-
-function runRemoteTool(ctx: GlobalContext) {
-  return tool({
-    description: "运行远端工具",
-    inputSchema: z.object({
-      name: z.string().describe("工具名称"),
-      args: z.string().describe("工具参数"),
-    }),
-    execute: async ({ name, args }) => {
-      return await new Promise((resolve, reject) =>
-        ctx.socket.emit("runRemoteTool", { name, args }, (res: { state: "success" | "error"; result?: any; error?: string }) => {
-          if (res.state === "error") reject(new Error(res.error));
-          else resolve(res.result);
-        }),
-      );
-    },
-  });
 }

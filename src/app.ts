@@ -90,7 +90,7 @@ export default async function startServe(randomPort: Boolean = false) {
           sizeOpts = { type: "dimensions", width: w, height: h };
         } else if (percentMatch) {
           const pct = parseFloat(percentMatch[1]);
-          sizeSubDir = size;
+          sizeSubDir = `${percentMatch[1]}p`;
           sizeOpts = { type: "percentage", value: pct };
         } else {
           // 无效的 size 参数，降级返回原图
@@ -98,12 +98,14 @@ export default async function startServe(randomPort: Boolean = false) {
           return;
         }
 
-        const smallImagePath = path.join(smallImageBaseDir, sizeSubDir, req.path);
+        const ext = path.extname(req.path);
+        const base = path.basename(req.path, ext);
+        const dir = path.dirname(req.path);
+        const smallImagePath = path.join(smallImageBaseDir, dir, `${base}_${sizeSubDir}${ext}`);
 
         ensureThumbnail(originalPath, smallImagePath, sizeOpts).then((thumbnailPath) => {
           if (thumbnailPath) {
-            const targetDir = path.join(smallImageBaseDir, sizeSubDir);
-            express.static(targetDir, { acceptRanges: false })(req, res, next);
+            res.sendFile(thumbnailPath);
           } else {
             // 缩略图生成失败，降级返回原图
             express.static(ossDir, { acceptRanges: false })(req, res, next);
