@@ -6,11 +6,17 @@ import { upsertUserAgentDeploy, upsertUserVendorConfig } from "@/utils/userConfi
 
 export type SubrouterProvider = "subrouterai" | "sub2api";
 
+export interface SubrouterLoginProvider {
+  provider: SubrouterProvider;
+  baseUrl: string;
+}
+
 export interface SubrouterLoginOptions {
   provider: SubrouterProvider;
   baseUrl: string;
   username: string;
   password: string;
+  timeoutMs?: number;
 }
 
 export interface NormalizedModel {
@@ -42,8 +48,17 @@ interface StoredAccount extends LoginResult {
   models?: string;
 }
 
+interface PreparedSubrouterLogin {
+  token: string;
+  toonflowUser: { id: number; name: string };
+  account: StoredAccount;
+  models: NormalizedModel[];
+}
+
 const SUBROUTER_VENDOR_ID = "subrouter";
 const AUTO_KEY_PREFIX = "toonflow-auto";
+const INTERNAL_SUBROUTER_BASE_URL = "http://subrouter.railway.internal:8080";
+const SUBROUTER_LOGIN_PROVIDERS_SETTING_KEY = "subrouterLoginProviders";
 
 function signToken(payload: string | object, expiresIn: string | number, secret: string): string {
   return (jwt.sign as any)(payload, secret, { expiresIn });
@@ -80,13 +95,91 @@ function getErrorMessage(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
 }
 
-function getAxios(baseUrl: string, headers: Record<string, string> = {}): AxiosInstance {
+function getAxios(baseUrl: string, headers: Record<string, string> = {}, timeout = 30000): AxiosInstance {
   return axios.create({
     baseURL: apiBase(baseUrl),
-    timeout: 30000,
+    timeout,
     headers,
     validateStatus: (status) => status >= 200 && status < 300,
   });
+}
+
+function normalizeProviderName(value: unknown): SubrouterProvider | undefined {
+  const provider = String(value || "").trim().toLowerCase();
+  if (provider === "subrouterai" || provider === "sub2api") return provider;
+  return undefined;
+}
+
+function normalizeLoginProviders(providers: Array<Partial<SubrouterLoginProvider> | undefined | null>): SubrouterLoginProvider[] {
+  const seen = new Set<string>();
+  const normalized: SubrouterLoginProvider[] = [];
+  for (const item of providers) {
+    const provider = normalizeProviderName(item?.provider);
+    const baseUrl = typeof item?.baseUrl === "string" ? normalizeBaseUrl(item.baseUrl) : "";
+    if (!provider || !baseUrl) continue;
+    const key = `${provider}:${baseUrl}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    normalized.push({ provider, baseUrl });
+  }
+  return normalized;
+}
+
+function parseLoginProviders(value: unknown): SubrouterLoginProvider[] {
+  if (typeof value !== "string" || !value.trim()) return [];
+  const raw = value.trim();
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) return normalizeLoginProviders(parsed);
+    if (parsed && typeof parsed === "object") return normalizeLoginProviders([parsed as Partial<SubrouterLoginProvider>]);
+  } catch {
+    // Also accept compact env syntax: subrouterai=http://a;sub2api=http://b
+  }
+
+  return normalizeLoginProviders(
+    raw.split(/[,\n;]/).flatMap((entry) => {
+      const text = entry.trim();
+      if (!text) return [];
+      const matched = text.match(/^(subrouterai|sub2api)\s*=\s*(.+)$/i);
+      if (matched) return [{ provider: matched[1].toLowerCase() as SubrouterProvider, baseUrl: matched[2].trim() }];
+      if (/^https?:\/\//i.test(text)) {
+        return [
+          { provider: "subrouterai" as const, baseUrl: text },
+          { provider: "sub2api" as const, baseUrl: text },
+        ];
+      }
+      return [];
+    }),
+  );
+}
+
+function getEnvLoginProviders(): SubrouterLoginProvider[] {
+  const providers: Array<Partial<SubrouterLoginProvider>> = [
+    ...parseLoginProviders(process.env.TOONFLOW_SUBROUTER_LOGIN_PROVIDERS),
+  ];
+  const sharedBaseUrl = process.env.TOONFLOW_SUBROUTER_BASE_URL || process.env.SUBROUTER_BASE_URL;
+  if (sharedBaseUrl) {
+    providers.push({ provider: "subrouterai", baseUrl: sharedBaseUrl }, { provider: "sub2api", baseUrl: sharedBaseUrl });
+  }
+  providers.push(
+    { provider: "subrouterai", baseUrl: process.env.TOONFLOW_SUBROUTERAI_BASE_URL || process.env.SUBROUTERAI_BASE_URL },
+    { provider: "sub2api", baseUrl: process.env.TOONFLOW_SUB2API_BASE_URL || process.env.SUB2API_BASE_URL },
+  );
+  return normalizeLoginProviders(providers);
+}
+
+export async function getDefaultSubrouterLoginProviders(): Promise<SubrouterLoginProvider[]> {
+  const envProviders = getEnvLoginProviders();
+  if (envProviders.length > 0) return envProviders;
+
+  const setting = await db("o_setting").where("key", SUBROUTER_LOGIN_PROVIDERS_SETTING_KEY).first();
+  const storedProviders = parseLoginProviders(setting?.value);
+  if (storedProviders.length > 0) return storedProviders;
+
+  return normalizeLoginProviders([
+    { provider: "subrouterai", baseUrl: INTERNAL_SUBROUTER_BASE_URL },
+    { provider: "sub2api", baseUrl: INTERNAL_SUBROUTER_BASE_URL },
+  ]);
 }
 
 function extractItems(data: any): any[] {
@@ -115,8 +208,8 @@ function extractKey(data: any): { key?: string; id?: string } {
   };
 }
 
-async function loginSubrouterAI(baseUrl: string, username: string, password: string): Promise<LoginResult> {
-  const client = getAxios(baseUrl);
+async function loginSubrouterAI(baseUrl: string, username: string, password: string, timeoutMs?: number): Promise<LoginResult> {
+  const client = getAxios(baseUrl, {}, timeoutMs);
   const res = await client.post("/api/user/login", { username, password });
   if (res.data?.success === false) throw new Error(res.data?.message || "SubRouterAI 登录失败");
   const cookie = buildCookie(res.headers["set-cookie"]);
@@ -133,8 +226,8 @@ async function loginSubrouterAI(baseUrl: string, username: string, password: str
   };
 }
 
-async function loginSub2API(baseUrl: string, email: string, password: string): Promise<LoginResult> {
-  const client = getAxios(baseUrl);
+async function loginSub2API(baseUrl: string, email: string, password: string, timeoutMs?: number): Promise<LoginResult> {
+  const client = getAxios(baseUrl, {}, timeoutMs);
   const res = await client.post("/api/v1/auth/login", { email, password });
   if (res.data?.code && res.data.code !== 0) throw new Error(res.data?.message || "Sub2API 登录失败");
   const data = res.data?.data || {};
@@ -418,21 +511,17 @@ export async function getStoredSubrouterAccount(userId: number, provider?: Subro
   return row as StoredAccount | undefined;
 }
 
-export async function loginAndPrepareSubrouter(options: SubrouterLoginOptions): Promise<{
-  token: string;
-  toonflowUser: { id: number; name: string };
-  account: StoredAccount;
-  models: NormalizedModel[];
-}> {
-  await ensureSubrouterVendor();
+async function authenticateSubrouter(options: SubrouterLoginOptions): Promise<LoginResult> {
   const baseUrl = normalizeBaseUrl(options.baseUrl);
-  const login =
-    options.provider === "subrouterai"
-      ? await loginSubrouterAI(baseUrl, options.username, options.password)
-      : await loginSub2API(baseUrl, options.username, options.password);
+  return options.provider === "subrouterai"
+    ? await loginSubrouterAI(baseUrl, options.username, options.password, options.timeoutMs)
+    : await loginSub2API(baseUrl, options.username, options.password, options.timeoutMs);
+}
 
-  const userName = `${login.provider}:${login.externalUserId || login.email || login.username || options.username}`;
-  const localUser = await ensureLocalUser(userName, options.password);
+async function prepareSubrouterLogin(login: LoginResult, fallbackUsername: string, fallbackPassword: string): Promise<PreparedSubrouterLogin> {
+  await ensureSubrouterVendor();
+  const userName = `${login.provider}:${login.externalUserId || login.email || login.username || fallbackUsername}`;
+  const localUser = await ensureLocalUser(userName, fallbackPassword);
   const account: StoredAccount = { ...login, userId: localUser.id };
   const key = login.provider === "subrouterai" ? await ensureSubrouterAIKey(account) : await ensureSub2APIKey(account);
   account.apiKey = key.key;
@@ -457,6 +546,25 @@ export async function loginAndPrepareSubrouter(options: SubrouterLoginOptions): 
     account,
     models,
   };
+}
+
+export async function loginAndPrepareSubrouter(options: SubrouterLoginOptions): Promise<PreparedSubrouterLogin> {
+  const login = await authenticateSubrouter(options);
+  return prepareSubrouterLogin(login, options.username, options.password);
+}
+
+export async function loginWithDefaultSubrouterProviders(username: string, password: string): Promise<PreparedSubrouterLogin | undefined> {
+  const providers = await getDefaultSubrouterLoginProviders();
+  for (const provider of providers) {
+    let login: LoginResult;
+    try {
+      login = await authenticateSubrouter({ ...provider, username, password, timeoutMs: 10000 });
+    } catch {
+      continue;
+    }
+    return prepareSubrouterLogin(login, username, password);
+  }
+  return undefined;
 }
 
 async function ensureLocalUser(name: string, fallbackPassword: string): Promise<{ id: number; name: string }> {
