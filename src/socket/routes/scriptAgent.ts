@@ -3,25 +3,27 @@ import u from "@/utils";
 import { Namespace, Socket } from "socket.io";
 import * as agent from "@/agents/scriptAgent/index";
 import ResTool from "@/socket/resTool";
+import { AuthUser, normalizeAuthUser, runWithUser } from "@/utils/requestContext";
 
-async function verifyToken(rawToken: string): Promise<Boolean> {
+async function verifyToken(rawToken: string): Promise<AuthUser | null> {
   const setting = await u.db("o_setting").where("key", "tokenKey").select("value").first();
-  if (!setting) return false;
+  if (!setting) return null;
   const { value: tokenKey } = setting;
-  if (!rawToken) return false;
+  if (!rawToken) return null;
   const token = rawToken.replace("Bearer ", "");
   try {
-    jwt.verify(token, tokenKey as string);
-    return true;
+    const decoded = jwt.verify(token, tokenKey as string);
+    return normalizeAuthUser(decoded) ?? null;
   } catch (err) {
-    return false;
+    return null;
   }
 }
 
 export default (nsp: Namespace) => {
   nsp.on("connection", async (socket: Socket) => {
     const token = socket.handshake.auth.token;
-    if (!token || !(await verifyToken(token))) {
+    const authUser = token ? await verifyToken(token) : null;
+    if (!authUser) {
       console.log("[scriptAgent] 连接失败，token无效");
       socket.disconnect();
       return;
@@ -45,7 +47,7 @@ export default (nsp: Namespace) => {
       thinlLevel: 0,
     };
 
-    socket.on("chat", async (data: { content: string }) => {
+    socket.on("chat", async (data: { content: string }) => runWithUser(authUser, async () => {
       const { content } = data;
       abortController?.abort();
       abortController = new AbortController();
@@ -75,7 +77,7 @@ export default (nsp: Namespace) => {
           abortController = null;
         }
       }
-    });
+    }));
 
     socket.on("updateThinkConfig", (data: { think: boolean; thinlLevel: 0 | 1 | 2 | 3 }) => {
       thinkConfig.think = data.think;

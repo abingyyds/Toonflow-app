@@ -1,4 +1,4 @@
-// @db-hash 46c86c97b2ffc399387f42c5b7c014eb
+// @db-hash 85abab0986221838d3bf538f62025a30
 //该文件由脚本自动生成，请勿手动修改
 
 export interface memories {
@@ -23,7 +23,6 @@ export interface o_agentDeploy {
   'modelName'?: string | null;
   'name'?: string | null;
   'temperature'?: number | null;
-  'topP'?: number | null;
   'type'?: string | null;
   'vendorId'?: string | null;
 }
@@ -98,7 +97,6 @@ export interface o_modelPrompt {
   'id'?: number;
   'model'?: string | null;
   'path'?: string | null;
-  'prompt'?: string | null;
   'vendorId'?: string | null;
 }
 export interface o_novel {
@@ -112,17 +110,6 @@ export interface o_novel {
   'id'?: number;
   'projectId'?: number | null;
   'reel'?: string | null;
-}
-export interface o_outline {
-  'data'?: string | null;
-  'episode'?: number | null;
-  'id'?: number;
-  'projectId'?: number | null;
-}
-export interface o_outlineNovel {
-  'id'?: number;
-  'novelId'?: number | null;
-  'outlineId'?: number | null;
 }
 export interface o_project {
   'artStyle'?: string | null;
@@ -197,6 +184,23 @@ export interface o_storyboard {
   'trackId'?: number | null;
   'videoDesc'?: string | null;
 }
+export interface o_subrouterAccount {
+  'accessToken'?: string | null;
+  'apiKey'?: string | null;
+  'apiKeyId'?: string | null;
+  'baseUrl'?: string;
+  'createdTime'?: number | null;
+  'displayName'?: string | null;
+  'email'?: string | null;
+  'externalUserId'?: string | null;
+  'models'?: string | null;
+  'provider'?: string;
+  'refreshToken'?: string | null;
+  'sessionCookie'?: string | null;
+  'updatedTime'?: number | null;
+  'userId'?: number;
+  'username'?: string | null;
+}
 export interface o_tasks {
   'describe'?: string | null;
   'id'?: number;
@@ -212,6 +216,30 @@ export interface o_user {
   'id'?: number;
   'name'?: string | null;
   'password'?: string | null;
+}
+export interface o_userAgentDeploy {
+  'agentKey'?: string;
+  'desc'?: string | null;
+  'disabled'?: boolean | null;
+  'maxOutputTokens'?: number | null;
+  'model'?: string | null;
+  'modelName'?: string | null;
+  'name'?: string | null;
+  'temperature'?: number | null;
+  'userId'?: number;
+  'vendorId'?: string | null;
+}
+export interface o_userSetting {
+  'key'?: string;
+  'userId'?: number;
+  'value'?: string | null;
+}
+export interface o_userVendorConfig {
+  'enable'?: number | null;
+  'inputValues'?: string | null;
+  'models'?: string | null;
+  'userId'?: number;
+  'vendorId'?: string;
 }
 export interface o_vendorConfig {
   'enable'?: number | null;
@@ -255,8 +283,6 @@ export interface DB {
   "o_imageFlow": o_imageFlow;
   "o_modelPrompt": o_modelPrompt;
   "o_novel": o_novel;
-  "o_outline": o_outline;
-  "o_outlineNovel": o_outlineNovel;
   "o_project": o_project;
   "o_prompt": o_prompt;
   "o_script": o_script;
@@ -265,8 +291,12 @@ export interface DB {
   "o_skillAttribution": o_skillAttribution;
   "o_skillList": o_skillList;
   "o_storyboard": o_storyboard;
+  "o_subrouterAccount": o_subrouterAccount;
   "o_tasks": o_tasks;
   "o_user": o_user;
+  "o_userAgentDeploy": o_userAgentDeploy;
+  "o_userSetting": o_userSetting;
+  "o_userVendorConfig": o_userVendorConfig;
   "o_vendorConfig": o_vendorConfig;
   "o_video": o_video;
   "o_videoTrack": o_videoTrack;

@@ -2,6 +2,7 @@ import { transform } from "sucrase";
 import fs from "fs";
 import path from "path";
 import u from "@/utils";
+import { getEffectiveVendorConfig } from "@/utils/userConfig";
 
 export function writeCode(id: string | number, tsCode: string) {
   const rootDir = u.getPath("vendor")
@@ -20,7 +21,7 @@ export function getCode(id: string): string {
 }
 
 export async function getModelList(id: string): Promise<Array<any>> {
-  const models = await u.db("o_vendorConfig").where("id", id).select("models").first();
+  const models = await getEffectiveVendorConfig(id);
   if (!models || !models.models) return [];
   const code = getCode(id);
   const jsCode = transform(code, { transforms: ["typescript"] }).code;

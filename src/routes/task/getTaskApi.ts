@@ -3,6 +3,7 @@ import u from "@/utils";
 import { success } from "@/lib/responseFormat";
 import { validateFields } from "@/middleware/middleware";
 import { number, z } from "zod";
+import { getCurrentUserId } from "@/utils/requestContext";
 const router = express.Router();
 export default router.post(
   "/",
@@ -15,11 +16,15 @@ export default router.post(
   }),
   async (req, res) => {
     const { taskClass, state, projectId, page = 1, limit = 10 }: any = req.body;
+    const userId = getCurrentUserId();
     const offset = (page - 1) * limit;
     const data = await u
       .db("o_tasks")
       .leftJoin("o_project", "o_project.id", "o_tasks.projectId")
       .andWhere((qb) => {
+        if (userId) {
+          qb.andWhere("o_project.userId", userId);
+        }
         if (taskClass) {
           qb.andWhere("o_tasks.taskClass", taskClass);
         }
@@ -36,7 +41,11 @@ export default router.post(
       .orderBy("o_tasks.id", "desc");
     const totalQuery = (await u
       .db("o_tasks")
+      .leftJoin("o_project", "o_project.id", "o_tasks.projectId")
       .andWhere((qb) => {
+        if (userId) {
+          qb.andWhere("o_project.userId", userId);
+        }
         if (taskClass) {
           qb.andWhere("o_tasks.taskClass", taskClass);
         }

@@ -16,6 +16,7 @@ import u from "@/utils";
 import jwt from "jsonwebtoken";
 import socketInit from "@/socket/index";
 import { isEletron } from "@/utils/getPath";
+import { normalizeAuthUser, runWithUser } from "@/utils/requestContext";
 
 const app = express();
 const server = http.createServer(app);
@@ -122,6 +123,38 @@ function setWebStaticHeaders(res: Response, filePath: string) {
 
 function getStaticContentType(fileName: string) {
   return fileName.endsWith(".css") ? "text/css; charset=utf-8" : "application/javascript; charset=utf-8";
+}
+
+function getProjectIdForAuth(req: Request): number | null {
+  const body = (req.body || {}) as Record<string, unknown>;
+  const projectId = Number(body.projectId);
+  if (Number.isFinite(projectId) && projectId > 0) return projectId;
+
+  const idIsProjectRoutes = new Set([
+    "/api/project/delProject",
+    "/api/project/editProject",
+    "/api/general/getSingleProject",
+    "/api/general/updateProject",
+    "/api/general/generalStatistics",
+  ]);
+  const id = Number(body.id);
+  if (idIsProjectRoutes.has(req.path) && Number.isFinite(id) && id > 0) return id;
+  return null;
+}
+
+async function assertProjectAccess(req: Request, res: Response, userId: number): Promise<boolean> {
+  const projectId = getProjectIdForAuth(req);
+  if (!projectId) return true;
+  const project = await u.db("o_project").where("id", projectId).select("userId").first();
+  if (!project) {
+    res.status(404).send({ message: "项目不存在" });
+    return false;
+  }
+  if (project.userId != null && Number(project.userId) !== userId) {
+    res.status(403).send({ message: "无权访问该项目" });
+    return false;
+  }
+  return true;
 }
 
 function sendPrecompressedStatic(cacheDir: string) {
@@ -243,13 +276,16 @@ export default async function startServe(randomPort: Boolean = false) {
     const rawToken = req.headers.authorization || (req.query.token as string) || "";
     const token = rawToken.replace("Bearer ", "");
     // 白名单路径
-    if (req.path === "/api/login/login") return next();
+    if (req.path === "/api/login/login" || req.path === "/api/subrouter/login") return next();
 
     if (!token) return res.status(401).send({ message: "未提供token" });
     try {
       const decoded = jwt.verify(token, tokenKey as string);
+      const authUser = normalizeAuthUser(decoded);
+      if (!authUser) return res.status(401).send({ message: "无效的token" });
       (req as any).user = decoded;
-      next();
+      if (authUser && !(await assertProjectAccess(req, res, authUser.id))) return;
+      runWithUser(authUser, () => next());
     } catch (err) {
       return res.status(401).send({ message: "无效的token" });
     }

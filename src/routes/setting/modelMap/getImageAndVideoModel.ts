@@ -1,10 +1,11 @@
 import express from "express";
 import u from "@/utils";
 import { success } from "@/lib/responseFormat";
+import { getEffectiveEnabledVendors } from "@/utils/userConfig";
 const router = express.Router();
 
 export default router.post("/", async (req, res) => {
-  const dataList = await u.db("o_vendorConfig").select("id").where("enable", 1);
+  const dataList = await getEffectiveEnabledVendors();
   if (!dataList || dataList.length === 0) {
     return res.status(404).send({ error: "模型未找到" });
   }

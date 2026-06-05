@@ -1,6 +1,7 @@
 import express from "express";
 import { success } from "@/lib/responseFormat";
 import u from "@/utils";
+import { getEffectiveVendorConfig } from "@/utils/userConfig";
 const router = express.Router();
 
 export default router.post("/", async (req, res) => {
@@ -14,9 +15,11 @@ export default router.post("/", async (req, res) => {
           await u.db("o_vendorConfig").where("id", item.id).delete();
           return null
         };
+        const effective = await getEffectiveVendorConfig(item.id!);
         return {
           ...item,
-          inputValues: JSON.parse(item.inputValues ?? "{}"),
+          ...(effective ?? {}),
+          inputValues: JSON.parse(effective?.inputValues ?? "{}"),
           models: await u.vendor.getModelList(item.id!),
           code: u.vendor.getCode(item.id!),
           description: vendor.description ?? "",

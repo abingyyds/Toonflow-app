@@ -65,6 +65,65 @@ export default async (knex: Knex): Promise<void> => {
       });
     }
   };
+
+  const createTable = async (table: string, builder: (t: Knex.CreateTableBuilder) => void) => {
+    if (await knex.schema.hasTable(table)) return;
+    await knex.schema.createTable(table, builder);
+  };
+
+  await createTable("o_userAgentDeploy", (table) => {
+    table.integer("userId").notNullable();
+    table.string("agentKey").notNullable();
+    table.string("model");
+    table.string("modelName");
+    table.text("vendorId");
+    table.string("desc");
+    table.string("name");
+    table.integer("temperature");
+    table.integer("maxOutputTokens");
+    table.boolean("disabled").defaultTo(false);
+    table.primary(["userId", "agentKey"]);
+    table.unique(["userId", "agentKey"]);
+  });
+
+  await createTable("o_userSetting", (table) => {
+    table.integer("userId").notNullable();
+    table.text("key").notNullable();
+    table.text("value");
+    table.primary(["userId", "key"]);
+    table.unique(["userId", "key"]);
+  });
+
+  await createTable("o_userVendorConfig", (table) => {
+    table.integer("userId").notNullable();
+    table.string("vendorId").notNullable();
+    table.text("inputValues");
+    table.text("models");
+    table.integer("enable");
+    table.primary(["userId", "vendorId"]);
+    table.unique(["userId", "vendorId"]);
+  });
+
+  await createTable("o_subrouterAccount", (table) => {
+    table.integer("userId").notNullable();
+    table.string("provider").notNullable();
+    table.text("baseUrl").notNullable();
+    table.text("externalUserId");
+    table.text("username");
+    table.text("email");
+    table.text("displayName");
+    table.text("sessionCookie");
+    table.text("accessToken");
+    table.text("refreshToken");
+    table.text("apiKey");
+    table.text("apiKeyId");
+    table.text("models");
+    table.integer("createdTime");
+    table.integer("updatedTime");
+    table.primary(["userId", "provider", "baseUrl"]);
+    table.unique(["userId", "provider", "baseUrl"]);
+  });
+
   //矫正因软件异常退出导致的状态不一致问题
   await db("o_novel").where("eventState", 0).update({
     eventState: -1,

@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import { success, error } from "@/lib/responseFormat";
 import { validateFields } from "@/middleware/middleware";
 import { z } from "zod";
+import { formatSubrouterError, loginAndPrepareSubrouter } from "@/utils/subrouter";
 const router = express.Router();
 
 export function setToken(payload: string | object, expiresIn: string | number, secret: string): string {
@@ -19,9 +20,38 @@ export default router.post(
   validateFields({
     username: z.string(),
     password: z.string(),
+    provider: z.enum(["subrouterai", "sub2api"]).optional(),
+    baseUrl: z.string().optional(),
   }),
   async (req, res) => {
-    const { username, password } = req.body;
+    const { username, password, provider, baseUrl } = req.body;
+
+    if (provider && baseUrl) {
+      try {
+        const result = await loginAndPrepareSubrouter({ provider, baseUrl, username, password });
+        return res.status(200).send(
+          success(
+            {
+              token: result.token,
+              name: result.toonflowUser.name,
+              id: result.toonflowUser.id,
+              account: {
+                provider: result.account.provider,
+                baseUrl: result.account.baseUrl,
+                username: result.account.username,
+                email: result.account.email,
+                displayName: result.account.displayName,
+                apiKeyReady: Boolean(result.account.apiKey),
+              },
+              models: result.models,
+            },
+            "SubRouter 登录成功",
+          ),
+        );
+      } catch (err) {
+        return res.status(400).send(error(formatSubrouterError(err)));
+      }
+    }
 
     const data = await u.db("o_user").where("name", "=", username).first();
     if (!data) return res.status(400).send(error("登录失败"));

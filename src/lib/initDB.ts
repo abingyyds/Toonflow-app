@@ -261,6 +261,35 @@ export default async (knex: Knex, forceInit: boolean = false): Promise<void> => 
         ]);
       },
     },
+    // 用户级 Agent 配置表
+    {
+      name: "o_userAgentDeploy",
+      builder: (table) => {
+        table.integer("userId").notNullable();
+        table.string("agentKey").notNullable();
+        table.string("model");
+        table.string("modelName");
+        table.text("vendorId");
+        table.string("desc");
+        table.string("name");
+        table.integer("temperature");
+        table.integer("maxOutputTokens");
+        table.boolean("disabled").defaultTo(false);
+        table.primary(["userId", "agentKey"]);
+        table.unique(["userId", "agentKey"]);
+      },
+    },
+    // 用户级设置表
+    {
+      name: "o_userSetting",
+      builder: (table) => {
+        table.integer("userId").notNullable();
+        table.text("key").notNullable();
+        table.text("value");
+        table.primary(["userId", "key"]);
+        table.unique(["userId", "key"]);
+      },
+    },
     //设置表
     {
       name: "o_setting",
@@ -613,6 +642,42 @@ export default async (knex: Knex, forceInit: boolean = false): Promise<void> => 
             enable: 0,
           },
         ]);
+      },
+    },
+    // 用户级供应商配置表
+    {
+      name: "o_userVendorConfig",
+      builder: (table) => {
+        table.integer("userId").notNullable();
+        table.string("vendorId").notNullable();
+        table.text("inputValues");
+        table.text("models");
+        table.integer("enable");
+        table.primary(["userId", "vendorId"]);
+        table.unique(["userId", "vendorId"]);
+      },
+    },
+    // SubRouter 账户绑定表
+    {
+      name: "o_subrouterAccount",
+      builder: (table) => {
+        table.integer("userId").notNullable();
+        table.string("provider").notNullable();
+        table.text("baseUrl").notNullable();
+        table.text("externalUserId");
+        table.text("username");
+        table.text("email");
+        table.text("displayName");
+        table.text("sessionCookie");
+        table.text("accessToken");
+        table.text("refreshToken");
+        table.text("apiKey");
+        table.text("apiKeyId");
+        table.text("models");
+        table.integer("createdTime");
+        table.integer("updatedTime");
+        table.primary(["userId", "provider", "baseUrl"]);
+        table.unique(["userId", "provider", "baseUrl"]);
       },
     },
     //图片工作流表
