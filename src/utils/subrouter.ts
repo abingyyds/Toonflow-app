@@ -29,6 +29,13 @@ export interface NormalizedModel {
   durationResolutionMap?: { duration: number[]; resolution: string[] }[];
 }
 
+type ModelSource = "subscription" | "gateway";
+
+interface ModelFetchResult {
+  models: NormalizedModel[];
+  source: ModelSource;
+}
+
 interface LoginResult {
   provider: SubrouterProvider;
   baseUrl: string;
@@ -53,12 +60,16 @@ interface PreparedSubrouterLogin {
   toonflowUser: { id: number; name: string };
   account: StoredAccount;
   models: NormalizedModel[];
+  modelsSource: ModelSource;
+  defaultTextModel?: NormalizedModel;
+  notice?: string;
 }
 
 const SUBROUTER_VENDOR_ID = "subrouter";
 const AUTO_KEY_PREFIX = "toonflow-auto";
 const INTERNAL_SUBROUTER_BASE_URL = "http://subrouter.railway.internal:8080";
 const SUBROUTER_LOGIN_PROVIDERS_SETTING_KEY = "subrouterLoginProviders";
+const DEFAULT_TEXT_AGENT_TARGETS = ["scriptAgent", "productionAgent", "universalAi"];
 
 function signToken(payload: string | object, expiresIn: string | number, secret: string): string {
   return (jwt.sign as any)(payload, secret, { expiresIn });
@@ -300,7 +311,7 @@ async function ensureSub2APIKey(account: StoredAccount): Promise<{ key: string; 
   return { key: created.key, id: created.id };
 }
 
-async function fetchSubrouterAIModels(account: StoredAccount): Promise<NormalizedModel[]> {
+async function fetchSubrouterAIModels(account: StoredAccount): Promise<ModelFetchResult> {
   const client = getAxios(account.baseUrl, subrouterAIAuthHeaders(account));
   const subscribed = await client.get("/api/user/self/subrouter/models").catch((err: AxiosError) => {
     if (err.response?.status === 404) return { data: { data: [] } };
@@ -308,14 +319,17 @@ async function fetchSubrouterAIModels(account: StoredAccount): Promise<Normalize
   });
   const rows = extractItems(subscribed.data);
   if (rows.length > 0) {
-    return normalizeModels(
-      rows.map((row) => ({
-        id: row.model_name || row.modelName || row.id || row.name,
-        category: row.category,
-      })),
-    );
+    return {
+      models: normalizeModels(
+        rows.map((row) => ({
+          id: row.model_name || row.modelName || row.id || row.name,
+          category: row.category,
+        })),
+      ),
+      source: "subscription",
+    };
   }
-  return fetchGatewayModels(account.baseUrl, account.apiKey || "");
+  return { models: await fetchGatewayModels(account.baseUrl, account.apiKey || ""), source: "gateway" };
 }
 
 async function fetchGatewayModels(baseUrl: string, apiKey: string): Promise<NormalizedModel[]> {
@@ -327,8 +341,8 @@ async function fetchGatewayModels(baseUrl: string, apiKey: string): Promise<Norm
   return normalizeModels(extractItems(res.data).map((item) => ({ id: item.id || item.model || item.name, category: item.category || item.type })));
 }
 
-async function fetchSub2APIModels(account: StoredAccount): Promise<NormalizedModel[]> {
-  return fetchGatewayModels(account.baseUrl, account.apiKey || "");
+async function fetchSub2APIModels(account: StoredAccount): Promise<ModelFetchResult> {
+  return { models: await fetchGatewayModels(account.baseUrl, account.apiKey || ""), source: "gateway" };
 }
 
 function inferType(modelName: string, category?: string): "text" | "image" | "video" {
@@ -360,6 +374,56 @@ function normalizeModels(rows: Array<{ id?: string; category?: string }>): Norma
     }
   }
   return [...map.values()].sort((a, b) => a.modelName.localeCompare(b.modelName));
+}
+
+function scoreTextModel(model: NormalizedModel): number {
+  const text = `${model.name} ${model.modelName}`.toLowerCase();
+  let score = 0;
+  const preferences: Array<[RegExp, number]> = [
+    [/claude.*sonnet|sonnet.*claude|sonnet/, 120],
+    [/gpt-5|gpt-4\.?1|gpt-4o|gpt-4|o3|o4/, 110],
+    [/deepseek.*(v3|chat|pro)|deepseek-ai\/deepseek/, 100],
+    [/qwen.*(max|plus|72b|32b|coder)|qwen3/, 90],
+    [/glm.*(5|4\.5|4-5)|kimi|moonshot/, 80],
+    [/doubao.*(seed|pro|1-6|1\.6)/, 70],
+    [/haiku|flash|lite|mini|small/, -10],
+  ];
+  for (const [pattern, weight] of preferences) {
+    if (pattern.test(text)) score += weight;
+  }
+  if (/embedding|embed|rerank|moderation|whisper|speech|tts|audio/.test(text)) score -= 1000;
+  if (model.think) score += 5;
+  return score;
+}
+
+function pickDefaultTextModel(models: NormalizedModel[]): NormalizedModel | undefined {
+  const textModels = models.filter((model) => model.type === "text");
+  if (textModels.length === 0) return undefined;
+  return [...textModels].sort((a, b) => {
+    const scoreDiff = scoreTextModel(b) - scoreTextModel(a);
+    if (scoreDiff !== 0) return scoreDiff;
+    return a.modelName.localeCompare(b.modelName);
+  })[0];
+}
+
+async function autoSelectDefaultTextAgentModels(userId: number, models: NormalizedModel[]): Promise<NormalizedModel | undefined> {
+  const model = pickDefaultTextModel(models);
+  if (!model) return undefined;
+  await selectSubrouterModel(userId, model.modelName, DEFAULT_TEXT_AGENT_TARGETS);
+  return model;
+}
+
+function buildModelNotice(result: ModelFetchResult, defaultTextModel?: NormalizedModel): string | undefined {
+  if (result.models.length === 0) {
+    return "未检测到可用模型，请在 SubRouter 订阅商家，或确认分站已上架可用模型后刷新模型。";
+  }
+  if (!defaultTextModel) {
+    return "已检测到 SubRouter 可用模型，但没有可用于 ToonFlow Agent 的文本模型；图片/视频模型仍可在项目创建时选择。";
+  }
+  if (result.source === "gateway") {
+    return "未检测到当前用户自己的商家订阅，已自动使用分站 Key 可访问的模型，并设置默认文本模型。";
+  }
+  return undefined;
 }
 
 function subrouterVendorCode(): string {
@@ -533,7 +597,8 @@ async function prepareSubrouterLogin(login: LoginResult, fallbackUsername: strin
   account.apiKey = key.key;
   account.apiKeyId = key.id;
 
-  const models = login.provider === "subrouterai" ? await fetchSubrouterAIModels(account) : await fetchSub2APIModels(account);
+  const modelResult = login.provider === "subrouterai" ? await fetchSubrouterAIModels(account) : await fetchSub2APIModels(account);
+  const models = modelResult.models;
   account.models = JSON.stringify(models);
   await saveAccount(account);
   await upsertUserVendorConfig(localUser.id, SUBROUTER_VENDOR_ID, {
@@ -541,6 +606,7 @@ async function prepareSubrouterLogin(login: LoginResult, fallbackUsername: strin
     models,
     enable: 1,
   });
+  const defaultTextModel = await autoSelectDefaultTextAgentModels(localUser.id, models);
 
   const tokenData = await db("o_setting").where("key", "tokenKey").first();
   if (!tokenData?.value) throw new Error("未找到 ToonFlow tokenKey");
@@ -551,6 +617,9 @@ async function prepareSubrouterLogin(login: LoginResult, fallbackUsername: strin
     toonflowUser: localUser,
     account,
     models,
+    modelsSource: modelResult.source,
+    defaultTextModel,
+    notice: buildModelNotice(modelResult, defaultTextModel),
   };
 }
 
@@ -585,13 +654,15 @@ async function ensureLocalUser(name: string, fallbackPassword: string): Promise<
 export async function refreshStoredModels(userId: number, provider?: SubrouterProvider, baseUrl?: string): Promise<NormalizedModel[]> {
   const account = await getStoredSubrouterAccount(userId, provider, baseUrl);
   if (!account) throw new Error("未绑定 SubRouter 账户");
-  const models = account.provider === "subrouterai" ? await fetchSubrouterAIModels(account) : await fetchSub2APIModels(account);
+  const modelResult = account.provider === "subrouterai" ? await fetchSubrouterAIModels(account) : await fetchSub2APIModels(account);
+  const models = modelResult.models;
   await saveAccount({ ...account, models: JSON.stringify(models) });
   await upsertUserVendorConfig(userId, SUBROUTER_VENDOR_ID, {
     inputValues: { apiKey: account.apiKey, baseUrl: gatewayBase(account.baseUrl) },
     models,
     enable: 1,
   });
+  await autoSelectDefaultTextAgentModels(userId, models);
   return models;
 }
 
