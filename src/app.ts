@@ -11,7 +11,7 @@ import buildRoute from "@/core";
 import path from "path";
 import fs from "fs";
 import zlib from "zlib";
-import os from "os";
+import crypto from "crypto";
 import u from "@/utils";
 import jwt from "jsonwebtoken";
 import socketInit from "@/socket/index";
@@ -19,9 +19,10 @@ import { isEletron } from "@/utils/getPath";
 
 const app = express();
 const server = http.createServer(app);
-const WEB_MAIN_SCRIPT = "toonflow-inline-main.js";
-const WEB_MAIN_SCRIPT_GZIP = `${WEB_MAIN_SCRIPT}.gz`;
-const WEB_MAIN_SCRIPT_BROTLI = `${WEB_MAIN_SCRIPT}.br`;
+const WEB_CACHE_VERSION = "v2";
+const WEB_MAIN_SCRIPT_PREFIX = "toonflow-inline-main";
+const WEB_STYLESHEET_PREFIX = "toonflow-inline-style";
+const LONG_CACHE_SECONDS = 60 * 60 * 24 * 365;
 
 function getWebApiBaseUrlPatch() {
   return `<script>
@@ -46,8 +47,16 @@ function prepareWebAssets(webDir: string) {
   const indexPath = path.join(webDir, "index.html");
   if (!fs.existsSync(indexPath)) return webDir;
 
-  const cacheDir = path.join(os.tmpdir(), "toonflow-web-cache", Buffer.from(webDir).toString("hex").slice(0, 32));
-  fs.rmSync(cacheDir, { recursive: true, force: true });
+  const indexStat = fs.statSync(indexPath);
+  const cacheKey = crypto
+    .createHash("sha256")
+    .update(`${WEB_CACHE_VERSION}:${webDir}:${indexStat.size}:${indexStat.mtimeMs}`)
+    .digest("hex")
+    .slice(0, 16);
+  const cacheDir = u.getPath(["web-cache", cacheKey]);
+  const cachedIndexPath = path.join(cacheDir, "index.html");
+  if (fs.existsSync(cachedIndexPath)) return cacheDir;
+
   fs.mkdirSync(cacheDir, { recursive: true });
 
   let html = fs.readFileSync(indexPath, "utf8");
@@ -63,40 +72,82 @@ function prepareWebAssets(webDir: string) {
   const inlineModuleScript = /<script type="module" crossorigin>([\s\S]*?)<\/script>/;
   const match = html.match(inlineModuleScript);
   if (match && match[1].length > 1024 * 1024) {
-    const scriptPath = path.join(cacheDir, WEB_MAIN_SCRIPT);
-    const gzipPath = path.join(cacheDir, WEB_MAIN_SCRIPT_GZIP);
-    const brotliPath = path.join(cacheDir, WEB_MAIN_SCRIPT_BROTLI);
     const scriptBuffer = Buffer.from(match[1], "utf8");
+    const scriptHash = crypto.createHash("sha256").update(scriptBuffer).digest("hex").slice(0, 12);
+    const scriptFile = `${WEB_MAIN_SCRIPT_PREFIX}-${scriptHash}.js`;
+    const scriptPath = path.join(cacheDir, scriptFile);
     fs.writeFileSync(scriptPath, match[1], "utf8");
-    fs.writeFileSync(gzipPath, zlib.gzipSync(scriptBuffer, { level: 9 }));
-    fs.writeFileSync(brotliPath, zlib.brotliCompressSync(scriptBuffer, { params: { [zlib.constants.BROTLI_PARAM_QUALITY]: 5 } }));
-    html = html.replace(match[0], `<script type="module" crossorigin src="./${WEB_MAIN_SCRIPT}"></script>`);
+    writeCompressedVariants(scriptPath, scriptBuffer);
+    html = html.replace(match[0], `<script type="module" crossorigin src="./${scriptFile}"></script>`);
+  }
+
+  const inlineStyle = /<style[^>]*>([\s\S]*?)<\/style>/;
+  const styleMatch = html.match(inlineStyle);
+  if (styleMatch && styleMatch[1].length > 256 * 1024) {
+    const styleBuffer = Buffer.from(styleMatch[1], "utf8");
+    const styleHash = crypto.createHash("sha256").update(styleBuffer).digest("hex").slice(0, 12);
+    const styleFile = `${WEB_STYLESHEET_PREFIX}-${styleHash}.css`;
+    const stylePath = path.join(cacheDir, styleFile);
+    fs.writeFileSync(stylePath, styleMatch[1], "utf8");
+    writeCompressedVariants(stylePath, styleBuffer);
+    html = html.replace(styleMatch[0], `<link rel="stylesheet" crossorigin href="./${styleFile}" />`);
+  }
+
+  for (const file of fs.readdirSync(webDir)) {
+    if (!file.endsWith(".js")) continue;
+    const filePath = path.join(webDir, file);
+    if (!fs.statSync(filePath).isFile()) continue;
+    writeCompressedVariants(path.join(cacheDir, file), fs.readFileSync(filePath));
   }
 
   fs.writeFileSync(path.join(cacheDir, "index.html"), html, "utf8");
   return cacheDir;
 }
 
-function sendPrecompressedStatic(webDir: string) {
+function writeCompressedVariants(targetPath: string, content: Buffer) {
+  fs.writeFileSync(`${targetPath}.gz`, zlib.gzipSync(content, { level: 9 }));
+  fs.writeFileSync(`${targetPath}.br`, zlib.brotliCompressSync(content, { params: { [zlib.constants.BROTLI_PARAM_QUALITY]: 5 } }));
+}
+
+function setWebStaticHeaders(res: Response, filePath: string) {
+  if (path.basename(filePath) === "index.html") {
+    res.setHeader("Cache-Control", "no-cache");
+    return;
+  }
+
+  if (/\.(?:js|css|ico|png|jpg|jpeg|webp|gif|svg|woff2?)$/i.test(filePath)) {
+    res.setHeader("Cache-Control", `public, max-age=${LONG_CACHE_SECONDS}, immutable`);
+  }
+}
+
+function getStaticContentType(fileName: string) {
+  return fileName.endsWith(".css") ? "text/css; charset=utf-8" : "application/javascript; charset=utf-8";
+}
+
+function sendPrecompressedStatic(cacheDir: string) {
   return (req: Request, res: Response, next: NextFunction) => {
     if (req.method !== "GET" && req.method !== "HEAD") return next();
-    if (req.path !== `/${WEB_MAIN_SCRIPT}`) return next();
+    const requestedFile = path.basename(req.path);
+    if (req.path !== `/${requestedFile}` || !/\.(?:js|css)$/i.test(requestedFile)) return next();
+
     const acceptEncoding = String(req.headers["accept-encoding"] || "");
-    const brotliPath = path.join(webDir, WEB_MAIN_SCRIPT_BROTLI);
-    const gzipPath = path.join(webDir, WEB_MAIN_SCRIPT_GZIP);
+    const brotliPath = path.join(cacheDir, `${requestedFile}.br`);
+    const gzipPath = path.join(cacheDir, `${requestedFile}.gz`);
 
     if (/\bbr\b/.test(acceptEncoding) && fs.existsSync(brotliPath)) {
       res.setHeader("Content-Encoding", "br");
-      res.setHeader("Content-Type", "application/javascript; charset=utf-8");
+      res.setHeader("Content-Type", getStaticContentType(requestedFile));
       res.setHeader("Vary", "Accept-Encoding");
+      setWebStaticHeaders(res, requestedFile);
       res.sendFile(brotliPath);
       return;
     }
 
     if (!/\bgzip\b/.test(acceptEncoding) || !fs.existsSync(gzipPath)) return next();
-    res.setHeader("Content-Type", "application/javascript; charset=utf-8");
+    res.setHeader("Content-Type", getStaticContentType(requestedFile));
     res.setHeader("Content-Encoding", "gzip");
     res.setHeader("Vary", "Accept-Encoding");
+    setWebStaticHeaders(res, requestedFile);
     res.sendFile(gzipPath);
   };
 }
@@ -178,8 +229,8 @@ export default async function startServe(randomPort: Boolean = false) {
     console.log("静态网站目录:", webDir);
     const preparedWebDir = prepareWebAssets(webDir);
     app.use(sendPrecompressedStatic(preparedWebDir));
-    app.use(express.static(preparedWebDir, { acceptRanges: false }));
-    app.use(express.static(webDir, { acceptRanges: false }));
+    app.use(express.static(preparedWebDir, { acceptRanges: false, setHeaders: setWebStaticHeaders }));
+    app.use(express.static(webDir, { acceptRanges: false, setHeaders: setWebStaticHeaders }));
   } else {
     console.warn("静态网站目录不存在:", webDir);
   }
