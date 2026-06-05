@@ -118,6 +118,10 @@ async function getVendorTemplateFn(
 async function getVendorTemplateFn(fnName: Exclude<FnName, "textRequest">, modelName: `${string}:${string}`): Promise<(input: any) => any>;
 async function getVendorTemplateFn(fnName: FnName, modelName: `${string}:${string}`): Promise<any> {
   const [id, name] = modelName.split(/:(.+)/);
+  if (id === "subrouter") {
+    const { ensureSubrouterVendor } = await import("@/utils/subrouter");
+    await ensureSubrouterVendor();
+  }
   const vendorConfigData = await getEffectiveVendorConfig(id);
   if (!vendorConfigData) throw new Error(`未找到供应商配置 id=${id}`);
   const modelList = await u.vendor.getModelList(id);
@@ -175,6 +179,38 @@ async function urlToBase64(url: string, retries = 3, delay = 1000): Promise<stri
   }
   throw new Error("urlToBase64 failed");
 }
+
+function pickMediaResult(value: unknown, seen = new Set<unknown>()): string | undefined {
+  if (typeof value === "string") return value;
+  if (!value || typeof value !== "object" || seen.has(value)) return undefined;
+  seen.add(value);
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const result = pickMediaResult(item, seen);
+      if (result) return result;
+    }
+    return undefined;
+  }
+
+  const data = value as Record<string, unknown>;
+  const keys = ["url", "uri", "download_url", "file_url", "video_url", "image_url", "audio_url", "result_url", "output_url", "b64_json"];
+  for (const key of keys) {
+    const result = pickMediaResult(data[key], seen);
+    if (result) return result;
+  }
+  for (const key of ["data", "content", "output", "result", "results", "file", "files", "asset", "assets", "video", "videos"]) {
+    const result = pickMediaResult(data[key], seen);
+    if (result) return result;
+  }
+  return undefined;
+}
+
+async function normalizeMediaResult(value: unknown, mediaType: string): Promise<string> {
+  const result = pickMediaResult(value);
+  if (!result) throw new Error(`${mediaType}生成失败：未返回有效结果`);
+  return result.startsWith("http") ? await urlToBase64(result) : result;
+}
+
 class AiText {
   private AiType: AiType | `${string}:${string}`;
   private think?: boolean;
@@ -255,8 +291,7 @@ class AiImage {
     const exec = async (mn: `${string}:${string}`) => {
       const fn = await getVendorTemplateFn("imageRequest", mn);
       await referenceList2imageBase642(mn.split(/:(.+)/)[0], input);
-      this.result = await fn(input);
-      if (this.result.startsWith("http")) this.result = await urlToBase64(this.result);
+      this.result = await normalizeMediaResult(await fn(input), "图片");
       return this;
     };
     if (taskRecord) {
@@ -303,9 +338,7 @@ class AiVideo {
         const fn = await getVendorTemplateFn("videoRequest", mn);
         await referenceList2imageBase642(mn.split(/:(.+)/)[0], input);
 
-        this.result = await fn(input);
-
-        if (this.result.startsWith("http")) this.result = await urlToBase64(this.result);
+        this.result = await normalizeMediaResult(await fn(input), "视频");
       };
       if (taskRecord) {
         await withTaskRecord(this.key, taskRecord.taskClass, taskRecord.describe, taskRecord.relatedObjects, taskRecord.projectId, exec);
@@ -334,9 +367,7 @@ class AiAudio {
       try {
         const fn = await getVendorTemplateFn("ttsRequest", mn);
         await referenceList2imageBase642(mn.split(/:(.+)/)[0], input);
-        this.result = await fn(input);
-
-        if (this.result.startsWith("http")) this.result = await urlToBase64(this.result);
+        this.result = await normalizeMediaResult(await fn(input), "音频");
         return this;
       } catch (e) {}
     };

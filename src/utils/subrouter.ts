@@ -66,6 +66,7 @@ interface PreparedSubrouterLogin {
 }
 
 const SUBROUTER_VENDOR_ID = "subrouter";
+const SUBROUTER_VENDOR_VERSION = "1.1";
 const AUTO_KEY_PREFIX = "toonflow-auto";
 const INTERNAL_SUBROUTER_BASE_URL = "http://subrouter.railway.internal:8080";
 const SUBROUTER_LOGIN_PROVIDERS_SETTING_KEY = "subrouterLoginProviders";
@@ -445,7 +446,7 @@ declare const exports: { vendor: VendorConfig; textRequest: (m: TextModel, t: bo
 
 const vendor: VendorConfig = {
   id: "subrouter",
-  version: "1.0",
+  version: "${SUBROUTER_VENDOR_VERSION}",
   author: "ToonFlow",
   name: "SubRouter 智能路由",
   description: "使用 SubRouter 账户自动创建的用户级 Key，支持文本、图片、视频模型。",
@@ -460,8 +461,93 @@ const vendor: VendorConfig = {
 const apiKey = () => vendor.inputValues.apiKey.replace(/^Bearer\\s+/i, "");
 const baseUrl = () => vendor.inputValues.baseUrl.replace(/\\/+$/, "");
 const headers = () => ({ Authorization: "Bearer " + apiKey(), "Content-Type": "application/json" });
-const pickUrl = (data: any): string | undefined =>
-  data?.data?.[0]?.url || data?.data?.[0]?.b64_json || data?.url || data?.video_url || data?.image_url || data?.data?.url || data?.data?.video_url || data?.data?.image_url || data?.data?.result_url || data?.content?.video_url;
+const URL_KEYS = new Set([
+  "url",
+  "uri",
+  "download_url",
+  "file_url",
+  "video_url",
+  "image_url",
+  "audio_url",
+  "result_url",
+  "output_url",
+  "signed_url",
+  "b64_json",
+]);
+const isMediaPayload = (value: string): boolean => {
+  const text = value.trim();
+  return (
+    text.startsWith("http://") ||
+    text.startsWith("https://") ||
+    text.startsWith("data:") ||
+    (text.length > 80 && /^[A-Za-z0-9+/]+={0,2}$/.test(text))
+  );
+};
+const mediaToBase64 = async (value: string): Promise<string> =>
+  value.startsWith("http://") || value.startsWith("https://") ? await urlToBase64(value) : value;
+const fetchJson = async (path: string, options: RequestInit): Promise<any> => {
+  const response = await fetch(baseUrl() + path, options);
+  if (!response.ok) throw new Error(response.status + " " + await response.text());
+  return await response.json();
+};
+const pickUrl = (data: any, seen = new Set<any>()): string | undefined => {
+  if (data == null) return undefined;
+  if (typeof data === "string") return isMediaPayload(data) ? data : undefined;
+  if (typeof data !== "object") return undefined;
+  if (seen.has(data)) return undefined;
+  seen.add(data);
+  if (Array.isArray(data)) {
+    for (const item of data) {
+      const value = pickUrl(item, seen);
+      if (value) return value;
+    }
+    return undefined;
+  }
+  for (const key of URL_KEYS) {
+    const value = data[key];
+    if (typeof value === "string" && isMediaPayload(value)) return value;
+    const nested = pickUrl(value, seen);
+    if (nested) return nested;
+  }
+  for (const key of ["data", "content", "output", "result", "results", "outputs", "file", "files", "asset", "assets", "video", "videos"]) {
+    const value = pickUrl(data[key], seen);
+    if (value) return value;
+  }
+  return undefined;
+};
+const pickTaskId = (data: any): string | undefined => {
+  const direct =
+    data?.request_id ||
+    data?.requestId ||
+    data?.id ||
+    data?.task_id ||
+    data?.taskId ||
+    data?.data?.request_id ||
+    data?.data?.requestId ||
+    data?.data?.id ||
+    data?.data?.task_id ||
+    data?.data?.taskId;
+  if (direct) return String(direct);
+  const created = data?.data?.task || data?.task || data?.result?.task || data?.output?.task;
+  const nested = created?.request_id || created?.requestId || created?.id || created?.task_id || created?.taskId;
+  return nested ? String(nested) : undefined;
+};
+const pickStatus = (data: any): string =>
+  String(data?.status || data?.state || data?.data?.status || data?.data?.state || data?.result?.status || data?.result?.state || data?.output?.status || data?.output?.state || "").toLowerCase();
+const pickError = (data: any): string | undefined =>
+  data?.error?.message ||
+  data?.error ||
+  data?.message ||
+  data?.msg ||
+  data?.data?.error?.message ||
+  data?.data?.error ||
+  data?.data?.message ||
+  data?.data?.fail_reason ||
+  data?.data?.failure_reason ||
+  data?.result?.error?.message ||
+  data?.result?.error ||
+  data?.output?.error?.message ||
+  data?.output?.error;
 
 const textRequest = (model: TextModel, think: boolean, thinkLevel: 0 | 1 | 2 | 3) => {
   if (!vendor.inputValues.apiKey) throw new Error("缺少 SubRouter API Key");
@@ -488,6 +574,7 @@ const imageRequest = async (config: ImageConfig, model: ImageModel): Promise<str
 
 const videoRequest = async (config: VideoConfig, model: VideoModel): Promise<string> => {
   if (!vendor.inputValues.apiKey) throw new Error("缺少 SubRouter API Key");
+  const isGrokImagineVideo = /grok-imagine-video/i.test(model.modelName);
   const imageRefs = (config.referenceList || []).filter((r) => r.type === "image").map((r) => r.base64);
   const videoRefs = (config.referenceList || []).filter((r) => r.type === "video").map((r) => r.base64);
   const audioRefs = (config.referenceList || []).filter((r) => r.type === "audio").map((r) => r.base64);
@@ -504,26 +591,62 @@ const videoRequest = async (config: VideoConfig, model: VideoModel): Promise<str
     },
   };
   if (imageRefs.length > 0) body.images = imageRefs;
-  const response = await fetch(baseUrl() + "/video/generations", { method: "POST", headers: headers(), body: JSON.stringify(body) });
-  if (!response.ok) throw new Error("视频任务创建失败: " + response.status + " " + await response.text());
-  const data = await response.json();
-  const taskId = data?.id || data?.data?.id || data?.task_id || data?.data?.task_id;
+  if (isGrokImagineVideo) {
+    delete body.ratio;
+    delete body.metadata;
+    delete body.images;
+    body.aspect_ratio = config.aspectRatio;
+    if (imageRefs.length === 1) body.image = { url: imageRefs[0] };
+    if (imageRefs.length > 1) body.reference_images = imageRefs.map((url) => ({ url }));
+  }
+  const postOptions = { method: "POST", headers: headers(), body: JSON.stringify(body) };
+  let data: any;
+  try {
+    data = await fetchJson(isGrokImagineVideo ? "/videos/generations" : "/video/generations", postOptions);
+  } catch (err: any) {
+    const message = String(err?.message || err);
+    if (!/^(404|405)\\b/.test(message)) throw new Error("视频任务创建失败: " + message);
+    data = await fetchJson(isGrokImagineVideo ? "/video/generations" : "/videos/generations", postOptions).catch((fallbackErr: any) => {
+      throw new Error("视频任务创建失败: " + String(fallbackErr?.message || fallbackErr));
+    });
+  }
+  const taskId = pickTaskId(data);
   const direct = pickUrl(data);
-  if (!taskId && direct) return direct.startsWith("data:") ? direct : await urlToBase64(direct);
+  console.info("[SubRouter视频] 创建返回", {
+    model: model.modelName,
+    taskId,
+    hasDirectUrl: Boolean(direct),
+    keys: data && typeof data === "object" ? Object.keys(data).slice(0, 20) : typeof data,
+  });
+  if (!taskId && direct) return await mediaToBase64(direct);
   if (!taskId) throw new Error("视频任务创建失败：未返回任务 ID");
   const res = await pollTask(async () => {
-    const query = await fetch(baseUrl() + "/video/generations/" + taskId, { method: "GET", headers: headers() });
-    if (!query.ok) throw new Error("视频任务轮询失败: " + query.status + " " + await query.text());
-    const queryData = await query.json();
-    const status = String(queryData?.status || queryData?.data?.status || queryData?.state || "").toLowerCase();
+    let queryData: any;
+    try {
+      queryData = await fetchJson(isGrokImagineVideo ? "/videos/" + taskId : "/video/generations/" + taskId, { method: "GET", headers: headers() });
+    } catch (err: any) {
+      const message = String(err?.message || err);
+      if (!/^(404|405)\\b/.test(message)) throw new Error("视频任务轮询失败: " + message);
+      queryData = await fetchJson(isGrokImagineVideo ? "/video/generations/" + taskId : "/videos/" + taskId, { method: "GET", headers: headers() }).catch((fallbackErr: any) => {
+        throw new Error("视频任务轮询失败: " + String(fallbackErr?.message || fallbackErr));
+      });
+    }
+    const status = pickStatus(queryData);
     const url = pickUrl(queryData);
-    if (url && /success|succeed|completed|finished|done/.test(status)) return { completed: true, data: url };
-    if (/fail|error|cancel|expired/.test(status)) return { completed: true, error: queryData?.message || queryData?.data?.fail_reason || "视频生成失败" };
+    console.info("[SubRouter视频] 轮询返回", {
+      model: model.modelName,
+      taskId,
+      status,
+      hasUrl: Boolean(url),
+      keys: queryData && typeof queryData === "object" ? Object.keys(queryData).slice(0, 20) : typeof queryData,
+    });
+    if (url && (!status || /success|succeed|completed|finished|done/.test(status))) return { completed: true, data: url };
+    if (/fail|error|cancel|expired/.test(status)) return { completed: true, error: pickError(queryData) || "视频生成失败" };
     return { completed: false };
   }, 10000, 1800000);
   if (res.error) throw new Error(res.error);
   if (!res.data) throw new Error("视频生成失败：未返回视频地址");
-  return res.data.startsWith("data:") ? res.data : await urlToBase64(res.data);
+  return await mediaToBase64(res.data);
 };
 
 const ttsRequest = async (config: TTSConfig, model: TTSModel): Promise<string> => "";
@@ -543,7 +666,10 @@ export async function ensureSubrouterVendor(): Promise<void> {
     await db("o_vendorConfig").insert({ id: SUBROUTER_VENDOR_ID, inputValues: "{}", models: "[]", enable: 0 });
   }
   const code = getCode(SUBROUTER_VENDOR_ID);
-  if (!code || !code.includes("SubRouter 智能路由")) {
+  const isAutoSubrouterVendor = !code || code.includes("SubRouter 智能路由");
+  const versionMatch = code.match(/version:\s*["']([^"']+)["']/);
+  const currentVersion = versionMatch ? Number.parseFloat(versionMatch[1]) : 0;
+  if (isAutoSubrouterVendor && (!code || !Number.isFinite(currentVersion) || currentVersion < Number.parseFloat(SUBROUTER_VENDOR_VERSION))) {
     writeCode(SUBROUTER_VENDOR_ID, subrouterVendorCode());
   }
 }
