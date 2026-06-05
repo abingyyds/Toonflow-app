@@ -246,7 +246,17 @@ export default async function startServe(randomPort: Boolean = false) {
     fs.mkdirSync(ossDir, { recursive: true });
   }
   console.log("文件目录:", ossDir);
-  app.use("/oss", express.static(ossDir, { acceptRanges: false }));
+  app.use(
+    "/oss",
+    (req, _, next) => {
+      if (req.url === "/oss" || req.url.startsWith("/oss/")) {
+        req.url = req.url.slice(4) || "/";
+      }
+      next();
+    },
+    express.static(ossDir, { acceptRanges: false }),
+    (_, res) => res.status(404).end(),
+  );
   // skills 静态资源
   const skillsDir = u.getPath("skills");
   if (!fs.existsSync(skillsDir)) {
