@@ -20,7 +20,7 @@ import { normalizeAuthUser, runWithUser } from "@/utils/requestContext";
 
 const app = express();
 const server = http.createServer(app);
-const WEB_CACHE_VERSION = "v2";
+const WEB_CACHE_VERSION = "v4";
 const WEB_MAIN_SCRIPT_PREFIX = "toonflow-inline-main";
 const WEB_STYLESHEET_PREFIX = "toonflow-inline-style";
 const LONG_CACHE_SECONDS = 60 * 60 * 24 * 365;
@@ -31,17 +31,25 @@ function getWebApiBaseUrlPatch() {
   try {
     if (location.protocol === "file:" || location.protocol === "toonflow:") return;
     var apiBaseUrl = location.origin + "/api";
+    var legacyApiBasePattern = /http:\\/\\/(localhost|127\\.0\\.0\\.1):10588(\\/api)?/g;
     for (var i = 0; i < localStorage.length; i += 1) {
       var key = localStorage.key(i);
       if (!key || key.indexOf("setting") === -1) continue;
       var raw = localStorage.getItem(key);
-      if (!raw || raw.indexOf("localhost:10588") === -1) continue;
-      localStorage.setItem(key, raw.replace(/http:\\/\\/localhost:10588\\/api/g, apiBaseUrl));
+      if (!raw || !legacyApiBasePattern.test(raw)) continue;
+      legacyApiBasePattern.lastIndex = 0;
+      localStorage.setItem(key, raw.replace(legacyApiBasePattern, apiBaseUrl));
     }
     window.__TOONFLOW_API_BASE_URL__ = apiBaseUrl;
   } catch (err) {}
 })();
 </script>`;
+}
+
+function patchLegacyApiBaseUrls(content: string): string {
+  return content
+    .replace(/(["'])http:\/\/(?:localhost|127\.0\.0\.1):10588\/api\1/g, '(location.origin + "/api")')
+    .replace(/(["'])http:\/\/(?:localhost|127\.0\.0\.1):10588\1/g, '(location.origin + "/api")');
 }
 
 function prepareWebAssets(webDir: string) {
@@ -62,7 +70,7 @@ function prepareWebAssets(webDir: string) {
 
   let html = fs.readFileSync(indexPath, "utf8");
   const hasPatchedApiBaseUrl = html.includes("window.__TOONFLOW_API_BASE_URL__");
-  html = html.replace(/"http:\/\/localhost:10588\/api"/g, '(location.origin + "/api")');
+  html = patchLegacyApiBaseUrls(html);
 
   if (!hasPatchedApiBaseUrl && !html.includes("(location.origin + \"/api\")")) {
     html = html.replace("<script type=\"module\"", `${getWebApiBaseUrlPatch()}\n    <script type="module"`);
@@ -130,6 +138,7 @@ function getProjectIdForAuth(req: Request): number | null {
   const projectId = Number(body.projectId);
   if (Number.isFinite(projectId) && projectId > 0) return projectId;
 
+  const apiPath = req.path.startsWith("/api/") ? req.path : `/api${req.path}`;
   const idIsProjectRoutes = new Set([
     "/api/project/delProject",
     "/api/project/editProject",
@@ -138,7 +147,7 @@ function getProjectIdForAuth(req: Request): number | null {
     "/api/general/generalStatistics",
   ]);
   const id = Number(body.id);
-  if (idIsProjectRoutes.has(req.path) && Number.isFinite(id) && id > 0) return id;
+  if (idIsProjectRoutes.has(apiPath) && Number.isFinite(id) && id > 0) return id;
   return null;
 }
 
@@ -276,7 +285,8 @@ export default async function startServe(randomPort: Boolean = false) {
     const rawToken = req.headers.authorization || (req.query.token as string) || "";
     const token = rawToken.replace("Bearer ", "");
     // 白名单路径
-    if (req.path === "/api/login/login" || req.path === "/api/subrouter/login") return next();
+    const apiPath = req.path.startsWith("/api/") ? req.path : `/api${req.path}`;
+    if (apiPath === "/api/login/login" || apiPath === "/api/subrouter/login") return next();
 
     if (!token) return res.status(401).send({ message: "未提供token" });
     try {

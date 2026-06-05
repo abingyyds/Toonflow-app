@@ -34,7 +34,10 @@ export default async function generateRouter(): Promise<void> {
     const routePath = fileNameToRoutePath(routeKey);
     routeModulePairs.push({ routePath, varName, entry });
   });
-  const routerData = JSON.stringify(routeModulePairs.map(({ routePath, varName }) => ({ routePath, varName })));
+  const routerData = JSON.stringify({
+    registrationMode: "api-and-legacy",
+    routes: routeModulePairs.map(({ routePath, varName }) => ({ routePath, varName })),
+  });
   const hash = crypto.createHash("md5").update(routerData).digest("hex");
 
   let content = `// @routes-hash ${hash}\nimport { Express } from "express";\n\n`;
@@ -42,6 +45,7 @@ export default async function generateRouter(): Promise<void> {
   content += `export default async (app: Express) => {\n`;
   for (const { routePath, varName } of routeModulePairs) {
     content += `  app.use("/api${routePath}", ${varName});\n`;
+    content += `  app.use("${routePath}", ${varName});\n`;
   }
   content += `}\n`;
 
