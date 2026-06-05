@@ -6,8 +6,17 @@ import sharp from "sharp";
 
 // 规范化路径：去除前导斜杠，并将路径分隔符统一转换为系统分隔符
 function normalizeUserPath(userPath: string): string {
-  // 去除前导的 / 或 \
-  const trimmedPath = userPath.replace(/^[/\\]+/, "");
+  // 去除 URL 挂载前缀，兼容旧数据里误保存的 oss/... 路径
+  let trimmedPath = userPath.trim();
+  try {
+    trimmedPath = new URL(trimmedPath, "http://toonflow.local").pathname;
+  } catch {
+    trimmedPath = trimmedPath.split(/[?#]/)[0];
+  }
+  trimmedPath = path.posix.normalize(trimmedPath.replace(/\\/g, "/")).replace(/^\/+/, "");
+  while (trimmedPath === "oss" || trimmedPath.startsWith("oss/")) {
+    trimmedPath = trimmedPath.replace(/^oss\/?/, "");
+  }
   // 将所有 / 替换为系统路径分隔符（path.sep）
   // 这样在 Windows 上会转为 \，在 Unix 上保持 /
   return trimmedPath.split("/").join(path.sep);
@@ -181,20 +190,21 @@ class OSS {
    * @returns 缩略图 URL（已存在或生成成功）或原图 URL（生成失败时）
    */
   async getSmallImageUrl(userRelPath: string): Promise<string> {
+    const normalizedRelPath = normalizeUserPath(userRelPath).split(path.sep).join("/");
     // 构造缩略图相对路径：在原路径的目录层级前插入 smallImage 目录
     // 例如：123/abc.jpg => smallImage/123/abc.jpg
-    const smallImageRelPath = `smallImage/${userRelPath.replace(/^[/\\]+/, "")}`;
+    const smallImageRelPath = `smallImage/${normalizedRelPath}`;
 
     if (await this.fileExists(smallImageRelPath)) {
       return this.getFileUrl(smallImageRelPath);
     }
 
     // 缩略图不存在：同步生成，生成失败则返回原图 URL
-    const originalUrl = await this.getFileUrl(userRelPath);
+    const originalUrl = await this.getFileUrl(normalizedRelPath);
 
     try {
       await this.ensureInit();
-      const srcAbsPath = resolveSafeLocalPath(userRelPath, this.rootDir);
+      const srcAbsPath = resolveSafeLocalPath(normalizedRelPath, this.rootDir);
       const dstAbsPath = resolveSafeLocalPath(smallImageRelPath, this.rootDir);
       await fs.mkdir(path.dirname(dstAbsPath), { recursive: true });
       await sharp(srcAbsPath)
