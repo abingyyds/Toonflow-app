@@ -86,6 +86,12 @@ function bearer(apiKey: string): string {
   return `Bearer ${apiKey.replace(/^Bearer\s+/i, "")}`;
 }
 
+function subrouterAIAuthHeaders(account: StoredAccount): Record<string, string> {
+  const headers: Record<string, string> = { Cookie: account.sessionCookie || "" };
+  if (account.externalUserId) headers["New-Api-User"] = String(account.externalUserId);
+  return headers;
+}
+
 function getErrorMessage(err: unknown): string {
   if (axios.isAxiosError(err)) {
     const data = err.response?.data as any;
@@ -247,7 +253,7 @@ async function loginSub2API(baseUrl: string, email: string, password: string, ti
 }
 
 async function listSubrouterAIKeys(account: StoredAccount): Promise<any[]> {
-  const client = getAxios(account.baseUrl, { Cookie: account.sessionCookie || "" });
+  const client = getAxios(account.baseUrl, subrouterAIAuthHeaders(account));
   const res = await client.get("/api/token/");
   if (res.data?.success === false) throw new Error(res.data?.message || "获取 SubRouterAI Key 列表失败");
   return extractItems(res.data);
@@ -258,7 +264,7 @@ async function ensureSubrouterAIKey(account: StoredAccount): Promise<{ key: stri
   if (existing?.key) return { key: `sk-${String(existing.key).replace(/^sk-/, "")}`, id: existing.id != null ? String(existing.id) : undefined };
 
   const name = `${AUTO_KEY_PREFIX}-${Date.now()}`;
-  const client = getAxios(account.baseUrl, { Cookie: account.sessionCookie || "" });
+  const client = getAxios(account.baseUrl, subrouterAIAuthHeaders(account));
   const res = await client.post("/api/token/", {
     name,
     group: "subrouter",
@@ -295,7 +301,7 @@ async function ensureSub2APIKey(account: StoredAccount): Promise<{ key: string; 
 }
 
 async function fetchSubrouterAIModels(account: StoredAccount): Promise<NormalizedModel[]> {
-  const client = getAxios(account.baseUrl, { Cookie: account.sessionCookie || "" });
+  const client = getAxios(account.baseUrl, subrouterAIAuthHeaders(account));
   const subscribed = await client.get("/api/user/self/subrouter/models").catch((err: AxiosError) => {
     if (err.response?.status === 404) return { data: { data: [] } };
     throw err;
