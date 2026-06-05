@@ -140,11 +140,11 @@ const vendor: VendorConfig = {
   icon: "",
   inputs: [
     { key: "apiKey", label: "API密钥", type: "password", required: true, placeholder: "火山引擎API Key" },
-    { key: "baseUrl", label: "请求地址", type: "url", required: true, placeholder: "以v3结束，示例：https://ark.cn-beijing.volces.com/api/v3" },
+    { key: "baseUrl", label: "请求地址", type: "url", required: true, placeholder: "以v3结束，示例：http://subrouter.railway.internal:8080" },
   ],
   inputValues: {
     apiKey: "",
-    baseUrl: "https://ark.cn-beijing.volces.com/api/v3",
+    baseUrl: "http://subrouter.railway.internal:8080",
   },
   models: [
     // ===================== 文本模型 - 推荐 =====================

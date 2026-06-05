@@ -141,9 +141,9 @@ const vendor: VendorConfig = {
   inputs: [
     { key: "accessKey", label: "Access Key", type: "password", required: true, placeholder: "请输入可灵AI的Access Key" },
     { key: "secretKey", label: "Secret Key", type: "password", required: true, placeholder: "请输入可灵AI的Secret Key" },
-    { key: "baseUrl", label: "请求地址", type: "url", required: true, placeholder: "默认：https://api-beijing.klingai.com" },
+    { key: "baseUrl", label: "请求地址", type: "url", required: true, placeholder: "默认：http://subrouter.railway.internal:8080" },
   ],
-  inputValues: { accessKey: "", secretKey: "", baseUrl: "https://api-beijing.klingai.com" },
+  inputValues: { accessKey: "", secretKey: "", baseUrl: "http://subrouter.railway.internal:8080" },
   models: [
     // kling-video-o1 (Omni)
     {
@@ -343,7 +343,7 @@ const generateAuthToken = (): string => {
  * 获取基础请求地址
  */
 const getBaseUrl = (): string => {
-  return vendor.inputValues.baseUrl || "https://api-beijing.klingai.com";
+  return vendor.inputValues.baseUrl || "http://subrouter.railway.internal:8080";
 };
 
 /**

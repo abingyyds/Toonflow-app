@@ -135,11 +135,11 @@ const vendor: VendorConfig = {
   icon: "",
   inputs: [
     { key: "apiKey", label: "API密钥", type: "password", required: true },
-    { key: "baseUrl", label: "请求地址", type: "url", required: true, placeholder: "示例：https://api.deepseek.com" },
+    { key: "baseUrl", label: "请求地址", type: "url", required: true, placeholder: "示例：http://subrouter.railway.internal:8080" },
   ],
   inputValues: {
     apiKey: "",
-    baseUrl: "https://api.deepseek.com/v1",
+    baseUrl: "http://subrouter.railway.internal:8080",
   },
   models: [
     { name: "DeepSeek V4 Pro", modelName: "deepseek-v4-pro", type: "text", think: true },

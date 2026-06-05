@@ -140,9 +140,9 @@ const vendor: VendorConfig = {
   description: "MiniMax官方接口适配，支持M系列推理文本模型、文生图/图生图、视频生成（文生视频、图生视频、首尾帧生成）能力 \n [前往平台](https://minimaxi.com/)",
   inputs: [
     { key: "apiKey", label: "API密钥", type: "password", required: true },
-    { key: "baseUrl", label: "请求地址", type: "url", required: true, placeholder: "示例：https://api.minimaxi.com" },
+    { key: "baseUrl", label: "请求地址", type: "url", required: true, placeholder: "示例：http://subrouter.railway.internal:8080" },
   ],
-  inputValues: { apiKey: "", baseUrl: "https://api.minimaxi.com" },
+  inputValues: { apiKey: "", baseUrl: "http://subrouter.railway.internal:8080" },
   models: [
     // 文本模型
     { name: "MiniMax-M2.7 (推理版)", modelName: "MiniMax-M2.7", type: "text", think: true },

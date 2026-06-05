@@ -7,6 +7,40 @@ import { transform } from "sucrase";
 import rawVendorData from "./vendor.json";
 
 const vendorData = rawVendorData as Record<string, string>;
+const INTERNAL_API_GATEWAY_URL = "http://subrouter.railway.internal:8080";
+const vendorDefaultUrls: Record<string, Record<string, string[]>> = {
+  atlascloud: {
+    chatBaseUrl: ["https://api.atlascloud.ai/v1"],
+    mediaBaseUrl: ["https://api.atlascloud.ai/api/v1"],
+  },
+  deepseek: {
+    baseUrl: ["https://api.deepseek.com", "https://api.deepseek.com/v1"],
+  },
+  grsai: {
+    baseUrl: ["https://grsai.dakka.com.cn"],
+  },
+  klingai: {
+    baseUrl: ["https://api-beijing.klingai.com"],
+  },
+  minimax: {
+    baseUrl: ["https://api.minimaxi.com"],
+  },
+  null: {
+    baseUrl: ["https://api.openai.com/v1"],
+  },
+  openai: {
+    baseUrl: ["https://api.openai.com/v1"],
+  },
+  toonflow: {
+    baseUrl: ["https://api.toonflow.net/v1"],
+  },
+  vidu: {
+    baseUrl: ["https://api.vidu.cn/ent/v2"],
+  },
+  volcengine: {
+    baseUrl: ["https://ark.cn-beijing.volces.com/api/v3"],
+  },
+};
 
 export default async (knex: Knex): Promise<void> => {
   const addColumn = async (table: string, column: string, type: string) => {
@@ -170,6 +204,7 @@ export default async (knex: Knex): Promise<void> => {
       if (tsCode) await tempOnsert(tsCode);
     }
   }
+  await migrateVendorGatewayDefaults();
 
   await dropColumn("o_vendorConfig", "author");
   await dropColumn("o_vendorConfig", "description");
@@ -187,6 +222,60 @@ export default async (knex: Knex): Promise<void> => {
     u.vendor.writeCode("minimax", vendorData["minimax.ts"]);
   }
 };
+
+function parseInputValues(inputValues: unknown): Record<string, string> {
+  if (typeof inputValues !== "string" || !inputValues) return {};
+  try {
+    const parsed = JSON.parse(inputValues);
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) return parsed as Record<string, string>;
+  } catch {}
+  return {};
+}
+
+function shouldUseInternalGateway(value: unknown, officialDefaults: string[]): boolean {
+  return typeof value !== "string" || value === "" || value === INTERNAL_API_GATEWAY_URL || officialDefaults.includes(value);
+}
+
+async function migrateVendorGatewayDefaults() {
+  const rows = (await u.db("o_vendorConfig").select("id", "inputValues")) as Array<{ id?: string; inputValues?: string | null }>;
+
+  for (const row of rows) {
+    if (!row.id) continue;
+    const defaults = vendorDefaultUrls[row.id];
+    if (!defaults) continue;
+
+    const inputValues = parseInputValues(row.inputValues);
+    let changed = false;
+    for (const [key, officialDefaults] of Object.entries(defaults)) {
+      if (!shouldUseInternalGateway(inputValues[key], officialDefaults)) continue;
+      inputValues[key] = INTERNAL_API_GATEWAY_URL;
+      changed = true;
+    }
+
+    if (changed) {
+      await u.db("o_vendorConfig").where("id", row.id).update({ inputValues: JSON.stringify(inputValues) });
+    }
+  }
+
+  const rootDir = u.getPath("vendor");
+  for (const [id, defaults] of Object.entries(vendorDefaultUrls)) {
+    const filename = `${id}.ts`;
+    const filePath = path.join(rootDir, filename);
+    const sourceCode = fs.existsSync(filePath) ? fs.readFileSync(filePath, "utf8") : vendorData[filename];
+    if (!sourceCode) continue;
+
+    let nextCode = sourceCode;
+    for (const urls of Object.values(defaults)) {
+      for (const url of urls) {
+        nextCode = nextCode.split(url).join(INTERNAL_API_GATEWAY_URL);
+      }
+    }
+
+    if (nextCode !== sourceCode) {
+      u.vendor.writeCode(id, nextCode);
+    }
+  }
+}
 
 async function tempOnsert(tsCode: string) {
   const jsCode = transform(tsCode, { transforms: ["typescript"] }).code;

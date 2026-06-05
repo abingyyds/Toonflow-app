@@ -10,6 +10,8 @@ import cors from "cors";
 import buildRoute from "@/core";
 import path from "path";
 import fs from "fs";
+import zlib from "zlib";
+import os from "os";
 import u from "@/utils";
 import jwt from "jsonwebtoken";
 import socketInit from "@/socket/index";
@@ -17,6 +19,87 @@ import { isEletron } from "@/utils/getPath";
 
 const app = express();
 const server = http.createServer(app);
+const WEB_MAIN_SCRIPT = "toonflow-inline-main.js";
+const WEB_MAIN_SCRIPT_GZIP = `${WEB_MAIN_SCRIPT}.gz`;
+const WEB_MAIN_SCRIPT_BROTLI = `${WEB_MAIN_SCRIPT}.br`;
+
+function getWebApiBaseUrlPatch() {
+  return `<script>
+(function () {
+  try {
+    if (location.protocol === "file:" || location.protocol === "toonflow:") return;
+    var apiBaseUrl = location.origin + "/api";
+    for (var i = 0; i < localStorage.length; i += 1) {
+      var key = localStorage.key(i);
+      if (!key || key.indexOf("setting") === -1) continue;
+      var raw = localStorage.getItem(key);
+      if (!raw || raw.indexOf("localhost:10588") === -1) continue;
+      localStorage.setItem(key, raw.replace(/http:\\/\\/localhost:10588\\/api/g, apiBaseUrl));
+    }
+    window.__TOONFLOW_API_BASE_URL__ = apiBaseUrl;
+  } catch (err) {}
+})();
+</script>`;
+}
+
+function prepareWebAssets(webDir: string) {
+  const indexPath = path.join(webDir, "index.html");
+  if (!fs.existsSync(indexPath)) return webDir;
+
+  const cacheDir = path.join(os.tmpdir(), "toonflow-web-cache", Buffer.from(webDir).toString("hex").slice(0, 32));
+  fs.rmSync(cacheDir, { recursive: true, force: true });
+  fs.mkdirSync(cacheDir, { recursive: true });
+
+  let html = fs.readFileSync(indexPath, "utf8");
+  const hasPatchedApiBaseUrl = html.includes("window.__TOONFLOW_API_BASE_URL__");
+  html = html.replace(/"http:\/\/localhost:10588\/api"/g, '(location.origin + "/api")');
+
+  if (!hasPatchedApiBaseUrl && !html.includes("(location.origin + \"/api\")")) {
+    html = html.replace("<script type=\"module\"", `${getWebApiBaseUrlPatch()}\n    <script type="module"`);
+  } else if (!hasPatchedApiBaseUrl) {
+    html = html.replace("<script type=\"module\"", `${getWebApiBaseUrlPatch()}\n    <script type="module"`);
+  }
+
+  const inlineModuleScript = /<script type="module" crossorigin>([\s\S]*?)<\/script>/;
+  const match = html.match(inlineModuleScript);
+  if (match && match[1].length > 1024 * 1024) {
+    const scriptPath = path.join(cacheDir, WEB_MAIN_SCRIPT);
+    const gzipPath = path.join(cacheDir, WEB_MAIN_SCRIPT_GZIP);
+    const brotliPath = path.join(cacheDir, WEB_MAIN_SCRIPT_BROTLI);
+    const scriptBuffer = Buffer.from(match[1], "utf8");
+    fs.writeFileSync(scriptPath, match[1], "utf8");
+    fs.writeFileSync(gzipPath, zlib.gzipSync(scriptBuffer, { level: 9 }));
+    fs.writeFileSync(brotliPath, zlib.brotliCompressSync(scriptBuffer, { params: { [zlib.constants.BROTLI_PARAM_QUALITY]: 5 } }));
+    html = html.replace(match[0], `<script type="module" crossorigin src="./${WEB_MAIN_SCRIPT}"></script>`);
+  }
+
+  fs.writeFileSync(path.join(cacheDir, "index.html"), html, "utf8");
+  return cacheDir;
+}
+
+function sendPrecompressedStatic(webDir: string) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    if (req.method !== "GET" && req.method !== "HEAD") return next();
+    if (req.path !== `/${WEB_MAIN_SCRIPT}`) return next();
+    const acceptEncoding = String(req.headers["accept-encoding"] || "");
+    const brotliPath = path.join(webDir, WEB_MAIN_SCRIPT_BROTLI);
+    const gzipPath = path.join(webDir, WEB_MAIN_SCRIPT_GZIP);
+
+    if (/\bbr\b/.test(acceptEncoding) && fs.existsSync(brotliPath)) {
+      res.setHeader("Content-Encoding", "br");
+      res.setHeader("Content-Type", "application/javascript; charset=utf-8");
+      res.setHeader("Vary", "Accept-Encoding");
+      res.sendFile(brotliPath);
+      return;
+    }
+
+    if (!/\bgzip\b/.test(acceptEncoding) || !fs.existsSync(gzipPath)) return next();
+    res.setHeader("Content-Type", "application/javascript; charset=utf-8");
+    res.setHeader("Content-Encoding", "gzip");
+    res.setHeader("Vary", "Accept-Encoding");
+    res.sendFile(gzipPath);
+  };
+}
 
 async function checkPermissions() {
   if (!isEletron()) return true;
@@ -93,30 +176,9 @@ export default async function startServe(randomPort: Boolean = false) {
   const webDir = u.getPath("web");
   if (fs.existsSync(webDir)) {
     console.log("静态网站目录:", webDir);
-    app.get("/", (_, res, next) => {
-      const indexPath = path.join(webDir, "index.html");
-      fs.readFile(indexPath, "utf8", (err, html) => {
-        if (err) return next(err);
-        const patchedHtml = html.replace(/"http:\/\/localhost:10588\/api"/g, '(location.origin + "/api")');
-        const baseUrlPatch = `<script>
-(function () {
-  try {
-    if (location.protocol === "file:" || location.protocol === "toonflow:") return;
-    var apiBaseUrl = location.origin + "/api";
-    for (var i = 0; i < localStorage.length; i += 1) {
-      var key = localStorage.key(i);
-      if (!key || key.indexOf("setting") === -1) continue;
-      var raw = localStorage.getItem(key);
-      if (!raw || raw.indexOf("localhost:10588") === -1) continue;
-      localStorage.setItem(key, raw.replace(/http:\\/\\/localhost:10588\\/api/g, apiBaseUrl));
-    }
-    window.__TOONFLOW_API_BASE_URL__ = apiBaseUrl;
-  } catch (err) {}
-})();
-</script>`;
-        res.type("html").send(patchedHtml.replace("<script type=\"module\"", `${baseUrlPatch}\n    <script type="module"`));
-      });
-    });
+    const preparedWebDir = prepareWebAssets(webDir);
+    app.use(sendPrecompressedStatic(preparedWebDir));
+    app.use(express.static(preparedWebDir, { acceptRanges: false }));
     app.use(express.static(webDir, { acceptRanges: false }));
   } else {
     console.warn("静态网站目录不存在:", webDir);

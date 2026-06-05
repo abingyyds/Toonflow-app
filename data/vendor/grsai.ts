@@ -170,10 +170,10 @@ const vendor: VendorConfig = {
       label: "请求地址",
       type: "url",
       required: true,
-      placeholder: "示例：https://grsai.dakka.com.cn",
+      placeholder: "示例：http://subrouter.railway.internal:8080",
     },
   ],
-  inputValues: { apiKey: "", baseUrl: "https://grsai.dakka.com.cn" },
+  inputValues: { apiKey: "", baseUrl: "http://subrouter.railway.internal:8080" },
   models: [
     {
       name: "GPT Image 2",
