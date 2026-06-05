@@ -20,7 +20,7 @@ import { normalizeAuthUser, runWithUser } from "@/utils/requestContext";
 
 const app = express();
 const server = http.createServer(app);
-const WEB_CACHE_VERSION = "v4";
+const WEB_CACHE_VERSION = "v5";
 const WEB_MAIN_SCRIPT_PREFIX = "toonflow-inline-main";
 const WEB_STYLESHEET_PREFIX = "toonflow-inline-style";
 const LONG_CACHE_SECONDS = 60 * 60 * 24 * 365;
@@ -41,6 +41,7 @@ function getWebApiBaseUrlPatch() {
       localStorage.setItem(key, raw.replace(legacyApiBasePattern, apiBaseUrl));
     }
     window.__TOONFLOW_API_BASE_URL__ = apiBaseUrl;
+    window.__TOONFLOW_BROWSER_API_BASE_URL__ = apiBaseUrl;
   } catch (err) {}
 })();
 </script>`;
@@ -49,7 +50,11 @@ function getWebApiBaseUrlPatch() {
 function patchLegacyApiBaseUrls(content: string): string {
   return content
     .replace(/(["'])http:\/\/(?:localhost|127\.0\.0\.1):10588\/api\1/g, '(location.origin + "/api")')
-    .replace(/(["'])http:\/\/(?:localhost|127\.0\.0\.1):10588\1/g, '(location.origin + "/api")');
+    .replace(/(["'])http:\/\/(?:localhost|127\.0\.0\.1):10588\1/g, '(location.origin + "/api")')
+    .replace(
+      /fetch\("toonflow:\/\/getAppUrl"\)/g,
+      '((location.protocol === "file:" || location.protocol === "toonflow:") ? fetch("toonflow://getAppUrl") : Promise.resolve({ json: function () { return Promise.resolve({}); } }))',
+    );
 }
 
 function prepareWebAssets(webDir: string) {
