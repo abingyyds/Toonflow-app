@@ -57,6 +57,7 @@ export default async function startServe(randomPort: Boolean = false) {
   app.use(cors({ origin: "*" }));
   app.use(express.json({ limit: "100mb" }));
   app.use(express.urlencoded({ extended: true, limit: "100mb" }));
+  app.get("/healthz", (_, res) => res.status(200).send("ok"));
 
   // oss 静态资源
   const ossDir = u.getPath("oss");
@@ -133,14 +134,21 @@ export default async function startServe(randomPort: Boolean = false) {
     res.status(err.status || 500).send(err);
   });
 
-  const port = randomPort ? 0 : 10588;
+  const configuredPort = Number.parseInt(process.env.PORT ?? "10588", 10);
+  const port = randomPort ? 0 : Number.isFinite(configuredPort) ? configuredPort : 10588;
   return await new Promise((resolve) => {
-    server.listen(port, async () => {
+    const onListening = async () => {
       const address = server.address();
       const realPort = typeof address === "string" ? address : address?.port;
       console.log(`[服务启动成功]: http://localhost:${realPort}`);
       resolve(realPort);
-    });
+    };
+
+    if (randomPort) {
+      server.listen(port, onListening);
+    } else {
+      server.listen(port, "0.0.0.0", onListening);
+    }
   });
 }
 
