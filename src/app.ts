@@ -93,6 +93,30 @@ export default async function startServe(randomPort: Boolean = false) {
   const webDir = u.getPath("web");
   if (fs.existsSync(webDir)) {
     console.log("静态网站目录:", webDir);
+    app.get("/", (_, res, next) => {
+      const indexPath = path.join(webDir, "index.html");
+      fs.readFile(indexPath, "utf8", (err, html) => {
+        if (err) return next(err);
+        const patchedHtml = html.replace(/"http:\/\/localhost:10588\/api"/g, '(location.origin + "/api")');
+        const baseUrlPatch = `<script>
+(function () {
+  try {
+    if (location.protocol === "file:" || location.protocol === "toonflow:") return;
+    var apiBaseUrl = location.origin + "/api";
+    for (var i = 0; i < localStorage.length; i += 1) {
+      var key = localStorage.key(i);
+      if (!key || key.indexOf("setting") === -1) continue;
+      var raw = localStorage.getItem(key);
+      if (!raw || raw.indexOf("localhost:10588") === -1) continue;
+      localStorage.setItem(key, raw.replace(/http:\\/\\/localhost:10588\\/api/g, apiBaseUrl));
+    }
+    window.__TOONFLOW_API_BASE_URL__ = apiBaseUrl;
+  } catch (err) {}
+})();
+</script>`;
+        res.type("html").send(patchedHtml.replace("<script type=\"module\"", `${baseUrlPatch}\n    <script type="module"`));
+      });
+    });
     app.use(express.static(webDir, { acceptRanges: false }));
   } else {
     console.warn("静态网站目录不存在:", webDir);
