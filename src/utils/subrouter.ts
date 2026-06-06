@@ -66,7 +66,7 @@ interface PreparedSubrouterLogin {
 }
 
 const SUBROUTER_VENDOR_ID = "subrouter";
-const SUBROUTER_VENDOR_VERSION = "1.1";
+const SUBROUTER_VENDOR_VERSION = "1.2";
 const AUTO_KEY_PREFIX = "toonflow-auto";
 const INTERNAL_SUBROUTER_BASE_URL = "http://subrouter.railway.internal:8080";
 const SUBROUTER_LOGIN_PROVIDERS_SETTING_KEY = "subrouterLoginProviders";
@@ -229,9 +229,9 @@ function extractKey(data: any): { key?: string; id?: string } {
 async function loginSubrouterAI(baseUrl: string, username: string, password: string, timeoutMs?: number): Promise<LoginResult> {
   const client = getAxios(baseUrl, {}, timeoutMs);
   const res = await client.post("/api/user/login", { username, password });
-  if (res.data?.success === false) throw new Error(res.data?.message || "SubRouterAI 登录失败");
+  if (res.data?.success === false) throw new Error(res.data?.message || "内置智能路由登录失败");
   const cookie = buildCookie(res.headers["set-cookie"]);
-  if (!cookie) throw new Error("SubRouterAI 登录成功但未返回 session cookie");
+  if (!cookie) throw new Error("内置智能路由登录成功但未返回会话信息");
   const user = extractUser(res.data);
   return {
     provider: "subrouterai",
@@ -247,11 +247,11 @@ async function loginSubrouterAI(baseUrl: string, username: string, password: str
 async function loginSub2API(baseUrl: string, email: string, password: string, timeoutMs?: number): Promise<LoginResult> {
   const client = getAxios(baseUrl, {}, timeoutMs);
   const res = await client.post("/api/v1/auth/login", { email, password });
-  if (res.data?.code && res.data.code !== 0) throw new Error(res.data?.message || "Sub2API 登录失败");
+  if (res.data?.code && res.data.code !== 0) throw new Error(res.data?.message || "内置智能路由登录失败");
   const data = res.data?.data || {};
   const user = data.user || {};
   const accessToken = data.access_token || data.accessToken;
-  if (!accessToken) throw new Error("Sub2API 登录成功但未返回 access_token");
+  if (!accessToken) throw new Error("内置智能路由登录成功但未返回访问令牌");
   return {
     provider: "sub2api",
     baseUrl: normalizeBaseUrl(baseUrl),
@@ -267,7 +267,7 @@ async function loginSub2API(baseUrl: string, email: string, password: string, ti
 async function listSubrouterAIKeys(account: StoredAccount): Promise<any[]> {
   const client = getAxios(account.baseUrl, subrouterAIAuthHeaders(account));
   const res = await client.get("/api/token/");
-  if (res.data?.success === false) throw new Error(res.data?.message || "获取 SubRouterAI Key 列表失败");
+  if (res.data?.success === false) throw new Error(res.data?.message || "获取内置智能路由访问密钥列表失败");
   return extractItems(res.data);
 }
 
@@ -285,10 +285,10 @@ async function ensureSubrouterAIKey(account: StoredAccount): Promise<{ key: stri
     unlimited_quota: true,
     model_limits_enabled: false,
   });
-  if (res.data?.success === false) throw new Error(res.data?.message || "创建 SubRouterAI Key 失败");
+  if (res.data?.success === false) throw new Error(res.data?.message || "创建内置智能路由访问密钥失败");
 
   const created = (await listSubrouterAIKeys(account)).find((item) => item.name === name && item.key);
-  if (!created?.key) throw new Error("SubRouterAI Key 已创建但未能从列表中读取 key");
+  if (!created?.key) throw new Error("内置智能路由访问密钥已创建但未能从列表中读取");
   return { key: `sk-${String(created.key).replace(/^sk-/, "")}`, id: created.id != null ? String(created.id) : undefined };
 }
 
@@ -308,7 +308,7 @@ async function ensureSub2APIKey(account: StoredAccount): Promise<{ key: string; 
 
   const createRes = await client.post("/api/v1/keys", body);
   const created = extractKey(createRes.data);
-  if (!created.key) throw new Error("Sub2API Key 已创建但响应中没有 key");
+  if (!created.key) throw new Error("内置智能路由访问密钥已创建但响应中没有返回密钥");
   return { key: created.key, id: created.id };
 }
 
@@ -416,13 +416,13 @@ async function autoSelectDefaultTextAgentModels(userId: number, models: Normaliz
 
 function buildModelNotice(result: ModelFetchResult, defaultTextModel?: NormalizedModel): string | undefined {
   if (result.models.length === 0) {
-    return "未检测到可用模型，请在 SubRouter 订阅商家，或确认分站已上架可用模型后刷新模型。";
+    return "未检测到可用模型，请在内置智能路由订阅商家，或确认分站已上架可用模型后刷新模型。";
   }
   if (!defaultTextModel) {
-    return "已检测到 SubRouter 可用模型，但没有可用于 ToonFlow Agent 的文本模型；图片/视频模型仍可在项目创建时选择。";
+    return "已检测到内置智能路由可用模型，但没有可用于 ToonFlow Agent 的文本模型；图片/视频模型仍可在项目创建时选择。";
   }
   if (result.source === "gateway") {
-    return "未检测到当前用户自己的商家订阅，已自动使用分站 Key 可访问的模型，并设置默认文本模型。";
+    return "未检测到当前用户自己的商家订阅，已自动使用分站可访问的模型，并设置默认文本模型。";
   }
   return undefined;
 }
@@ -448,8 +448,8 @@ const vendor: VendorConfig = {
   id: "subrouter",
   version: "${SUBROUTER_VENDOR_VERSION}",
   author: "ToonFlow",
-  name: "SubRouter 智能路由",
-  description: "使用 SubRouter 账户自动创建的用户级 Key，支持文本、图片、视频模型。",
+  name: "内置智能路由",
+  description: "使用内置智能路由自动创建的用户级访问密钥，支持文本、图片、视频模型。",
   inputs: [
     { key: "apiKey", label: "API密钥", type: "password", required: true },
     { key: "baseUrl", label: "API基地址", type: "url", required: true },
@@ -550,12 +550,12 @@ const pickError = (data: any): string | undefined =>
   data?.output?.error;
 
 const textRequest = (model: TextModel, think: boolean, thinkLevel: 0 | 1 | 2 | 3) => {
-  if (!vendor.inputValues.apiKey) throw new Error("缺少 SubRouter API Key");
+  if (!vendor.inputValues.apiKey) throw new Error("缺少内置智能路由 API Key");
   return createOpenAICompatible({ name: "subrouter", baseURL: baseUrl(), apiKey: apiKey() }).chatModel(model.modelName);
 };
 
 const imageRequest = async (config: ImageConfig, model: ImageModel): Promise<string> => {
-  if (!vendor.inputValues.apiKey) throw new Error("缺少 SubRouter API Key");
+  if (!vendor.inputValues.apiKey) throw new Error("缺少内置智能路由 API Key");
   const body: any = {
     model: model.modelName,
     prompt: config.prompt,
@@ -573,7 +573,7 @@ const imageRequest = async (config: ImageConfig, model: ImageModel): Promise<str
 };
 
 const videoRequest = async (config: VideoConfig, model: VideoModel): Promise<string> => {
-  if (!vendor.inputValues.apiKey) throw new Error("缺少 SubRouter API Key");
+  if (!vendor.inputValues.apiKey) throw new Error("缺少内置智能路由 API Key");
   const isGrokImagineVideo = /grok-imagine-video/i.test(model.modelName);
   const imageRefs = (config.referenceList || []).filter((r) => r.type === "image").map((r) => r.base64);
   const videoRefs = (config.referenceList || []).filter((r) => r.type === "video").map((r) => r.base64);
@@ -612,7 +612,7 @@ const videoRequest = async (config: VideoConfig, model: VideoModel): Promise<str
   }
   const taskId = pickTaskId(data);
   const direct = pickUrl(data);
-  console.info("[SubRouter视频] 创建返回", {
+  console.info("[内置智能路由视频] 创建返回", {
     model: model.modelName,
     taskId,
     hasDirectUrl: Boolean(direct),
@@ -633,7 +633,7 @@ const videoRequest = async (config: VideoConfig, model: VideoModel): Promise<str
     }
     const status = pickStatus(queryData);
     const url = pickUrl(queryData);
-    console.info("[SubRouter视频] 轮询返回", {
+    console.info("[内置智能路由视频] 轮询返回", {
       model: model.modelName,
       taskId,
       status,
@@ -666,7 +666,7 @@ export async function ensureSubrouterVendor(): Promise<void> {
     await db("o_vendorConfig").insert({ id: SUBROUTER_VENDOR_ID, inputValues: "{}", models: "[]", enable: 0 });
   }
   const code = getCode(SUBROUTER_VENDOR_ID);
-  const isAutoSubrouterVendor = !code || code.includes("SubRouter 智能路由");
+  const isAutoSubrouterVendor = !code || code.includes("SubRouter 智能路由") || code.includes("内置智能路由");
   const versionMatch = code.match(/version:\s*["']([^"']+)["']/);
   const currentVersion = versionMatch ? Number.parseFloat(versionMatch[1]) : 0;
   if (isAutoSubrouterVendor && (!code || !Number.isFinite(currentVersion) || currentVersion < Number.parseFloat(SUBROUTER_VENDOR_VERSION))) {
@@ -779,7 +779,7 @@ async function ensureLocalUser(name: string, fallbackPassword: string): Promise<
 
 export async function refreshStoredModels(userId: number, provider?: SubrouterProvider, baseUrl?: string): Promise<NormalizedModel[]> {
   const account = await getStoredSubrouterAccount(userId, provider, baseUrl);
-  if (!account) throw new Error("未绑定 SubRouter 账户");
+  if (!account) throw new Error("未绑定内置智能路由账户");
   const modelResult = account.provider === "subrouterai" ? await fetchSubrouterAIModels(account) : await fetchSub2APIModels(account);
   const models = modelResult.models;
   await saveAccount({ ...account, models: JSON.stringify(models) });

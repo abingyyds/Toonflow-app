@@ -48,7 +48,7 @@ export default router.post(
               defaultTextModel: result.defaultTextModel,
               notice: result.notice,
             },
-            "SubRouter 登录成功",
+            "内置智能路由登录成功",
           ),
         );
       } catch (err) {
@@ -95,7 +95,7 @@ export default router.post(
               defaultTextModel: result.defaultTextModel,
               notice: result.notice,
             },
-            "SubRouter 登录成功",
+            "内置智能路由登录成功",
           ),
         );
       }
