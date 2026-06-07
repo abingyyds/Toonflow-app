@@ -66,7 +66,7 @@ interface PreparedSubrouterLogin {
 }
 
 const SUBROUTER_VENDOR_ID = "subrouter";
-const SUBROUTER_VENDOR_VERSION = "1.3";
+const SUBROUTER_VENDOR_VERSION = "1.4";
 const AUTO_KEY_PREFIX = "toonflow-auto";
 const INTERNAL_SUBROUTER_BASE_URL = "http://subrouter.railway.internal:8080";
 const SUBROUTER_LOGIN_PROVIDERS_SETTING_KEY = "subrouterLoginProviders";
@@ -87,6 +87,43 @@ function apiBase(baseUrl: string): string {
 function gatewayBase(baseUrl: string): string {
   const normalized = normalizeBaseUrl(baseUrl);
   return normalized.endsWith("/v1") ? normalized : `${normalized}/v1`;
+}
+
+function parseBaseUrlCandidates(value: unknown): string[] {
+  if (typeof value !== "string" || !value.trim()) return [];
+  return value
+    .split(/[,\n;]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function uniqueValues(values: string[]): string[] {
+  return [...new Set(values.filter(Boolean))];
+}
+
+function getRuntimeSubrouterBaseUrlCandidates(accountBaseUrl?: string): string[] {
+  return uniqueValues(
+    [
+      accountBaseUrl,
+      process.env.TOONFLOW_SUBROUTER_PUBLIC_BASE_URL,
+      process.env.SUBROUTER_PUBLIC_BASE_URL,
+      process.env.TOONFLOW_SUBROUTER_FALLBACK_BASE_URL,
+      process.env.SUBROUTER_FALLBACK_BASE_URL,
+      ...parseBaseUrlCandidates(process.env.TOONFLOW_SUBROUTER_BASE_URL_CANDIDATES || process.env.SUBROUTER_BASE_URL_CANDIDATES),
+    ]
+      .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+      .map(gatewayBase),
+  );
+}
+
+function buildSubrouterInputValues(account: Pick<StoredAccount, "apiKey" | "baseUrl">): Record<string, string> {
+  const candidates = getRuntimeSubrouterBaseUrlCandidates(account.baseUrl);
+  return {
+    apiKey: account.apiKey || "",
+    baseUrl: candidates[0] || gatewayBase(account.baseUrl),
+    fallbackBaseUrl: candidates[1] || "",
+    baseUrlCandidates: candidates.join("\n"),
+  };
 }
 
 function buildCookie(headers: unknown): string {
@@ -454,13 +491,26 @@ const vendor: VendorConfig = {
   inputs: [
     { key: "apiKey", label: "API密钥", type: "password", required: true },
     { key: "baseUrl", label: "API基地址", type: "url", required: true },
+    { key: "fallbackBaseUrl", label: "备用API基地址", type: "url", required: false },
+    { key: "baseUrlCandidates", label: "API候选地址", type: "text", required: false },
   ],
-  inputValues: { apiKey: "", baseUrl: "" },
+  inputValues: { apiKey: "", baseUrl: "", fallbackBaseUrl: "", baseUrlCandidates: "" },
   models: [],
 };
 
 const apiKey = () => vendor.inputValues.apiKey.replace(/^Bearer\\s+/i, "");
-const baseUrl = () => vendor.inputValues.baseUrl.replace(/\\/+$/, "");
+const normalizeUrl = (url: string): string => url.trim().replace(/\\/+$/, "");
+const baseUrls = (): string[] => {
+  const raw = [
+    vendor.inputValues.baseUrl,
+    vendor.inputValues.fallbackBaseUrl,
+    ...(vendor.inputValues.baseUrlCandidates || "").split(/[,\\n;]/),
+  ];
+  const urls = raw.map((url) => normalizeUrl(String(url || ""))).filter(Boolean);
+  return [...new Set(urls)];
+};
+let activeBaseUrl = "";
+const baseUrl = () => activeBaseUrl || baseUrls()[0] || "";
 const headers = () => ({ Authorization: "Bearer " + apiKey(), "Content-Type": "application/json" });
 const URL_KEYS = new Set([
   "url",
@@ -489,29 +539,47 @@ const mediaToBase64 = async (value: string): Promise<string> =>
 const describeRequestError = (err: any): string => {
   const status = err?.response?.status;
   const code = err?.code || err?.cause?.code;
+  const attemptedBaseUrl = err?.__baseUrl;
   const responseData = err?.response?.data;
   const responseText = responseData ? (typeof responseData === "string" ? responseData : JSON.stringify(responseData)) : "";
   return [
+    attemptedBaseUrl ? "baseUrl=" + attemptedBaseUrl : "",
     status ? "status=" + status : "",
     code ? "code=" + code : "",
     err?.message || String(err),
     responseText ? "body=" + responseText.slice(0, 1000) : "",
   ].filter(Boolean).join(" ");
 };
+const shouldTryNextBaseUrl = (err: any): boolean => {
+  const status = err?.response?.status;
+  if (!status) return true;
+  return [404, 405, 502, 503, 504].includes(Number(status));
+};
+const isEndpointFallbackError = (message: string): boolean => /(^|\\s)(status=)?(404|405)\\b/.test(message);
 const requestJson = async (path: string, method: "GET" | "POST", body?: any): Promise<any> => {
-  try {
-    const response = await axios({
-      url: baseUrl() + path,
-      method,
-      headers: headers(),
-      data: body,
-      timeout: 120000,
-      validateStatus: (status: number) => status >= 200 && status < 300,
-    });
-    return response.data;
-  } catch (err: any) {
-    throw new Error(method + " " + path + " " + describeRequestError(err));
+  const candidates = baseUrls();
+  if (candidates.length === 0) throw new Error(method + " " + path + " 未配置 API 基地址");
+  const ordered = activeBaseUrl ? [activeBaseUrl, ...candidates.filter((url) => url !== activeBaseUrl)] : candidates;
+  let lastErr: any;
+  for (const candidate of ordered) {
+    try {
+      const response = await axios({
+        url: candidate + path,
+        method,
+        headers: headers(),
+        data: body,
+        timeout: 120000,
+        validateStatus: (status: number) => status >= 200 && status < 300,
+      });
+      activeBaseUrl = candidate;
+      return response.data;
+    } catch (err: any) {
+      err.__baseUrl = candidate;
+      lastErr = err;
+      if (!shouldTryNextBaseUrl(err)) break;
+    }
   }
+  throw new Error(method + " " + path + " " + describeRequestError(lastErr));
 };
 const pickUrl = (data: any, seen = new Set<any>()): string | undefined => {
   if (data == null) return undefined;
@@ -627,7 +695,7 @@ const videoRequest = async (config: VideoConfig, model: VideoModel): Promise<str
     data = await requestJson(isGrokImagineVideo ? "/videos/generations" : "/video/generations", "POST", body);
   } catch (err: any) {
     const message = String(err?.message || err);
-    if (!/^(404|405)\\b/.test(message)) throw new Error("视频任务创建失败: " + message);
+    if (!isEndpointFallbackError(message)) throw new Error("视频任务创建失败: " + message);
     data = await requestJson(isGrokImagineVideo ? "/video/generations" : "/videos/generations", "POST", body).catch((fallbackErr: any) => {
       throw new Error("视频任务创建失败: " + String(fallbackErr?.message || fallbackErr));
     });
@@ -648,7 +716,7 @@ const videoRequest = async (config: VideoConfig, model: VideoModel): Promise<str
       queryData = await requestJson(isGrokImagineVideo ? "/videos/" + taskId : "/video/generations/" + taskId, "GET");
     } catch (err: any) {
       const message = String(err?.message || err);
-      if (!/^(404|405)\\b/.test(message)) throw new Error("视频任务轮询失败: " + message);
+      if (!isEndpointFallbackError(message)) throw new Error("视频任务轮询失败: " + message);
       queryData = await requestJson(isGrokImagineVideo ? "/video/generations/" + taskId : "/videos/" + taskId, "GET").catch((fallbackErr: any) => {
         throw new Error("视频任务轮询失败: " + String(fallbackErr?.message || fallbackErr));
       });
@@ -750,7 +818,7 @@ async function prepareSubrouterLogin(login: LoginResult, fallbackUsername: strin
   account.models = JSON.stringify(models);
   await saveAccount(account);
   await upsertUserVendorConfig(localUser.id, SUBROUTER_VENDOR_ID, {
-    inputValues: { apiKey: account.apiKey, baseUrl: gatewayBase(account.baseUrl) },
+    inputValues: buildSubrouterInputValues(account),
     models,
     enable: 1,
   });
@@ -806,7 +874,7 @@ export async function refreshStoredModels(userId: number, provider?: SubrouterPr
   const models = modelResult.models;
   await saveAccount({ ...account, models: JSON.stringify(models) });
   await upsertUserVendorConfig(userId, SUBROUTER_VENDOR_ID, {
-    inputValues: { apiKey: account.apiKey, baseUrl: gatewayBase(account.baseUrl) },
+    inputValues: buildSubrouterInputValues(account),
     models,
     enable: 1,
   });

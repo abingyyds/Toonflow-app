@@ -131,7 +131,7 @@ async function getVendorTemplateFn(fnName: FnName, modelName: `${string}:${strin
   const jsCode = transform(code, { transforms: ["typescript"] }).code;
   const running = u.vm(jsCode);
   if (running.vendor) {
-    Object.assign(running.vendor.inputValues, JSON.parse(vendorConfigData.inputValues ?? "{}"));
+    Object.assign(running.vendor.inputValues, normalizeRuntimeSubrouterInputValues(id, JSON.parse(vendorConfigData.inputValues ?? "{}")));
     running.vendor.models = modelList;
   }
   const fn = running[fnName];
@@ -142,6 +142,42 @@ async function getVendorTemplateFn(fnName: FnName, modelName: `${string}:${strin
       return fn(selectedModel, effectiveThink, thinkLevel);
     };
   else return <T>(input: T) => fn(input, selectedModel);
+}
+
+function normalizeGatewayBaseUrl(value: string): string {
+  const normalized = value.trim().replace(/\/+$/, "");
+  return normalized.endsWith("/v1") ? normalized : `${normalized}/v1`;
+}
+
+function parseBaseUrlCandidates(value: unknown): string[] {
+  if (typeof value !== "string" || !value.trim()) return [];
+  return value
+    .split(/[,\n;]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function normalizeRuntimeSubrouterInputValues(id: string, inputValues: Record<string, any>) {
+  if (id !== "subrouter") return inputValues;
+  const candidates = [
+    inputValues.baseUrl,
+    inputValues.fallbackBaseUrl,
+    ...parseBaseUrlCandidates(inputValues.baseUrlCandidates),
+    process.env.TOONFLOW_SUBROUTER_PUBLIC_BASE_URL,
+    process.env.SUBROUTER_PUBLIC_BASE_URL,
+    process.env.TOONFLOW_SUBROUTER_FALLBACK_BASE_URL,
+    process.env.SUBROUTER_FALLBACK_BASE_URL,
+    ...parseBaseUrlCandidates(process.env.TOONFLOW_SUBROUTER_BASE_URL_CANDIDATES || process.env.SUBROUTER_BASE_URL_CANDIDATES),
+  ]
+    .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+    .map(normalizeGatewayBaseUrl);
+  const uniqueCandidates = [...new Set(candidates)];
+  return {
+    ...inputValues,
+    baseUrl: uniqueCandidates[0] || inputValues.baseUrl,
+    fallbackBaseUrl: inputValues.fallbackBaseUrl || uniqueCandidates[1] || "",
+    baseUrlCandidates: uniqueCandidates.join("\n"),
+  };
 }
 
 async function withTaskRecord<T>(
