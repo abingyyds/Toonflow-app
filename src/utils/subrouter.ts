@@ -66,7 +66,7 @@ interface PreparedSubrouterLogin {
 }
 
 const SUBROUTER_VENDOR_ID = "subrouter";
-const SUBROUTER_VENDOR_VERSION = "1.2";
+const SUBROUTER_VENDOR_VERSION = "1.3";
 const AUTO_KEY_PREFIX = "toonflow-auto";
 const INTERNAL_SUBROUTER_BASE_URL = "http://subrouter.railway.internal:8080";
 const SUBROUTER_LOGIN_PROVIDERS_SETTING_KEY = "subrouterLoginProviders";
@@ -440,6 +440,7 @@ interface ImageConfig { prompt: string; referenceList?: Extract<ReferenceList, {
 interface VideoConfig { duration: number; resolution: string; aspectRatio: "16:9" | "9:16"; prompt: string; referenceList?: ReferenceList[]; audio?: boolean; mode: VideoMode[]; }
 interface TTSConfig { text: string; voice: string; speechRate: number; pitchRate: number; volume: number; referenceList?: Extract<ReferenceList, { type: "audio" }>[]; }
 declare const createOpenAICompatible: any;
+declare const axios: any;
 declare const urlToBase64: (url: string) => Promise<string>;
 declare const pollTask: (fn: () => Promise<{ completed: boolean; data?: string; error?: string }>, interval?: number, timeout?: number) => Promise<{ completed: boolean; data?: string; error?: string }>;
 declare const exports: { vendor: VendorConfig; textRequest: (m: TextModel, t: boolean, tl: 0 | 1 | 2 | 3) => any; imageRequest: (c: ImageConfig, m: ImageModel) => Promise<string>; videoRequest: (c: VideoConfig, m: VideoModel) => Promise<string>; ttsRequest: (c: TTSConfig, m: TTSModel) => Promise<string>; };
@@ -485,10 +486,32 @@ const isMediaPayload = (value: string): boolean => {
 };
 const mediaToBase64 = async (value: string): Promise<string> =>
   value.startsWith("http://") || value.startsWith("https://") ? await urlToBase64(value) : value;
-const fetchJson = async (path: string, options: RequestInit): Promise<any> => {
-  const response = await fetch(baseUrl() + path, options);
-  if (!response.ok) throw new Error(response.status + " " + await response.text());
-  return await response.json();
+const describeRequestError = (err: any): string => {
+  const status = err?.response?.status;
+  const code = err?.code || err?.cause?.code;
+  const responseData = err?.response?.data;
+  const responseText = responseData ? (typeof responseData === "string" ? responseData : JSON.stringify(responseData)) : "";
+  return [
+    status ? "status=" + status : "",
+    code ? "code=" + code : "",
+    err?.message || String(err),
+    responseText ? "body=" + responseText.slice(0, 1000) : "",
+  ].filter(Boolean).join(" ");
+};
+const requestJson = async (path: string, method: "GET" | "POST", body?: any): Promise<any> => {
+  try {
+    const response = await axios({
+      url: baseUrl() + path,
+      method,
+      headers: headers(),
+      data: body,
+      timeout: 120000,
+      validateStatus: (status: number) => status >= 200 && status < 300,
+    });
+    return response.data;
+  } catch (err: any) {
+    throw new Error(method + " " + path + " " + describeRequestError(err));
+  }
 };
 const pickUrl = (data: any, seen = new Set<any>()): string | undefined => {
   if (data == null) return undefined;
@@ -564,9 +587,9 @@ const imageRequest = async (config: ImageConfig, model: ImageModel): Promise<str
   };
   const refs = (config.referenceList || []).map((r) => r.base64).filter(Boolean);
   if (refs.length > 0) body.image = refs.length === 1 ? refs[0] : refs;
-  const response = await fetch(baseUrl() + "/images/generations", { method: "POST", headers: headers(), body: JSON.stringify(body) });
-  if (!response.ok) throw new Error("图片生成失败: " + response.status + " " + await response.text());
-  const data = await response.json();
+  const data = await requestJson("/images/generations", "POST", body).catch((err: any) => {
+    throw new Error("图片生成失败: " + String(err?.message || err));
+  });
   const result = pickUrl(data);
   if (!result) throw new Error("图片生成失败：未返回图片");
   return result.startsWith("data:") || /^[A-Za-z0-9+/=]+$/.test(result) ? result : await urlToBase64(result);
@@ -599,14 +622,13 @@ const videoRequest = async (config: VideoConfig, model: VideoModel): Promise<str
     if (imageRefs.length === 1) body.image = { url: imageRefs[0] };
     if (imageRefs.length > 1) body.reference_images = imageRefs.map((url) => ({ url }));
   }
-  const postOptions = { method: "POST", headers: headers(), body: JSON.stringify(body) };
   let data: any;
   try {
-    data = await fetchJson(isGrokImagineVideo ? "/videos/generations" : "/video/generations", postOptions);
+    data = await requestJson(isGrokImagineVideo ? "/videos/generations" : "/video/generations", "POST", body);
   } catch (err: any) {
     const message = String(err?.message || err);
     if (!/^(404|405)\\b/.test(message)) throw new Error("视频任务创建失败: " + message);
-    data = await fetchJson(isGrokImagineVideo ? "/video/generations" : "/videos/generations", postOptions).catch((fallbackErr: any) => {
+    data = await requestJson(isGrokImagineVideo ? "/video/generations" : "/videos/generations", "POST", body).catch((fallbackErr: any) => {
       throw new Error("视频任务创建失败: " + String(fallbackErr?.message || fallbackErr));
     });
   }
@@ -623,11 +645,11 @@ const videoRequest = async (config: VideoConfig, model: VideoModel): Promise<str
   const res = await pollTask(async () => {
     let queryData: any;
     try {
-      queryData = await fetchJson(isGrokImagineVideo ? "/videos/" + taskId : "/video/generations/" + taskId, { method: "GET", headers: headers() });
+      queryData = await requestJson(isGrokImagineVideo ? "/videos/" + taskId : "/video/generations/" + taskId, "GET");
     } catch (err: any) {
       const message = String(err?.message || err);
       if (!/^(404|405)\\b/.test(message)) throw new Error("视频任务轮询失败: " + message);
-      queryData = await fetchJson(isGrokImagineVideo ? "/video/generations/" + taskId : "/videos/" + taskId, { method: "GET", headers: headers() }).catch((fallbackErr: any) => {
+      queryData = await requestJson(isGrokImagineVideo ? "/video/generations/" + taskId : "/videos/" + taskId, "GET").catch((fallbackErr: any) => {
         throw new Error("视频任务轮询失败: " + String(fallbackErr?.message || fallbackErr));
       });
     }
