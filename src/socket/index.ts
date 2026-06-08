@@ -5,7 +5,7 @@ import scriptAgent from "./routes/scriptAgent";
 export default (io: Server) => {
   const routes: Record<string, (nsp: ReturnType<Server["of"]>) => void> = {
     productionAgent,
-    scriptAgent,
+    // scriptAgent,
   };
 
   for (const [name, handler] of Object.entries(routes)) {

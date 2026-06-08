@@ -2,7 +2,6 @@ import isPathInside from "is-path-inside";
 import getPath, { isEletron } from "@/utils/getPath";
 import fs from "node:fs/promises";
 import path from "node:path";
-import sharp from "sharp";
 
 // 规范化路径：去除前导斜杠，并将路径分隔符统一转换为系统分隔符
 function normalizeUserPath(userPath: string): string {
@@ -64,7 +63,7 @@ class OSS {
     const ossURL = process.env.ossURL || process.env.OSSURL;
     if (ossURL && ossURL !== "") url = `${ossURL.replace(/\/+$/, "")}/${prefix}/`;
     if (process.env.NODE_ENV == "dev") url = `http://localhost:10588/${prefix}/`;
-    if (isEletron()) url = `http://localhost:${process.env.PORT}/${prefix}/`;
+    if (isEletron()) url = `/${prefix}/`;
     return `${url}${safePath.split(path.sep).join("/")}`;
   }
 
@@ -189,34 +188,8 @@ class OSS {
    * @param userRelPath 用户传入的相对文件路径（使用 / 作为分隔符）
    * @returns 缩略图 URL（已存在或生成成功）或原图 URL（生成失败时）
    */
-  async getSmallImageUrl(userRelPath: string): Promise<string> {
-    const normalizedRelPath = normalizeUserPath(userRelPath).split(path.sep).join("/");
-    // 构造缩略图相对路径：在原路径的目录层级前插入 smallImage 目录
-    // 例如：123/abc.jpg => smallImage/123/abc.jpg
-    const smallImageRelPath = `smallImage/${normalizedRelPath}`;
-
-    if (await this.fileExists(smallImageRelPath)) {
-      return this.getFileUrl(smallImageRelPath);
-    }
-
-    // 缩略图不存在：同步生成，生成失败则返回原图 URL
-    const originalUrl = await this.getFileUrl(normalizedRelPath);
-
-    try {
-      await this.ensureInit();
-      const srcAbsPath = resolveSafeLocalPath(normalizedRelPath, this.rootDir);
-      const dstAbsPath = resolveSafeLocalPath(smallImageRelPath, this.rootDir);
-      await fs.mkdir(path.dirname(dstAbsPath), { recursive: true });
-      await sharp(srcAbsPath)
-        .resize(512, 512, { fit: "inside", withoutEnlargement: true })
-        .toFile(dstAbsPath);
-      console.info(`[${dstAbsPath}]小图写入成功`);
-      return this.getFileUrl(smallImageRelPath);
-    } catch (e) {
-      // 生成失败返回原图
-      console.warn("[OSS] 生成缩略图失败:", e);
-      return originalUrl;
-    }
+  async getSmallImageUrl(userRelPath: string, size: string = "20"): Promise<string> {
+    return await this.getFileUrl(userRelPath) + `?size=${size}`;
   }
 }
 

@@ -56,3 +56,4 @@ data/oss/*
 data/web-cache/
 data/test.sqlite
 version.txt
+data/plugin/*

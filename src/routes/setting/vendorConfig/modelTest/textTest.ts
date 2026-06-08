@@ -52,7 +52,7 @@ export default router.post(
         messages,
         tools: { getWeatherTool },
       });
-      console.log("%c Line:46 🍐 data", "background:#6ec1c2", data);
+      console.log("%c Line:46 🍐 data", "background:#6ec1c2", JSON.stringify(data, null, 2));
       if (!data) return res.status(500).send(error("模型未返回结果"));
       res.status(200).send(success({ thinking: data.reasoningText, content: data.text }));
     } catch (err) {

@@ -124,10 +124,14 @@ async function getVendorTemplateFn(fnName: FnName, modelName: `${string}:${strin
   }
   const vendorConfigData = await getEffectiveVendorConfig(id);
   if (!vendorConfigData) throw new Error(`未找到供应商配置 id=${id}`);
+
   const modelList = await u.vendor.getModelList(id);
+
   const selectedModel = modelList.find((i: any) => i.modelName == name);
+
   if (!selectedModel) throw new Error(`未找到模型 ${name} id=${id}`);
   const code = u.vendor.getCode(id);
+
   const jsCode = transform(code, { transforms: ["typescript"] }).code;
   const running = u.vm(jsCode);
   if (running.vendor) {
@@ -190,6 +194,7 @@ async function withTaskRecord<T>(
 ): Promise<T> {
   const modelName = await resolveModelName(modelKey);
   const [_, model] = modelName.split(/:(.+)/);
+
   const taskRecord = await u.task(projectId, taskClass, model, { describe: describe, content: relatedObjects });
   try {
     const result = await fn(modelName, false, 0);
@@ -207,8 +212,12 @@ async function urlToBase64(url: string, retries = 3, delay = 1000): Promise<stri
     try {
       const res = await axios.get(url, { responseType: "arraybuffer" });
       const base64 = Buffer.from(res.data).toString("base64");
+
+      console.log("%c Line:177 🌭", "background:#3f7cff");
       return `${base64}`;
     } catch (e) {
+      console.log("%c Line:178 🥕 e", "background:#e41a6a", e);
+
       if (attempt === retries) throw e;
       await new Promise((resolve) => setTimeout(resolve, delay * attempt));
     }
@@ -387,7 +396,9 @@ class AiVideo {
     }
   }
   async save(path: string) {
+    console.log("%c Line:327 🍰", "background:#42b983");
     await u.oss.writeFile(path, this.result);
+    console.log("%c Line:328 🍇", "background:#7f2b82");
     return this;
   }
 }
@@ -419,7 +430,7 @@ class AiAudio {
 }
 
 export default {
-  Text: (AiType: AiType | `${string}:${string}`, think?: boolean, thinkLevel?: 0 | 1 | 2 | 3) => new AiText(AiType, think, thinkLevel),
+  Text: (AiType: AiType | `${string}:${string}`, thinkLevel?: 0 | 1 | 2 | 3) => new AiText(AiType, false, thinkLevel),
   Image: (key: `${string}:${string}`) => new AiImage(key),
   Video: (key: `${string}:${string}`) => new AiVideo(key),
   Audio: (key: `${string}:${string}`) => new AiAudio(key),

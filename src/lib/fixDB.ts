@@ -153,14 +153,14 @@ export default async (knex: Knex): Promise<void> => {
   // 添加新字段
   await addColumn("o_prompt", "useData", "text");
   // 添加新字段
-  await addColumn("o_agentDeploy", "type", "string");
+  await addColumn("o_agentDeploy", "type", "text");
   // 添加新字段
   await addColumn("o_agentDeploy", "temperature", "integer");
   // 添加新字段
   await addColumn("o_agentDeploy", "maxOutputTokens", "integer");
   await addColumn("o_assets", "audioBindState", "integer");
-  await addColumn("o_modelPrompt", "fileName", "string");
-  await addColumn("o_modelPrompt", "path", "string");
+  await addColumn("o_modelPrompt", "fileName", "text");
+  await addColumn("o_modelPrompt", "path", "text");
   const vendorDataSelect = await u.db("o_vendorConfig").whereIn("id", ["deepseek", "atlascloud"]).select("*");
   if (!vendorDataSelect.find((i) => i.id == "deepseek")) {
     await u.db("o_vendorConfig").insert({
@@ -271,6 +271,19 @@ export default async (knex: Knex): Promise<void> => {
   await dropColumn("o_vendorConfig", "icon");
   await dropColumn("o_vendorConfig", "inputs");
   await dropColumn("o_vendorConfig", "createTime");
+
+  //清除 Agent 配置 中的生产agent
+  const deleteAgentDeployKey = [
+    "productionAgent:decisionAgent",
+    "productionAgent:supervisionAgent",
+    "productionAgent:deriveAssetsAgent",
+    "productionAgent:generateAssetsAgent",
+    "productionAgent:directorPlanAgent",
+    "productionAgent:storyboardGenAgent",
+    "productionAgent:storyboardPanelAgent",
+    "productionAgent:storyboardTableAgent",
+  ];
+  await u.db("o_agentDeploy").whereIn("key", deleteAgentDeployKey).delete();
 
   const volcengineVer = await u.vendor.getVendor("volcengine").version;
   if (Number(volcengineVer) < 2.3) {

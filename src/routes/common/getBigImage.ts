@@ -17,6 +17,6 @@ export default router.post(
       url = u.replaceUrl(url).replace("/smallImage", "");
     }
     const bigImageUrl = await u.oss.getFileUrl(u.replaceUrl(url));
-    res.status(200).send(success(bigImageUrl));
+    res.status(200).send(success(bigImageUrl.replaceAll("/oss/oss/", "/oss/"), "获取大图成功"));
   },
 );
