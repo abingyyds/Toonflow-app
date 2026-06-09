@@ -644,7 +644,7 @@ const shouldTryNextBaseUrl = (err: any): boolean => {
   return [404, 405, 502, 503, 504].includes(Number(status));
 };
 const isEndpointFallbackError = (message: string): boolean => /(^|\\s)(status=)?(404|405)\\b/.test(message);
-const requestJson = async (path: string, method: "GET" | "POST", body?: any): Promise<any> => {
+const requestJson = async (path: string, method: "GET" | "POST", body?: any, timeout = 120000): Promise<any> => {
   const candidates = baseUrls();
   if (candidates.length === 0) throw new Error(method + " " + path + " 未配置 API 基地址");
   const ordered = activeBaseUrl ? [activeBaseUrl, ...candidates.filter((url) => url !== activeBaseUrl)] : candidates;
@@ -656,7 +656,7 @@ const requestJson = async (path: string, method: "GET" | "POST", body?: any): Pr
         method,
         headers: headers(),
         data: body,
-        timeout: 120000,
+        timeout,
         validateStatus: (status: number) => status >= 200 && status < 300,
       });
       activeBaseUrl = candidate;
@@ -775,16 +775,16 @@ const videoRequest = async (config: VideoConfig, model: VideoModel): Promise<str
     delete body.metadata;
     delete body.images;
     body.aspect_ratio = config.aspectRatio;
-    if (imageRefs.length === 1) body.image = { url: imageRefs[0] };
-    if (imageRefs.length > 1) body.reference_images = imageRefs.map((url) => ({ url }));
+    if (imageRefs.length === 1) body.image = imageRefs[0];
+    if (imageRefs.length > 1) body.reference_images = imageRefs;
   }
   let data: any;
   try {
-    data = await requestJson(isGrokImagineVideo ? "/videos/generations" : "/video/generations", "POST", body);
+    data = await requestJson(isGrokImagineVideo ? "/videos/generations" : "/video/generations", "POST", body, 600000);
   } catch (err: any) {
     const message = String(err?.message || err);
     if (!isEndpointFallbackError(message)) throw new Error("视频任务创建失败: " + message);
-    data = await requestJson(isGrokImagineVideo ? "/video/generations" : "/videos/generations", "POST", body).catch((fallbackErr: any) => {
+    data = await requestJson(isGrokImagineVideo ? "/video/generations" : "/videos/generations", "POST", body, 600000).catch((fallbackErr: any) => {
       throw new Error("视频任务创建失败: " + String(fallbackErr?.message || fallbackErr));
     });
   }
