@@ -5,6 +5,7 @@ import { Knex } from "knex";
 import db from "@/utils/db";
 import { transform } from "sucrase";
 import rawVendorData from "./vendor.json";
+import { HIDDEN_BUILT_IN_VENDOR_IDS, isHiddenBuiltInVendorId } from "@/utils/vendorVisibility";
 
 const vendorData = rawVendorData as Record<string, string>;
 const INTERNAL_API_GATEWAY_URL = "http://subrouter.railway.internal:8080";
@@ -167,25 +168,8 @@ export default async (knex: Knex): Promise<void> => {
   await addColumn("o_subrouterAccount", "distributorId", "integer");
   await addColumn("o_subrouterAccount", "distributorSlug", "text");
   await addColumn("o_subrouterAccount", "distributorName", "text");
-  await u.db("o_vendorConfig").where("id", "toonflow").update({ enable: 0 });
-  await u.db("o_userVendorConfig").where("vendorId", "toonflow").update({ enable: 0 });
-  const vendorDataSelect = await u.db("o_vendorConfig").whereIn("id", ["deepseek", "atlascloud"]).select("*");
-  if (!vendorDataSelect.find((i) => i.id == "deepseek")) {
-    await u.db("o_vendorConfig").insert({
-      id: "deepseek",
-      inputValues: "{}",
-      models: "[]",
-      enable: 0,
-    });
-  }
-  if (!vendorDataSelect.find((i) => i.id == "atlascloud")) {
-    await u.db("o_vendorConfig").insert({
-      id: "atlascloud",
-      inputValues: "{}",
-      models: "[]",
-      enable: 0,
-    });
-  }
+  await u.db("o_vendorConfig").whereIn("id", HIDDEN_BUILT_IN_VENDOR_IDS).delete();
+  await u.db("o_userVendorConfig").whereIn("vendorId", HIDDEN_BUILT_IN_VENDOR_IDS).delete();
   //检测是否包含新增音色绑定提示词
   const existAudioPrompt = await db("o_prompt").where("type", "audioBindPrompt").first();
   if (!existAudioPrompt)
@@ -266,6 +250,7 @@ export default async (knex: Knex): Promise<void> => {
   const defList = Object.keys(vendorData).map((filename) => filename.replace(/\.ts$/, ""));
   const existingIds = data.map((i: any) => i.id);
   for (const id of defList) {
+    if (isHiddenBuiltInVendorId(id)) continue;
     if (!existingIds.includes(id)) {
       const tsCode = vendorData[`${id}.ts`];
       if (tsCode) await tempOnsert(tsCode);
@@ -293,14 +278,6 @@ export default async (knex: Knex): Promise<void> => {
   ];
   await u.db("o_agentDeploy").whereIn("key", deleteAgentDeployKey).delete();
 
-  const volcengineVer = await u.vendor.getVendor("volcengine").version;
-  if (Number(volcengineVer) < 2.3) {
-    u.vendor.writeCode("volcengine", vendorData["volcengine.ts"]);
-  }
-  const minimaxVer = await u.vendor.getVendor("minimax").version;
-  if (Number(minimaxVer) < 2.1) {
-    u.vendor.writeCode("minimax", vendorData["minimax.ts"]);
-  }
 };
 
 function parseInputValues(inputValues: unknown): Record<string, string> {
@@ -321,6 +298,7 @@ async function migrateVendorGatewayDefaults() {
 
   for (const row of rows) {
     if (!row.id) continue;
+    if (isHiddenBuiltInVendorId(row.id)) continue;
     const defaults = vendorDefaultUrls[row.id];
     if (!defaults) continue;
 
@@ -339,6 +317,7 @@ async function migrateVendorGatewayDefaults() {
 
   const rootDir = u.getPath("vendor");
   for (const [id, defaults] of Object.entries(vendorDefaultUrls)) {
+    if (isHiddenBuiltInVendorId(id)) continue;
     const filename = `${id}.ts`;
     const filePath = path.join(rootDir, filename);
     const sourceCode = fs.existsSync(filePath) ? fs.readFileSync(filePath, "utf8") : vendorData[filename];

@@ -4,6 +4,7 @@ import { validateFields } from "@/middleware/middleware";
 import u from "@/utils";
 import { z } from "zod";
 import { transform } from "sucrase";
+import { isHiddenBuiltInVendorId } from "@/utils/vendorVisibility";
 const router = express.Router();
 
 const vendorConfigSchema = z.object({
@@ -99,6 +100,7 @@ export default router.post(
     }
 
     if ((vendor.id as string).includes(":")) return res.status(400).send(error("id不能包含英文冒号"));
+    if (isHiddenBuiltInVendorId(vendor.id)) return res.status(400).send(error("该内置供应商已关闭，请使用内置智能路由"));
     const data = await u.db("o_vendorConfig").where("id", vendor.id).first();
     if (data) return res.status(500).send(error("供应商id已存在"));
     const [id] = await u.db("o_vendorConfig").insert({
