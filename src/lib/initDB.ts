@@ -586,7 +586,6 @@ export default async (knex: Knex, forceInit: boolean = false): Promise<void> => 
         table.integer("distributorId");
         table.text("distributorSlug");
         table.text("distributorName");
-        table.text("distSiteHost");
         table.text("apiKey");
         table.text("apiKeyId");
         table.text("models");

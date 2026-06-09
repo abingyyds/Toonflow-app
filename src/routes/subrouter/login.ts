@@ -32,7 +32,6 @@ export default router.post(
               distributorId: result.account.distributorId,
               distributorSlug: result.account.distributorSlug,
               distributorName: result.account.distributorName,
-              distSiteHost: result.account.distSiteHost,
               apiKeyReady: Boolean(result.account.apiKey),
             },
             models: result.models,

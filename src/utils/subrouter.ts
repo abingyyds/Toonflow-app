@@ -49,13 +49,11 @@ interface LoginResult {
   distributorId?: number;
   distributorSlug?: string;
   distributorName?: string;
-  distSiteHost?: string;
 }
 
 interface SubrouterAIDistributor {
   id: number;
   slug: string;
-  domain?: string;
   name?: string;
   status?: number;
   parentId?: number;
@@ -83,7 +81,6 @@ const SUBROUTER_VENDOR_ID = "subrouter";
 const SUBROUTER_VENDOR_VERSION = "1.4";
 const AUTO_KEY_PREFIX = "toonflow-auto";
 const INTERNAL_SUBROUTER_BASE_URL = "http://subrouter.railway.internal:8080";
-const DEFAULT_SUBROUTERAI_DIST_HOST_SUFFIX = "subrouter.ai";
 const SUBROUTER_LOGIN_PROVIDERS_SETTING_KEY = "subrouterLoginProviders";
 const DEFAULT_TEXT_AGENT_TARGETS = ["scriptAgent", "productionAgent", "universalAi"];
 
@@ -93,44 +90,6 @@ function signToken(payload: string | object, expiresIn: string | number, secret:
 
 function normalizeBaseUrl(baseUrl: string): string {
   return baseUrl.trim().replace(/\/+$/, "");
-}
-
-function normalizeHeaderHost(host: string): string {
-  return host
-    .trim()
-    .replace(/^https?:\/\//i, "")
-    .replace(/\/.*$/, "")
-    .toLowerCase();
-}
-
-function buildSubrouterAIDistSiteHost(distributor?: Pick<SubrouterAIDistributor, "slug" | "domain">): string | undefined {
-  const domain = normalizeHeaderHost(distributor?.domain || "");
-  if (domain) return domain;
-
-  const cleanSlug = String(distributor?.slug || "").trim().toLowerCase();
-  if (!cleanSlug) return undefined;
-
-  const template = process.env.TOONFLOW_SUBROUTERAI_DIST_HOST_TEMPLATE || process.env.SUBROUTERAI_DIST_HOST_TEMPLATE;
-  if (template) return normalizeHeaderHost(template.replace(/\{slug\}/g, cleanSlug));
-
-  const suffix = normalizeHeaderHost(
-    process.env.TOONFLOW_SUBROUTERAI_DIST_HOST_SUFFIX ||
-      process.env.SUBROUTERAI_DIST_HOST_SUFFIX ||
-      process.env.DIST_SUBDOMAIN_SUFFIX ||
-      DEFAULT_SUBROUTERAI_DIST_HOST_SUFFIX,
-  );
-  if (!suffix) return undefined;
-  return normalizeHeaderHost(`${cleanSlug}.${suffix}`);
-}
-
-function subrouterAIDistSiteHeaders(distSiteHost: string, headers: Record<string, string> = {}): Record<string, string> {
-  const host = normalizeHeaderHost(distSiteHost);
-  return {
-    ...headers,
-    Host: host,
-    "X-Original-Host": host,
-    "X-Forwarded-Host": host,
-  };
 }
 
 function apiBase(baseUrl: string): string {
@@ -191,7 +150,7 @@ function bearer(apiKey: string): string {
 function subrouterAIAuthHeaders(account: StoredAccount): Record<string, string> {
   const headers: Record<string, string> = { Cookie: account.sessionCookie || "" };
   if (account.externalUserId) headers["New-Api-User"] = String(account.externalUserId);
-  return account.distSiteHost ? subrouterAIDistSiteHeaders(account.distSiteHost, headers) : headers;
+  return headers;
 }
 
 function getErrorMessage(err: unknown): string {
@@ -301,22 +260,6 @@ function extractItems(data: any): any[] {
   return [];
 }
 
-function extractModelItems(data: any): any[] {
-  const candidates = [
-    data?.data?.models,
-    data?.models,
-    data?.data?.items,
-    data?.data?.data,
-    data?.data,
-    data?.items,
-    data,
-  ];
-  for (const item of candidates) {
-    if (Array.isArray(item)) return item;
-  }
-  return [];
-}
-
 function extractUser(data: any): Record<string, any> {
   return data?.data?.user || data?.data || data?.user || {};
 }
@@ -335,7 +278,6 @@ function extractSubrouterAIDistributor(data: any): SubrouterAIDistributor | unde
   return {
     id,
     slug,
-    domain: rawDist.domain || body.distributor_domain || body.distributorDomain,
     name: rawDist.name || body.distributor_name || body.distributorName,
     status: rawDist.status != null ? Number(rawDist.status) : undefined,
     parentId: rawDist.parent_id != null ? Number(rawDist.parent_id) : undefined,
@@ -375,21 +317,6 @@ async function fetchSubrouterAIDistributor(client: AxiosInstance): Promise<Subro
   return extractSubrouterAIDistributor(res.data);
 }
 
-async function loginSubrouterAIDistSite(
-  baseUrl: string,
-  distSiteHost: string,
-  username: string,
-  password: string,
-  timeoutMs?: number,
-): Promise<string> {
-  const client = getAxios(baseUrl, subrouterAIDistSiteHeaders(distSiteHost), timeoutMs);
-  const res = await client.post("/api/dist/user/login", { username, password });
-  if (res.data?.success === false) throw new Error(res.data?.message || "SubRouterAI 分站登录失败");
-  const cookie = buildCookie(res.headers["set-cookie"]);
-  if (!cookie) throw new Error("SubRouterAI 分站登录成功但未返回会话信息");
-  return cookie;
-}
-
 async function loginSubrouterAI(baseUrl: string, username: string, password: string, timeoutMs?: number): Promise<LoginResult> {
   const client = getAxios(baseUrl, {}, timeoutMs);
   const res = await client.post("/api/user/login", { username, password });
@@ -398,8 +325,6 @@ async function loginSubrouterAI(baseUrl: string, username: string, password: str
   if (!cookie) throw new Error("内置智能路由登录成功但未返回会话信息");
   const user = extractUser(res.data);
   const distributor = await fetchSubrouterAIDistributor(getAxios(baseUrl, { Cookie: cookie }, timeoutMs));
-  const distSiteHost = buildSubrouterAIDistSiteHost(distributor);
-  const sessionCookie = distSiteHost ? await loginSubrouterAIDistSite(baseUrl, distSiteHost, username, password, timeoutMs) : cookie;
 
   return {
     provider: "subrouterai",
@@ -408,11 +333,10 @@ async function loginSubrouterAI(baseUrl: string, username: string, password: str
     username: user.username || username,
     email: user.email,
     displayName: user.display_name || user.displayName || user.username || username,
-    sessionCookie,
+    sessionCookie: cookie,
     distributorId: distributor?.id,
     distributorSlug: distributor?.slug,
     distributorName: distributor?.name,
-    distSiteHost,
   };
 }
 
@@ -438,8 +362,8 @@ async function loginSub2API(baseUrl: string, email: string, password: string, ti
 
 async function listSubrouterAIKeys(account: StoredAccount): Promise<any[]> {
   const client = getAxios(account.baseUrl, subrouterAIAuthHeaders(account));
-  if (account.distSiteHost) {
-    const res = await client.get("/api/dist/token/list", { params: { page: 1, page_size: 100 } });
+  if (account.distributorId) {
+    const res = await client.get("/api/user/self/distributor/token/list", { params: { page: 1, page_size: 100 } });
     if (res.data?.success === false) throw new Error(res.data?.message || "获取分站访问密钥列表失败");
     return extractItems(res.data);
   }
@@ -449,7 +373,7 @@ async function listSubrouterAIKeys(account: StoredAccount): Promise<any[]> {
 }
 
 async function ensureSubrouterAIKey(account: StoredAccount): Promise<{ key: string; id?: string }> {
-  if (account.distSiteHost) return ensureSubrouterAIDistSiteKey(account);
+  if (account.distributorId) return ensureSubrouterAISelfDistributorKey(account);
 
   const existing = findReusableKey(await listSubrouterAIKeys(account));
   if (existing) return existing;
@@ -474,27 +398,15 @@ async function ensureSubrouterAIKey(account: StoredAccount): Promise<{ key: stri
   return createdFromList;
 }
 
-async function getSubrouterAIDistSiteKeyGroupId(account: StoredAccount): Promise<number | undefined> {
-  const client = getAxios(account.baseUrl, subrouterAIAuthHeaders(account));
-  const res = await client.get("/api/dist/site/key-groups");
-  if (res.data?.success === false) throw new Error(res.data?.message || "获取分站密钥分组失败");
-  const groups = extractItems(res.data).filter((group) => group && group.enabled !== false && group.is_unavailable !== true);
-  if (groups.length === 0) return undefined;
-  const preferred = groups.find((group) => /subrouter|智能|toonflow|default|默认|通用/i.test(`${group.name || ""} ${group.description || ""}`));
-  const selected = preferred || groups[0];
-  return selected?.id != null ? Number(selected.id) : undefined;
-}
-
-async function ensureSubrouterAIDistSiteKey(account: StoredAccount): Promise<{ key: string; id?: string }> {
+async function ensureSubrouterAISelfDistributorKey(account: StoredAccount): Promise<{ key: string; id?: string }> {
   const existing = findReusableKey(await listSubrouterAIKeys(account));
   if (existing) return existing;
 
   const client = getAxios(account.baseUrl, subrouterAIAuthHeaders(account));
   const name = `${AUTO_KEY_PREFIX}-${Date.now()}`;
-  const keyGroupId = await getSubrouterAIDistSiteKeyGroupId(account);
-  const res = await client.post("/api/dist/token/create", {
+  const res = await client.post("/api/user/self/distributor/token/create", {
     name,
-    key_group_id: keyGroupId || 0,
+    key_group_id: 0,
   });
   if (res.data?.success === false) throw new Error(res.data?.message || "创建分站访问密钥失败");
 
@@ -530,19 +442,8 @@ async function ensureSub2APIKey(account: StoredAccount): Promise<{ key: string; 
 
 async function fetchSubrouterAIModels(account: StoredAccount): Promise<ModelFetchResult> {
   const client = getAxios(account.baseUrl, subrouterAIAuthHeaders(account));
-  if (account.distSiteHost) {
-    const endpoint = account.apiKeyId ? `/api/dist/token/${account.apiKeyId}/models` : "/api/dist/site/models";
-    const res = await client.get(endpoint);
-    if (res.data?.success === false) throw new Error(res.data?.message || "获取分站模型列表失败");
-    return {
-      models: normalizeModels(
-        extractModelItems(res.data).map((row) => ({
-          id: row.model_name || row.modelName || row.model || row.id || row.name,
-          category: row.category,
-        })),
-      ),
-      source: "dist-site",
-    };
+  if (account.distributorId) {
+    return { models: await fetchGatewayModels(account.baseUrl, account.apiKey || ""), source: "dist-site" };
   }
 
   const subscribed = await client.get("/api/user/self/subrouter/models").catch((err: AxiosError) => {
@@ -976,7 +877,6 @@ async function saveAccount(account: StoredAccount): Promise<void> {
     distributorId: account.distributorId ?? null,
     distributorSlug: account.distributorSlug ?? null,
     distributorName: account.distributorName ?? null,
-    distSiteHost: account.distSiteHost ?? null,
     apiKey: account.apiKey ?? null,
     apiKeyId: account.apiKeyId ?? null,
     models: account.models ?? "[]",
