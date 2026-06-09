@@ -167,6 +167,8 @@ export default async (knex: Knex): Promise<void> => {
   await addColumn("o_subrouterAccount", "distributorId", "integer");
   await addColumn("o_subrouterAccount", "distributorSlug", "text");
   await addColumn("o_subrouterAccount", "distributorName", "text");
+  await u.db("o_vendorConfig").where("id", "toonflow").update({ enable: 0 });
+  await u.db("o_userVendorConfig").where("vendorId", "toonflow").update({ enable: 0 });
   const vendorDataSelect = await u.db("o_vendorConfig").whereIn("id", ["deepseek", "atlascloud"]).select("*");
   if (!vendorDataSelect.find((i) => i.id == "deepseek")) {
     await u.db("o_vendorConfig").insert({
@@ -365,7 +367,7 @@ async function tempOnsert(tsCode: string) {
     id: vendor.id,
     inputValues: JSON.stringify(vendor.inputValues ?? {}),
     models: JSON.stringify([]),
-    enable: vendor.id == "toonflow" ? 1 : 0,
+    enable: 0,
   });
   u.vendor.writeCode(vendor.id, tsCode);
 }

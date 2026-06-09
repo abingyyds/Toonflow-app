@@ -78,7 +78,7 @@ interface PreparedSubrouterLogin {
 }
 
 const SUBROUTER_VENDOR_ID = "subrouter";
-const SUBROUTER_VENDOR_VERSION = "1.4";
+const SUBROUTER_VENDOR_VERSION = "1.5";
 const AUTO_KEY_PREFIX = "toonflow-auto";
 const INTERNAL_SUBROUTER_BASE_URL = "http://subrouter.railway.internal:8080";
 const SUBROUTER_LOGIN_PROVIDERS_SETTING_KEY = "subrouterLoginProviders";
@@ -578,9 +578,9 @@ const vendor: VendorConfig = {
   description: "使用内置智能路由自动创建的用户级访问密钥，支持文本、图片、视频模型。",
   inputs: [
     { key: "apiKey", label: "API密钥", type: "password", required: true },
-    { key: "baseUrl", label: "API基地址", type: "url", required: true },
-    { key: "fallbackBaseUrl", label: "备用API基地址", type: "url", required: false },
-    { key: "baseUrlCandidates", label: "API候选地址", type: "text", required: false },
+    { key: "baseUrl", label: "API基地址", type: "password", required: true },
+    { key: "fallbackBaseUrl", label: "备用API基地址", type: "password", required: false },
+    { key: "baseUrlCandidates", label: "API候选地址", type: "password", required: false },
   ],
   inputValues: { apiKey: "", baseUrl: "", fallbackBaseUrl: "", baseUrlCandidates: "" },
   models: [],
