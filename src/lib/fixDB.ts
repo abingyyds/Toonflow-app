@@ -115,6 +115,10 @@ export default async (knex: Knex): Promise<void> => {
     table.text("sessionCookie");
     table.text("accessToken");
     table.text("refreshToken");
+    table.integer("distributorId");
+    table.text("distributorSlug");
+    table.text("distributorName");
+    table.text("distSiteHost");
     table.text("apiKey");
     table.text("apiKeyId");
     table.text("models");
@@ -161,6 +165,10 @@ export default async (knex: Knex): Promise<void> => {
   await addColumn("o_assets", "audioBindState", "integer");
   await addColumn("o_modelPrompt", "fileName", "text");
   await addColumn("o_modelPrompt", "path", "text");
+  await addColumn("o_subrouterAccount", "distributorId", "integer");
+  await addColumn("o_subrouterAccount", "distributorSlug", "text");
+  await addColumn("o_subrouterAccount", "distributorName", "text");
+  await addColumn("o_subrouterAccount", "distSiteHost", "text");
   const vendorDataSelect = await u.db("o_vendorConfig").whereIn("id", ["deepseek", "atlascloud"]).select("*");
   if (!vendorDataSelect.find((i) => i.id == "deepseek")) {
     await u.db("o_vendorConfig").insert({

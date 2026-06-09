@@ -29,7 +29,7 @@ export interface NormalizedModel {
   durationResolutionMap?: { duration: number[]; resolution: string[] }[];
 }
 
-type ModelSource = "subscription" | "gateway";
+type ModelSource = "subscription" | "gateway" | "dist-site";
 
 interface ModelFetchResult {
   models: NormalizedModel[];
@@ -46,6 +46,20 @@ interface LoginResult {
   sessionCookie?: string;
   accessToken?: string;
   refreshToken?: string;
+  distributorId?: number;
+  distributorSlug?: string;
+  distributorName?: string;
+  distSiteHost?: string;
+}
+
+interface SubrouterAIDistributor {
+  id: number;
+  slug: string;
+  domain?: string;
+  name?: string;
+  status?: number;
+  parentId?: number;
+  level?: number;
 }
 
 interface StoredAccount extends LoginResult {
@@ -69,6 +83,7 @@ const SUBROUTER_VENDOR_ID = "subrouter";
 const SUBROUTER_VENDOR_VERSION = "1.4";
 const AUTO_KEY_PREFIX = "toonflow-auto";
 const INTERNAL_SUBROUTER_BASE_URL = "http://subrouter.railway.internal:8080";
+const DEFAULT_SUBROUTERAI_DIST_HOST_SUFFIX = "subrouter.ai";
 const SUBROUTER_LOGIN_PROVIDERS_SETTING_KEY = "subrouterLoginProviders";
 const DEFAULT_TEXT_AGENT_TARGETS = ["scriptAgent", "productionAgent", "universalAi"];
 
@@ -78,6 +93,44 @@ function signToken(payload: string | object, expiresIn: string | number, secret:
 
 function normalizeBaseUrl(baseUrl: string): string {
   return baseUrl.trim().replace(/\/+$/, "");
+}
+
+function normalizeHeaderHost(host: string): string {
+  return host
+    .trim()
+    .replace(/^https?:\/\//i, "")
+    .replace(/\/.*$/, "")
+    .toLowerCase();
+}
+
+function buildSubrouterAIDistSiteHost(distributor?: Pick<SubrouterAIDistributor, "slug" | "domain">): string | undefined {
+  const domain = normalizeHeaderHost(distributor?.domain || "");
+  if (domain) return domain;
+
+  const cleanSlug = String(distributor?.slug || "").trim().toLowerCase();
+  if (!cleanSlug) return undefined;
+
+  const template = process.env.TOONFLOW_SUBROUTERAI_DIST_HOST_TEMPLATE || process.env.SUBROUTERAI_DIST_HOST_TEMPLATE;
+  if (template) return normalizeHeaderHost(template.replace(/\{slug\}/g, cleanSlug));
+
+  const suffix = normalizeHeaderHost(
+    process.env.TOONFLOW_SUBROUTERAI_DIST_HOST_SUFFIX ||
+      process.env.SUBROUTERAI_DIST_HOST_SUFFIX ||
+      process.env.DIST_SUBDOMAIN_SUFFIX ||
+      DEFAULT_SUBROUTERAI_DIST_HOST_SUFFIX,
+  );
+  if (!suffix) return undefined;
+  return normalizeHeaderHost(`${cleanSlug}.${suffix}`);
+}
+
+function subrouterAIDistSiteHeaders(distSiteHost: string, headers: Record<string, string> = {}): Record<string, string> {
+  const host = normalizeHeaderHost(distSiteHost);
+  return {
+    ...headers,
+    Host: host,
+    "X-Original-Host": host,
+    "X-Forwarded-Host": host,
+  };
 }
 
 function apiBase(baseUrl: string): string {
@@ -138,7 +191,7 @@ function bearer(apiKey: string): string {
 function subrouterAIAuthHeaders(account: StoredAccount): Record<string, string> {
   const headers: Record<string, string> = { Cookie: account.sessionCookie || "" };
   if (account.externalUserId) headers["New-Api-User"] = String(account.externalUserId);
-  return headers;
+  return account.distSiteHost ? subrouterAIDistSiteHeaders(account.distSiteHost, headers) : headers;
 }
 
 function getErrorMessage(err: unknown): string {
@@ -198,14 +251,15 @@ function parseLoginProviders(value: unknown): SubrouterLoginProvider[] {
       const matched = text.match(/^(subrouterai|sub2api)\s*=\s*(.+)$/i);
       if (matched) return [{ provider: matched[1].toLowerCase() as SubrouterProvider, baseUrl: matched[2].trim() }];
       if (/^https?:\/\//i.test(text)) {
-        return [
-          { provider: "subrouterai" as const, baseUrl: text },
-          { provider: "sub2api" as const, baseUrl: text },
-        ];
+        return [{ provider: "subrouterai" as const, baseUrl: text }];
       }
       return [];
     }),
   );
+}
+
+function subrouterAIOnly(providers: SubrouterLoginProvider[]): SubrouterLoginProvider[] {
+  return providers.filter((provider) => provider.provider === "subrouterai");
 }
 
 function getEnvLoginProviders(): SubrouterLoginProvider[] {
@@ -214,26 +268,22 @@ function getEnvLoginProviders(): SubrouterLoginProvider[] {
   ];
   const sharedBaseUrl = process.env.TOONFLOW_SUBROUTER_BASE_URL || process.env.SUBROUTER_BASE_URL;
   if (sharedBaseUrl) {
-    providers.push({ provider: "subrouterai", baseUrl: sharedBaseUrl }, { provider: "sub2api", baseUrl: sharedBaseUrl });
+    providers.push({ provider: "subrouterai", baseUrl: sharedBaseUrl });
   }
-  providers.push(
-    { provider: "subrouterai", baseUrl: process.env.TOONFLOW_SUBROUTERAI_BASE_URL || process.env.SUBROUTERAI_BASE_URL },
-    { provider: "sub2api", baseUrl: process.env.TOONFLOW_SUB2API_BASE_URL || process.env.SUB2API_BASE_URL },
-  );
+  providers.push({ provider: "subrouterai", baseUrl: process.env.TOONFLOW_SUBROUTERAI_BASE_URL || process.env.SUBROUTERAI_BASE_URL });
   return normalizeLoginProviders(providers);
 }
 
 export async function getDefaultSubrouterLoginProviders(): Promise<SubrouterLoginProvider[]> {
-  const envProviders = getEnvLoginProviders();
+  const envProviders = subrouterAIOnly(getEnvLoginProviders());
   if (envProviders.length > 0) return envProviders;
 
   const setting = await db("o_setting").where("key", SUBROUTER_LOGIN_PROVIDERS_SETTING_KEY).first();
-  const storedProviders = parseLoginProviders(setting?.value);
+  const storedProviders = subrouterAIOnly(parseLoginProviders(setting?.value));
   if (storedProviders.length > 0) return storedProviders;
 
   return normalizeLoginProviders([
     { provider: "subrouterai", baseUrl: INTERNAL_SUBROUTER_BASE_URL },
-    { provider: "sub2api", baseUrl: INTERNAL_SUBROUTER_BASE_URL },
   ]);
 }
 
@@ -251,16 +301,93 @@ function extractItems(data: any): any[] {
   return [];
 }
 
+function extractModelItems(data: any): any[] {
+  const candidates = [
+    data?.data?.models,
+    data?.models,
+    data?.data?.items,
+    data?.data?.data,
+    data?.data,
+    data?.items,
+    data,
+  ];
+  for (const item of candidates) {
+    if (Array.isArray(item)) return item;
+  }
+  return [];
+}
+
 function extractUser(data: any): Record<string, any> {
   return data?.data?.user || data?.data || data?.user || {};
 }
 
+function extractSubrouterAIDistributor(data: any): SubrouterAIDistributor | undefined {
+  const body = data?.data || data || {};
+  const rawDist = body.distributor || {};
+  const id = Number(body.distributor_id || rawDist.id || 0);
+  const rawBelongs = body.belongs_to_distributor ?? body.belongsToDistributor;
+  const belongs = rawBelongs == null ? id > 0 : Boolean(rawBelongs);
+  if (!belongs) return undefined;
+
+  const slug = String(rawDist.slug || body.distributor_slug || body.distributorSlug || "").trim();
+  if (!id || !slug) throw new Error("用户属于分站，但 SubRouterAI 未返回分站 slug");
+
+  return {
+    id,
+    slug,
+    domain: rawDist.domain || body.distributor_domain || body.distributorDomain,
+    name: rawDist.name || body.distributor_name || body.distributorName,
+    status: rawDist.status != null ? Number(rawDist.status) : undefined,
+    parentId: rawDist.parent_id != null ? Number(rawDist.parent_id) : undefined,
+    level: rawDist.level != null ? Number(rawDist.level) : undefined,
+  };
+}
+
 function extractKey(data: any): { key?: string; id?: string } {
   const body = data?.data || data;
+  const nested = body?.token || body?.key_info || body?.keyInfo || body?.apiKey || body?.api_key;
+  if (nested && typeof nested === "object") {
+    return {
+      key: nested.key || nested.api_key || nested.apiKey || nested.token,
+      id: nested.id != null ? String(nested.id) : undefined,
+    };
+  }
   return {
     key: body?.key || body?.api_key || body?.token,
     id: body?.id != null ? String(body.id) : undefined,
   };
+}
+
+function normalizeSubrouterAIKey(key: string): string {
+  return `sk-${String(key).replace(/^sk-/, "")}`;
+}
+
+function findReusableKey(items: any[]): { key: string; id?: string } | undefined {
+  const existing = items.find((item) => String(item.name || "").startsWith(AUTO_KEY_PREFIX) && (item.key || item.api_key || item.token));
+  if (!existing) return undefined;
+  const key = existing.key || existing.api_key || existing.token;
+  return { key: normalizeSubrouterAIKey(key), id: existing.id != null ? String(existing.id) : undefined };
+}
+
+async function fetchSubrouterAIDistributor(client: AxiosInstance): Promise<SubrouterAIDistributor | undefined> {
+  const res = await client.get("/api/user/self/distributor");
+  if (res.data?.success === false) throw new Error(res.data?.message || "查询 SubRouterAI 分站归属失败");
+  return extractSubrouterAIDistributor(res.data);
+}
+
+async function loginSubrouterAIDistSite(
+  baseUrl: string,
+  distSiteHost: string,
+  username: string,
+  password: string,
+  timeoutMs?: number,
+): Promise<string> {
+  const client = getAxios(baseUrl, subrouterAIDistSiteHeaders(distSiteHost), timeoutMs);
+  const res = await client.post("/api/dist/user/login", { username, password });
+  if (res.data?.success === false) throw new Error(res.data?.message || "SubRouterAI 分站登录失败");
+  const cookie = buildCookie(res.headers["set-cookie"]);
+  if (!cookie) throw new Error("SubRouterAI 分站登录成功但未返回会话信息");
+  return cookie;
 }
 
 async function loginSubrouterAI(baseUrl: string, username: string, password: string, timeoutMs?: number): Promise<LoginResult> {
@@ -270,6 +397,10 @@ async function loginSubrouterAI(baseUrl: string, username: string, password: str
   const cookie = buildCookie(res.headers["set-cookie"]);
   if (!cookie) throw new Error("内置智能路由登录成功但未返回会话信息");
   const user = extractUser(res.data);
+  const distributor = await fetchSubrouterAIDistributor(getAxios(baseUrl, { Cookie: cookie }, timeoutMs));
+  const distSiteHost = buildSubrouterAIDistSiteHost(distributor);
+  const sessionCookie = distSiteHost ? await loginSubrouterAIDistSite(baseUrl, distSiteHost, username, password, timeoutMs) : cookie;
+
   return {
     provider: "subrouterai",
     baseUrl: normalizeBaseUrl(baseUrl),
@@ -277,7 +408,11 @@ async function loginSubrouterAI(baseUrl: string, username: string, password: str
     username: user.username || username,
     email: user.email,
     displayName: user.display_name || user.displayName || user.username || username,
-    sessionCookie: cookie,
+    sessionCookie,
+    distributorId: distributor?.id,
+    distributorSlug: distributor?.slug,
+    distributorName: distributor?.name,
+    distSiteHost,
   };
 }
 
@@ -303,17 +438,24 @@ async function loginSub2API(baseUrl: string, email: string, password: string, ti
 
 async function listSubrouterAIKeys(account: StoredAccount): Promise<any[]> {
   const client = getAxios(account.baseUrl, subrouterAIAuthHeaders(account));
+  if (account.distSiteHost) {
+    const res = await client.get("/api/dist/token/list", { params: { page: 1, page_size: 100 } });
+    if (res.data?.success === false) throw new Error(res.data?.message || "获取分站访问密钥列表失败");
+    return extractItems(res.data);
+  }
   const res = await client.get("/api/token/");
   if (res.data?.success === false) throw new Error(res.data?.message || "获取内置智能路由访问密钥列表失败");
   return extractItems(res.data);
 }
 
 async function ensureSubrouterAIKey(account: StoredAccount): Promise<{ key: string; id?: string }> {
-  const existing = (await listSubrouterAIKeys(account)).find((item) => String(item.name || "").startsWith(AUTO_KEY_PREFIX) && item.key);
-  if (existing?.key) return { key: `sk-${String(existing.key).replace(/^sk-/, "")}`, id: existing.id != null ? String(existing.id) : undefined };
+  if (account.distSiteHost) return ensureSubrouterAIDistSiteKey(account);
 
-  const name = `${AUTO_KEY_PREFIX}-${Date.now()}`;
+  const existing = findReusableKey(await listSubrouterAIKeys(account));
+  if (existing) return existing;
+
   const client = getAxios(account.baseUrl, subrouterAIAuthHeaders(account));
+  const name = `${AUTO_KEY_PREFIX}-${Date.now()}`;
   const res = await client.post("/api/token/", {
     name,
     group: "subrouter",
@@ -324,9 +466,46 @@ async function ensureSubrouterAIKey(account: StoredAccount): Promise<{ key: stri
   });
   if (res.data?.success === false) throw new Error(res.data?.message || "创建内置智能路由访问密钥失败");
 
-  const created = (await listSubrouterAIKeys(account)).find((item) => item.name === name && item.key);
-  if (!created?.key) throw new Error("内置智能路由访问密钥已创建但未能从列表中读取");
-  return { key: `sk-${String(created.key).replace(/^sk-/, "")}`, id: created.id != null ? String(created.id) : undefined };
+  const created = extractKey(res.data);
+  if (created.key) return { key: normalizeSubrouterAIKey(created.key), id: created.id };
+
+  const createdFromList = findReusableKey((await listSubrouterAIKeys(account)).filter((item) => item.name === name));
+  if (!createdFromList) throw new Error("内置智能路由访问密钥已创建但未能从列表中读取");
+  return createdFromList;
+}
+
+async function getSubrouterAIDistSiteKeyGroupId(account: StoredAccount): Promise<number | undefined> {
+  const client = getAxios(account.baseUrl, subrouterAIAuthHeaders(account));
+  const res = await client.get("/api/dist/site/key-groups");
+  if (res.data?.success === false) throw new Error(res.data?.message || "获取分站密钥分组失败");
+  const groups = extractItems(res.data).filter((group) => group && group.enabled !== false && group.is_unavailable !== true);
+  if (groups.length === 0) return undefined;
+  const preferred = groups.find((group) => /subrouter|智能|toonflow|default|默认|通用/i.test(`${group.name || ""} ${group.description || ""}`));
+  const selected = preferred || groups[0];
+  return selected?.id != null ? Number(selected.id) : undefined;
+}
+
+async function ensureSubrouterAIDistSiteKey(account: StoredAccount): Promise<{ key: string; id?: string }> {
+  const existing = findReusableKey(await listSubrouterAIKeys(account));
+  if (existing) return existing;
+
+  const client = getAxios(account.baseUrl, subrouterAIAuthHeaders(account));
+  const name = `${AUTO_KEY_PREFIX}-${Date.now()}`;
+  const keyGroupId = await getSubrouterAIDistSiteKeyGroupId(account);
+  const res = await client.post("/api/dist/token/create", {
+    name,
+    key_group_id: keyGroupId || 0,
+  });
+  if (res.data?.success === false) throw new Error(res.data?.message || "创建分站访问密钥失败");
+
+  const created = extractKey(res.data);
+  if (created.key) return { key: normalizeSubrouterAIKey(created.key), id: created.id };
+
+  const createdFromList = findReusableKey((await listSubrouterAIKeys(account)).filter((item) => item.name === name));
+  if (!createdFromList) {
+    throw new Error("分站访问密钥已创建但未能从列表中读取");
+  }
+  return createdFromList;
 }
 
 async function ensureSub2APIKey(account: StoredAccount): Promise<{ key: string; id?: string }> {
@@ -351,6 +530,21 @@ async function ensureSub2APIKey(account: StoredAccount): Promise<{ key: string; 
 
 async function fetchSubrouterAIModels(account: StoredAccount): Promise<ModelFetchResult> {
   const client = getAxios(account.baseUrl, subrouterAIAuthHeaders(account));
+  if (account.distSiteHost) {
+    const endpoint = account.apiKeyId ? `/api/dist/token/${account.apiKeyId}/models` : "/api/dist/site/models";
+    const res = await client.get(endpoint);
+    if (res.data?.success === false) throw new Error(res.data?.message || "获取分站模型列表失败");
+    return {
+      models: normalizeModels(
+        extractModelItems(res.data).map((row) => ({
+          id: row.model_name || row.modelName || row.model || row.id || row.name,
+          category: row.category,
+        })),
+      ),
+      source: "dist-site",
+    };
+  }
+
   const subscribed = await client.get("/api/user/self/subrouter/models").catch((err: AxiosError) => {
     if (err.response?.status === 404) return { data: { data: [] } };
     throw err;
@@ -457,6 +651,9 @@ function buildModelNotice(result: ModelFetchResult, defaultTextModel?: Normalize
   }
   if (!defaultTextModel) {
     return "已检测到内置智能路由可用模型，但没有可用于 ToonFlow Agent 的文本模型；图片/视频模型仍可在项目创建时选择。";
+  }
+  if (result.source === "dist-site") {
+    return undefined;
   }
   if (result.source === "gateway") {
     return "未检测到当前用户自己的商家订阅，已自动使用分站可访问的模型，并设置默认文本模型。";
@@ -776,6 +973,10 @@ async function saveAccount(account: StoredAccount): Promise<void> {
     sessionCookie: account.sessionCookie ?? null,
     accessToken: account.accessToken ?? null,
     refreshToken: account.refreshToken ?? null,
+    distributorId: account.distributorId ?? null,
+    distributorSlug: account.distributorSlug ?? null,
+    distributorName: account.distributorName ?? null,
+    distSiteHost: account.distSiteHost ?? null,
     apiKey: account.apiKey ?? null,
     apiKeyId: account.apiKeyId ?? null,
     models: account.models ?? "[]",
