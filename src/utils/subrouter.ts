@@ -234,16 +234,11 @@ function getEnvLoginProviders(): SubrouterLoginProvider[] {
 }
 
 export async function getDefaultSubrouterLoginProviders(): Promise<SubrouterLoginProvider[]> {
-  const envProviders = subrouterAIOnly(getEnvLoginProviders());
-  if (envProviders.length > 0) return envProviders;
-
+  const providers: SubrouterLoginProvider[] = [...subrouterAIOnly(getEnvLoginProviders())];
   const setting = await db("o_setting").where("key", SUBROUTER_LOGIN_PROVIDERS_SETTING_KEY).first();
-  const storedProviders = subrouterAIOnly(parseLoginProviders(setting?.value));
-  if (storedProviders.length > 0) return storedProviders;
-
-  return normalizeLoginProviders([
-    { provider: "subrouterai", baseUrl: INTERNAL_SUBROUTER_BASE_URL },
-  ]);
+  providers.push(...subrouterAIOnly(parseLoginProviders(setting?.value)));
+  providers.push({ provider: "subrouterai", baseUrl: INTERNAL_SUBROUTER_BASE_URL });
+  return normalizeLoginProviders(providers);
 }
 
 function extractItems(data: any): any[] {
@@ -947,15 +942,18 @@ export async function loginAndPrepareSubrouter(options: SubrouterLoginOptions): 
 
 export async function loginWithDefaultSubrouterProviders(username: string, password: string): Promise<PreparedSubrouterLogin | undefined> {
   const providers = await getDefaultSubrouterLoginProviders();
+  let lastAuthError: unknown;
   for (const provider of providers) {
     let login: LoginResult;
     try {
       login = await authenticateSubrouter({ ...provider, username, password, timeoutMs: 10000 });
-    } catch {
+    } catch (err) {
+      lastAuthError = err;
       continue;
     }
     return prepareSubrouterLogin(login, username, password);
   }
+  if (lastAuthError) throw lastAuthError;
   return undefined;
 }
 
