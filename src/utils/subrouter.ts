@@ -306,12 +306,6 @@ function findReusableKey(items: any[]): { key: string; id?: string } | undefined
   return { key: normalizeSubrouterAIKey(key), id: existing.id != null ? String(existing.id) : undefined };
 }
 
-async function fetchSubrouterAIDistributor(client: AxiosInstance): Promise<SubrouterAIDistributor | undefined> {
-  const res = await client.get("/api/user/self/distributor");
-  if (res.data?.success === false) throw new Error(res.data?.message || "查询 SubRouterAI 分站归属失败");
-  return extractSubrouterAIDistributor(res.data);
-}
-
 async function loginSubrouterAI(baseUrl: string, username: string, password: string, timeoutMs?: number): Promise<LoginResult> {
   const client = getAxios(baseUrl, {}, timeoutMs);
   const res = await client.post("/api/user/login", { username, password });
@@ -319,12 +313,13 @@ async function loginSubrouterAI(baseUrl: string, username: string, password: str
   const cookie = buildCookie(res.headers["set-cookie"]);
   if (!cookie) throw new Error("内置智能路由登录成功但未返回会话信息");
   const user = extractUser(res.data);
-  const distributor = await fetchSubrouterAIDistributor(getAxios(baseUrl, { Cookie: cookie }, timeoutMs));
+  const externalUserId = user.id != null ? String(user.id) : undefined;
+  const distributor = extractSubrouterAIDistributor(res.data);
 
   return {
     provider: "subrouterai",
     baseUrl: normalizeBaseUrl(baseUrl),
-    externalUserId: user.id != null ? String(user.id) : undefined,
+    externalUserId,
     username: user.username || username,
     email: user.email,
     displayName: user.display_name || user.displayName || user.username || username,

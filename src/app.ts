@@ -21,7 +21,7 @@ import { normalizeAuthUser, runWithUser } from "@/utils/requestContext";
 
 const app = express();
 const server = http.createServer(app);
-const WEB_CACHE_VERSION = "v5";
+const WEB_CACHE_VERSION = "v8";
 const WEB_MAIN_SCRIPT_PREFIX = "toonflow-inline-main";
 const WEB_STYLESHEET_PREFIX = "toonflow-inline-style";
 const LONG_CACHE_SECONDS = 60 * 60 * 24 * 365;
@@ -32,17 +32,193 @@ function getWebApiBaseUrlPatch() {
   try {
     if (location.protocol === "file:" || location.protocol === "toonflow:") return;
     var apiBaseUrl = location.origin + "/api";
+    var apiFirstSegments = {
+      agents: true,
+      artStyle: true,
+      assetsGenerate: true,
+      common: true,
+      cornerScape: true,
+      flowProject: true,
+      general: true,
+      infiniteCanvas: true,
+      login: true,
+      modelSelect: true,
+      novel: true,
+      other: true,
+      production: true,
+      project: true,
+      script: true,
+      scriptAgent: true,
+      setting: true,
+      subrouter: true,
+      task: true,
+      test: true
+    };
+    var assetsApiSegments = {
+      addAssets: true,
+      addAudioAssets: true,
+      batchDelete: true,
+      batchGenerationData: true,
+      delAssets: true,
+      delImage: true,
+      getAssetsApi: true,
+      getImage: true,
+      getMaterialData: true,
+      pollingImageAssets: true,
+      pollingPromptAssets: true,
+      saveAssets: true,
+      updateAssets: true,
+      updateAudioAssets: true,
+      uploadClip: true
+    };
+    var pluginApiSegments = {
+      ai: true,
+      file: true,
+      tRPC: true
+    };
     var legacyApiBasePattern = /http:\\/\\/(localhost|127\\.0\\.0\\.1):10588(\\/api)?/g;
-    for (var i = 0; i < localStorage.length; i += 1) {
-      var key = localStorage.key(i);
-      if (!key || key.indexOf("setting") === -1) continue;
-      var raw = localStorage.getItem(key);
-      if (!raw || !legacyApiBasePattern.test(raw)) continue;
-      legacyApiBasePattern.lastIndex = 0;
-      localStorage.setItem(key, raw.replace(legacyApiBasePattern, apiBaseUrl));
+
+    function installPublicWebStyle() {
+      var style = document.createElement("style");
+      style.textContent = [
+        "body:not(.is-electron) .loginPage + .settingBtn > .t-button:last-child{display:none!important}",
+        "body:not(.is-electron) .loginPage ~ .settingBtn > .t-button:last-child{display:none!important}",
+        "body:not(.is-electron) .loginPage + .settingBtn > button:last-child{display:none!important}",
+        "body:not(.is-electron) .loginPage ~ .settingBtn > button:last-child{display:none!important}",
+        "body:not(.is-electron) .requestConfig input{pointer-events:none!important}",
+        "body:not(.is-electron) .requestConfig .t-input{opacity:.72!important}"
+      ].join("\\n");
+      document.head.appendChild(style);
     }
+
+    function normalizeSettingValue(key, raw) {
+      if (typeof raw !== "string" || !raw) return raw;
+      var replaced = raw.replace(legacyApiBasePattern, apiBaseUrl);
+      legacyApiBasePattern.lastIndex = 0;
+      try {
+        var data = JSON.parse(replaced);
+        if (!data || typeof data !== "object" || Array.isArray(data)) return replaced;
+        if (key === "setting" || Object.prototype.hasOwnProperty.call(data, "baseUrl")) {
+          data.baseUrl = apiBaseUrl;
+          return JSON.stringify(data);
+        }
+      } catch (err) {
+        return replaced;
+      }
+      return replaced;
+    }
+
+    var nativeSetItem = Storage.prototype.setItem;
+    function lockStoredApiBaseUrl() {
+      var foundSetting = false;
+      for (var i = 0; i < localStorage.length; i += 1) {
+        var key = localStorage.key(i);
+        if (!key) continue;
+        if (key === "setting") foundSetting = true;
+        var raw = localStorage.getItem(key);
+        var next = normalizeSettingValue(key, raw);
+        if (next !== raw) nativeSetItem.call(localStorage, key, next);
+      }
+      if (!foundSetting) {
+        nativeSetItem.call(localStorage, "setting", JSON.stringify({ baseUrl: apiBaseUrl }));
+      }
+    }
+
+    Storage.prototype.setItem = function (key, value) {
+      if (this === localStorage) value = normalizeSettingValue(String(key), String(value));
+      return nativeSetItem.call(this, key, value);
+    };
+
+    function getApiPath(pathname, origin) {
+      if (pathname === "/api") return "";
+      if (pathname.indexOf("/api/") === 0) return pathname.slice(4);
+      var parts = pathname.split("/");
+      var first = parts[1] || "";
+      var second = parts[2] || "";
+      if (first === "assets") {
+        return origin !== location.origin || assetsApiSegments[second] ? pathname : null;
+      }
+      if (first === "plugin") {
+        return origin !== location.origin || pluginApiSegments[second] ? pathname : null;
+      }
+      return apiFirstSegments[first] ? pathname : null;
+    }
+
+    function rewriteHttpUrl(input) {
+      if (typeof input !== "string" && !(input instanceof URL)) return input;
+      var text = String(input);
+      var parsed;
+      try {
+        parsed = new URL(text, location.href);
+      } catch (err) {
+        return input;
+      }
+      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return input;
+      if (parsed.pathname === "/socket.io/" || parsed.pathname.indexOf("/socket.io/") === 0) {
+        if (parsed.origin === location.origin) return input;
+        parsed.protocol = location.protocol;
+        parsed.host = location.host;
+        return parsed.toString();
+      }
+      var apiPath = getApiPath(parsed.pathname, parsed.origin);
+      if (apiPath == null) return input;
+      var locked = new URL(apiBaseUrl + apiPath);
+      locked.search = parsed.search;
+      locked.hash = parsed.hash;
+      return locked.toString();
+    }
+
+    function rewriteSocketUrl(input) {
+      if (typeof input !== "string" && !(input instanceof URL)) return input;
+      var text = String(input);
+      var parsed;
+      try {
+        parsed = new URL(text, location.href);
+      } catch (err) {
+        return input;
+      }
+      if (parsed.protocol !== "ws:" && parsed.protocol !== "wss:") return input;
+      if (parsed.pathname !== "/socket.io/" && parsed.pathname.indexOf("/socket.io/") !== 0) return input;
+      if (parsed.host === location.host) return input;
+      parsed.protocol = location.protocol === "https:" ? "wss:" : "ws:";
+      parsed.host = location.host;
+      return parsed.toString();
+    }
+
+    var nativeFetch = window.fetch;
+    if (typeof nativeFetch === "function") {
+      window.fetch = function (input, init) {
+        if (typeof Request !== "undefined" && input instanceof Request) {
+          var rewrittenRequestUrl = rewriteHttpUrl(input.url);
+          if (rewrittenRequestUrl !== input.url) input = new Request(rewrittenRequestUrl, input);
+        } else {
+          input = rewriteHttpUrl(input);
+        }
+        return nativeFetch.call(this, input, init);
+      };
+    }
+
+    var nativeOpen = XMLHttpRequest.prototype.open;
+    XMLHttpRequest.prototype.open = function (method, url) {
+      arguments[1] = rewriteHttpUrl(url);
+      return nativeOpen.apply(this, arguments);
+    };
+
+    var NativeWebSocket = window.WebSocket;
+    if (typeof NativeWebSocket === "function") {
+      var LockedWebSocket = function (url, protocols) {
+        return protocols === undefined ? new NativeWebSocket(rewriteSocketUrl(url)) : new NativeWebSocket(rewriteSocketUrl(url), protocols);
+      };
+      LockedWebSocket.prototype = NativeWebSocket.prototype;
+      Object.setPrototypeOf(LockedWebSocket, NativeWebSocket);
+      window.WebSocket = LockedWebSocket;
+    }
+
+    installPublicWebStyle();
+    lockStoredApiBaseUrl();
     window.__TOONFLOW_API_BASE_URL__ = apiBaseUrl;
     window.__TOONFLOW_BROWSER_API_BASE_URL__ = apiBaseUrl;
+    window.__TOONFLOW_LOCKED_API_BASE_URL__ = apiBaseUrl;
   } catch (err) {}
 })();
 </script>`;
