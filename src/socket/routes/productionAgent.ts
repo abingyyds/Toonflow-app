@@ -105,7 +105,9 @@ export default (nsp: Namespace) => {
         await agent.runDecisionAI(globalContext, text);
       } catch (err: any) {
         if (err?.name !== "AbortError" && !globalContext.abortSignal.signal.aborted) {
-          console.error("[productionAgent] chat error:", u.error(err).message);
+          const message = u.error(err).message;
+          console.error("[productionAgent] chat error:", message);
+          globalContext.kit.box().name("导演").text(message).end("error");
         }
       }
     }));
