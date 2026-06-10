@@ -6,6 +6,8 @@ import Memory from "@/utils/agent/memory";
 import * as fs from "fs";
 import path from "path";
 
+type ProductionFlowDataKey = "script" | "scriptPlan" | "plan" | "storyboardTable" | "assets" | "storyboard" | "workbench" | "all";
+
 function buildMemPrompt(mem: Awaited<ReturnType<Memory["get"]>>): string {
   let memoryContext = "";
   if (mem.rag.length) {
@@ -28,6 +30,12 @@ export async function runDecisionAI(ctx: GlobalContext, text: string) {
 
   const skill = path.join(u.getPath("skills"), "production_agent_decision.md");
   const prompt = await fs.promises.readFile(skill, "utf-8");
+  const decisionPrompt = `${prompt}
+
+## 当前产品入口语义
+
+当用户点击「开始制作视频」或输入「请帮我开始制作视频」时，含义是「从头开始 / 完整制作」，应从阶段1导演规划开始按流水线推进。
+这不是视频生成面板里的最终合成视频请求，不要按“生成视频/合成视频”拒绝执行。`;
 
   const projectInfo = await u.db("o_project").where("id", ctx.projectId).first();
   if (!projectInfo) throw new Error(`项目不存在，ID: ${ctx.projectId}`);
@@ -51,44 +59,179 @@ export async function runDecisionAI(ctx: GlobalContext, text: string) {
 
   const { fullStream } = await u.Ai.Text("productionAgent", ctx.thinkLevel).stream({
     messages: [
-      // { role: "system", content: prompt },
-      // { role: "assistant", content: mem + "\n" + modelInfo },
+      { role: "system", content: decisionPrompt },
+      { role: "assistant", content: mem + "\n\n" + modelInfo },
       { role: "user", content: text },
     ],
     abortSignal: ctx.abortSignal.signal,
     tools: {
       ...memory.getTools(),
-      // ...useTools({ resTool: ctx.resTool, msg: ctx.msg }),
-      subAgent: subAgent(ctx),
+      ...createSubAgentTools(ctx),
     },
   });
-  return consumeStream(ctx, fullStream, "导演");
+  const fullResponse = await consumeStream(ctx, fullStream, "导演");
+  if (fullResponse.trim()) await memory.add("assistant:decision", fullResponse);
+  return fullResponse;
 }
 
-function subAgent(ctx: GlobalContext) {
-  return tool({
-    description: "运行执行subAgent来完成相关任务",
-    inputSchema: z.object({
-      prompt: z.string().describe("交给子Agent的任务简约描述，100字以内"),
-    }),
-    execute: async ({ prompt }) => {
-      const remoteToolsString = ctx.remoteTools
-        .map((t) => {
-          return `工具名称：${t.path}\n工具描述：${t.description}\n工具参数：${t.jsonSchema ? JSON.stringify(t.jsonSchema) : "无"}`;
-        })
-        .join("\n\n");
-      const systemPrompt = `你可以使用runRemoteTool工具运行如下方法：\n\n${remoteToolsString}\n\n当你需要使用工具时，调用runRemoteTools并传入工具名称和字符串参数即可。`;
+function createSubAgentTools(ctx: GlobalContext) {
+  const promptInput = z.object({
+    prompt: z.string().describe("交给子Agent的任务简约描述，100字以内"),
+  });
 
-      const { fullStream } = await u.Ai.Text("productionAgent", ctx.thinkLevel).stream({
+  return {
+    run_sub_agent_director_plan: createStageTool(ctx, {
+      key: "productionAgent:directorPlanAgent",
+      skillFile: "production_execution_director_plan.md",
+      name: "导演规划",
+      description: "运行执行层Agent完成阶段1：导演规划（含衍生资产预划）",
+      inputSchema: promptInput,
+    }),
+    run_sub_agent_derive_assets: createStageTool(ctx, {
+      key: "productionAgent:deriveAssetsAgent",
+      skillFile: "production_execution_derive_assets.md",
+      name: "衍生资产",
+      description: "运行执行层Agent完成阶段2：衍生资产分析与写入",
+      inputSchema: promptInput,
+    }),
+    run_sub_agent_generate_assets: createStageTool(ctx, {
+      key: "productionAgent:generateAssetsAgent",
+      skillFile: "production_execution_generate_assets.md",
+      name: "资产生成",
+      description: "运行执行层Agent完成阶段3：衍生资产图片生成",
+      inputSchema: promptInput,
+    }),
+    run_sub_agent_storyboard_table: createStageTool(ctx, {
+      key: "productionAgent:storyboardTableAgent",
+      skillFile: "production_execution_storyboard_table.md",
+      name: "分镜表",
+      description: "运行执行层Agent完成阶段4：构建结构化分镜表",
+      inputSchema: promptInput,
+    }),
+    run_sub_agent_storyboard_panel: createStageTool(ctx, {
+      key: "productionAgent:storyboardPanelAgent",
+      skillFile: "production_execution_storyboard_panel.md",
+      name: "分镜面板",
+      description: "运行执行层Agent完成阶段5：分镜面板写入",
+      inputSchema: promptInput,
+    }),
+    run_sub_agent_storyboard_gen: createStageTool(ctx, {
+      key: "productionAgent:storyboardGenAgent",
+      skillFile: "production_execution_storyboard_gen.md",
+      name: "分镜图",
+      description: "运行执行层Agent完成阶段6：分镜图生成",
+      inputSchema: promptInput,
+    }),
+    run_sub_agent_supervision: createStageTool(ctx, {
+      key: "productionAgent:supervisionAgent",
+      skillFile: "production_agent_supervision.md",
+      name: "监督",
+      description: "运行监督层Agent审核当前阶段产出物",
+      inputSchema: promptInput,
+    }),
+  };
+}
+
+function createStageTool(
+  ctx: GlobalContext,
+  config: {
+    key: Parameters<typeof u.Ai.Text>[0];
+    skillFile: string;
+    name: string;
+    description: string;
+    inputSchema: z.ZodType<{ prompt: string }>;
+  },
+) {
+  return tool({
+    description: config.description,
+    inputSchema: config.inputSchema,
+    execute: async ({ prompt }) => {
+      const systemPrompt = await fs.promises.readFile(path.join(u.getPath("skills"), config.skillFile), "utf-8");
+      const { fullStream } = await u.Ai.Text(config.key, ctx.thinkLevel).stream({
         system: systemPrompt,
         messages: [{ role: "user", content: prompt }],
-        tools: {
-          runRemoteTool: runRemoteTool(ctx),
-        },
+        abortSignal: ctx.abortSignal.signal,
+        tools: createProductionRemoteTools(ctx),
       });
-      const result = await consumeStream(ctx, fullStream, "执行");
-      return result;
+      return consumeStream(ctx, fullStream, config.name);
     },
+  });
+}
+
+function createProductionRemoteTools(ctx: GlobalContext) {
+  return {
+    get_flowData: tool({
+      description: "读取生产工作区数据。key 可为 script、assets、scriptPlan/plan、storyboardTable、storyboard、workbench、all。",
+      inputSchema: z.object({
+        key: z.enum(["script", "scriptPlan", "plan", "storyboardTable", "assets", "storyboard", "workbench", "all"]).default("all"),
+      }),
+      execute: async ({ key }) => {
+        const data = await emitRemoteTool<Record<string, any>>(ctx, "getFlowData", {});
+        return pickFlowData(data, key);
+      },
+    }),
+    add_deriveAsset: tool({
+      description: "新增或更新一个衍生资产。",
+      inputSchema: z.object({
+        assetsId: z.number().describe("父资产ID"),
+        id: z.number().nullable().optional().describe("已有衍生资产ID；新增时可为空"),
+        name: z.string().describe("衍生资产名称"),
+        desc: z.string().optional().describe("衍生资产描述"),
+        describe: z.string().optional().describe("衍生资产描述"),
+        type: z.string().optional().describe("资产类型"),
+      }),
+      execute: async (input) =>
+        emitRemoteTool(ctx, "addDeriveAsset", {
+          ...input,
+          describe: input.describe ?? input.desc ?? "",
+        }),
+    }),
+    del_deriveAsset: tool({
+      description: "删除一个衍生资产。",
+      inputSchema: z.object({
+        assetsId: z.number().describe("父资产ID"),
+        id: z.number().describe("衍生资产ID"),
+      }),
+      execute: async (input) => emitRemoteTool(ctx, "delDeriveAsset", input),
+    }),
+    generate_assets_images: tool({
+      description: "对指定衍生资产ID发起图片生成任务。",
+      inputSchema: z.object({
+        ids: z.array(z.number()).describe("需要生成图片的衍生资产ID列表"),
+      }),
+      execute: async (input) => emitRemoteTool(ctx, "generateDeriveAsset", input),
+    }),
+    generate_storyboard_images: tool({
+      description: "对指定分镜ID发起分镜图生成任务。",
+      inputSchema: z.object({
+        ids: z.array(z.number()).describe("需要生成分镜图的分镜ID列表"),
+      }),
+      execute: async (input) => emitRemoteTool(ctx, "generateStoryboard", input),
+    }),
+  };
+}
+
+function pickFlowData(data: Record<string, any>, key: ProductionFlowDataKey) {
+  if (!key || key === "all") return data;
+  const normalizedKey = key === "plan" ? "scriptPlan" : key;
+  return data?.[normalizedKey];
+}
+
+function emitRemoteTool<T = any>(ctx: GlobalContext, event: string, payload: any): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`远端工具 ${event} 调用超时`)), 120000);
+    ctx.socket.emit(event, payload, (res: any) => {
+      clearTimeout(timer);
+      if (res?.state === "error") {
+        reject(new Error(res.error || res.message || `${event} 调用失败`));
+        return;
+      }
+      if (res?.success === false) {
+        reject(new Error(res.message || `${event} 调用失败`));
+        return;
+      }
+      resolve((res?.result ?? res?.data ?? res?.message ?? res) as T);
+    });
   });
 }
 

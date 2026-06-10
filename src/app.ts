@@ -21,7 +21,7 @@ import { normalizeAuthUser, runWithUser } from "@/utils/requestContext";
 
 const app = express();
 const server = http.createServer(app);
-const WEB_CACHE_VERSION = "v8";
+const WEB_CACHE_VERSION = "v9";
 const WEB_MAIN_SCRIPT_PREFIX = "toonflow-inline-main";
 const WEB_STYLESHEET_PREFIX = "toonflow-inline-style";
 const LONG_CACHE_SECONDS = 60 * 60 * 24 * 365;

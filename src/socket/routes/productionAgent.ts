@@ -94,6 +94,7 @@ export default (nsp: Namespace) => {
     socket.on("chat", async (payload: string | { content?: string }) => runWithUser(authUser, async () => {
       const text = normalizeChatText(payload).trim();
       if (!text) return;
+      console.log("[productionAgent] 收到消息:", text.slice(0, 120));
 
       globalContext.abortSignal.abort();
       globalContext.abortSignal = new AbortController();
