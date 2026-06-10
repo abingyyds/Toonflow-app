@@ -14,6 +14,7 @@ export default router.post(
   async (req, res) => {
     const { projectId, agentType } = req.body;
     const row = await u.db("o_agentWorkData").where({ projectId: projectId, key: agentType }).first();
+    const script = await u.db("o_script").where({ projectId }).select("id", "name", "content");
 
     if (!row) {
       const [id] = await u.db("o_agentWorkData").insert({
@@ -29,13 +30,16 @@ export default router.post(
           data: {
             storySkeleton: "",
             adaptationStrategy: "",
+            script,
           },
-          id
+          id,
         }),
       );
     }
     const data = JSON.parse(row.data ?? "{}");
-    data.script = await u.db("o_script").where({ projectId }).select("id", "name", "content");
+    data.storySkeleton = data.storySkeleton ?? "";
+    data.adaptationStrategy = data.adaptationStrategy ?? "";
+    data.script = script;
 
     res.status(200).send(success({ data, id: row.id }));
   },
