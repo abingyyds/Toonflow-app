@@ -3,14 +3,6 @@ export const INTERNAL_ROUTER_VENDOR_ID = "subrouter";
 export const HIDDEN_BUILT_IN_VENDOR_IDS = [
   "toonflow",
   "toonflow2",
-  "deepseek",
-  "atlascloud",
-  "volcengine",
-  "minimax",
-  "openai",
-  "klingai",
-  "vidu",
-  "grsai",
   "null",
   "bull",
 ] as const;

@@ -278,6 +278,19 @@ export default async (knex: Knex): Promise<void> => {
   ];
   await u.db("o_agentDeploy").whereIn("key", deleteAgentDeployKey).delete();
 
+  const getVendorVersion = (id: string): number => {
+    try {
+      return Number(u.vendor.getVendor(id)?.version ?? 0);
+    } catch {
+      return 0;
+    }
+  };
+  if (getVendorVersion("volcengine") < 2.3) {
+    u.vendor.writeCode("volcengine", vendorData["volcengine.ts"]);
+  }
+  if (getVendorVersion("minimax") < 2.1) {
+    u.vendor.writeCode("minimax", vendorData["minimax.ts"]);
+  }
 };
 
 function parseInputValues(inputValues: unknown): Record<string, string> {
