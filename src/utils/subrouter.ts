@@ -78,7 +78,7 @@ interface PreparedSubrouterLogin {
 }
 
 const SUBROUTER_VENDOR_ID = "subrouter";
-const SUBROUTER_VENDOR_VERSION = "1.5";
+const SUBROUTER_VENDOR_VERSION = "1.7";
 const AUTO_KEY_PREFIX = "toonflow-auto";
 const INTERNAL_SUBROUTER_BASE_URL = "http://subrouter.railway.internal:8080";
 const SUBROUTER_LOGIN_PROVIDERS_SETTING_KEY = "subrouterLoginProviders";
@@ -566,6 +566,7 @@ interface VideoConfig { duration: number; resolution: string; aspectRatio: "16:9
 interface TTSConfig { text: string; voice: string; speechRate: number; pitchRate: number; volume: number; referenceList?: Extract<ReferenceList, { type: "audio" }>[]; }
 declare const createOpenAICompatible: any;
 declare const axios: any;
+declare const Buffer: any;
 declare const urlToBase64: (url: string) => Promise<string>;
 declare const pollTask: (fn: () => Promise<{ completed: boolean; data?: string; error?: string }>, interval?: number, timeout?: number) => Promise<{ completed: boolean; data?: string; error?: string }>;
 declare const exports: { vendor: VendorConfig; textRequest: (m: TextModel, t: boolean, tl: 0 | 1 | 2 | 3) => any; imageRequest: (c: ImageConfig, m: ImageModel) => Promise<string>; videoRequest: (c: VideoConfig, m: VideoModel) => Promise<string>; ttsRequest: (c: TTSConfig, m: TTSModel) => Promise<string>; };
@@ -643,7 +644,6 @@ const shouldTryNextBaseUrl = (err: any): boolean => {
   if (!status) return true;
   return [404, 405, 502, 503, 504].includes(Number(status));
 };
-const isEndpointFallbackError = (message: string): boolean => /(^|\\s)(status=)?(404|405)\\b/.test(message);
 const requestJson = async (path: string, method: "GET" | "POST", body?: any): Promise<any> => {
   const candidates = baseUrls();
   if (candidates.length === 0) throw new Error(method + " " + path + " 未配置 API 基地址");
@@ -668,6 +668,32 @@ const requestJson = async (path: string, method: "GET" | "POST", body?: any): Pr
     }
   }
   throw new Error(method + " " + path + " " + describeRequestError(lastErr));
+};
+const requestBinary = async (path: string): Promise<string> => {
+  const candidates = baseUrls();
+  if (candidates.length === 0) throw new Error("GET " + path + " 未配置 API 基地址");
+  const ordered = activeBaseUrl ? [activeBaseUrl, ...candidates.filter((url) => url !== activeBaseUrl)] : candidates;
+  let lastErr: any;
+  for (const candidate of ordered) {
+    try {
+      const response = await axios({
+        url: candidate + path,
+        method: "GET",
+        headers: headers(),
+        responseType: "arraybuffer",
+        timeout: 120000,
+        validateStatus: (status: number) => status >= 200 && status < 300,
+      });
+      activeBaseUrl = candidate;
+      const mime = String(response.headers?.["content-type"] || "video/mp4").split(";")[0];
+      return "data:" + mime + ";base64," + Buffer.from(response.data).toString("base64");
+    } catch (err: any) {
+      err.__baseUrl = candidate;
+      lastErr = err;
+      if (!shouldTryNextBaseUrl(err)) break;
+    }
+  }
+  throw new Error("GET " + path + " " + describeRequestError(lastErr));
 };
 const pickUrl = (data: any, seen = new Set<any>()): string | undefined => {
   if (data == null) return undefined;
@@ -728,6 +754,18 @@ const pickError = (data: any): string | undefined =>
   data?.output?.error?.message ||
   data?.output?.error;
 
+const openAIVideoSeconds = (duration: unknown): string => {
+  const requested = Number(duration);
+  const safe = Number.isFinite(requested) ? requested : 4;
+  return String([4, 8, 12].reduce((best, item) => Math.abs(item - safe) < Math.abs(best - safe) ? item : best, 4));
+};
+
+const openAIVideoSize = (resolution: unknown, aspectRatio: unknown): string => {
+  const high = /1080|1024|1792/i.test(String(resolution || ""));
+  if (String(aspectRatio || "16:9") === "9:16") return high ? "1024x1792" : "720x1280";
+  return high ? "1792x1024" : "1280x720";
+};
+
 const textRequest = (model: TextModel, think: boolean, thinkLevel: 0 | 1 | 2 | 3) => {
   if (!vendor.inputValues.apiKey) throw new Error("缺少内置智能路由 API Key");
   return createOpenAICompatible({ name: "subrouter", baseURL: baseUrl(), apiKey: apiKey() }).chatModel(model.modelName);
@@ -753,62 +791,33 @@ const imageRequest = async (config: ImageConfig, model: ImageModel): Promise<str
 
 const videoRequest = async (config: VideoConfig, model: VideoModel): Promise<string> => {
   if (!vendor.inputValues.apiKey) throw new Error("缺少内置智能路由 API Key");
-  const isGrokImagineVideo = /grok-imagine-video/i.test(model.modelName);
   const imageRefs = (config.referenceList || []).filter((r) => r.type === "image").map((r) => r.base64);
-  const videoRefs = (config.referenceList || []).filter((r) => r.type === "video").map((r) => r.base64);
-  const audioRefs = (config.referenceList || []).filter((r) => r.type === "audio").map((r) => r.base64);
   const body: any = {
     model: model.modelName,
     prompt: config.prompt,
-    duration: config.duration,
-    resolution: config.resolution || "720p",
-    ratio: config.aspectRatio,
-    metadata: {
-      ratio: config.aspectRatio,
-      generate_audio: model.audio === true || (model.audio === "optional" && config.audio !== false),
-      references: [...imageRefs, ...videoRefs, ...audioRefs],
-    },
+    seconds: openAIVideoSeconds(config.duration),
+    size: openAIVideoSize(config.resolution, config.aspectRatio),
   };
-  if (imageRefs.length > 0) body.images = imageRefs;
-  if (isGrokImagineVideo) {
-    delete body.ratio;
-    delete body.metadata;
-    delete body.images;
-    body.aspect_ratio = config.aspectRatio;
-    if (imageRefs.length === 1) body.image = { url: imageRefs[0] };
-    if (imageRefs.length > 1) body.reference_images = imageRefs.map((url) => ({ url }));
-  }
+  if (imageRefs.length > 0) body.input_reference = { image_url: imageRefs[0] };
   let data: any;
-  try {
-    data = await requestJson(isGrokImagineVideo ? "/videos/generations" : "/video/generations", "POST", body);
-  } catch (err: any) {
-    const message = String(err?.message || err);
-    if (!isEndpointFallbackError(message)) throw new Error("视频任务创建失败: " + message);
-    data = await requestJson(isGrokImagineVideo ? "/video/generations" : "/videos/generations", "POST", body).catch((fallbackErr: any) => {
-      throw new Error("视频任务创建失败: " + String(fallbackErr?.message || fallbackErr));
-    });
-  }
+  data = await requestJson("/videos", "POST", body).catch((err: any) => {
+    throw new Error("视频任务创建失败: " + String(err?.message || err));
+  });
   const taskId = pickTaskId(data);
   const direct = pickUrl(data);
   console.info("[内置智能路由视频] 创建返回", {
     model: model.modelName,
     taskId,
     hasDirectUrl: Boolean(direct),
+    endpoint: "/videos",
     keys: data && typeof data === "object" ? Object.keys(data).slice(0, 20) : typeof data,
   });
   if (!taskId && direct) return await mediaToBase64(direct);
   if (!taskId) throw new Error("视频任务创建失败：未返回任务 ID");
   const res = await pollTask(async () => {
-    let queryData: any;
-    try {
-      queryData = await requestJson(isGrokImagineVideo ? "/videos/" + taskId : "/video/generations/" + taskId, "GET");
-    } catch (err: any) {
-      const message = String(err?.message || err);
-      if (!isEndpointFallbackError(message)) throw new Error("视频任务轮询失败: " + message);
-      queryData = await requestJson(isGrokImagineVideo ? "/video/generations/" + taskId : "/videos/" + taskId, "GET").catch((fallbackErr: any) => {
-        throw new Error("视频任务轮询失败: " + String(fallbackErr?.message || fallbackErr));
-      });
-    }
+    const queryData = await requestJson("/videos/" + taskId, "GET").catch((err: any) => {
+      throw new Error("视频任务轮询失败: " + String(err?.message || err));
+    });
     const status = pickStatus(queryData);
     const url = pickUrl(queryData);
     console.info("[内置智能路由视频] 轮询返回", {
@@ -816,9 +825,17 @@ const videoRequest = async (config: VideoConfig, model: VideoModel): Promise<str
       taskId,
       status,
       hasUrl: Boolean(url),
+      endpoint: "/videos/" + taskId,
       keys: queryData && typeof queryData === "object" ? Object.keys(queryData).slice(0, 20) : typeof queryData,
     });
     if (url && (!status || /success|succeed|completed|finished|done/.test(status))) return { completed: true, data: url };
+    if (/success|succeed|completed|finished|done/.test(status)) {
+      try {
+        return { completed: true, data: await requestBinary("/videos/" + taskId + "/content") };
+      } catch (err: any) {
+        return { completed: true, error: "视频下载失败: " + String(err?.message || err) };
+      }
+    }
     if (/fail|error|cancel|expired/.test(status)) return { completed: true, error: pickError(queryData) || "视频生成失败" };
     return { completed: false };
   }, 10000, 1800000);

@@ -30,6 +30,43 @@ function normalizeChatText(payload: string | { content?: string }) {
   return typeof payload === "string" ? payload : payload?.content ?? "";
 }
 
+function createThrottledMessageSync(socket: Socket, intervalMs = 120) {
+  let latestMessages: ChatMessagesData[] | null = null;
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  let lastEmitAt = 0;
+
+  const emit = () => {
+    if (!latestMessages) return;
+    if (timer) {
+      clearTimeout(timer);
+      timer = null;
+    }
+    lastEmitAt = Date.now();
+    socket.emit("syncMessages", latestMessages);
+    latestMessages = null;
+  };
+
+  return {
+    schedule(messages: ChatMessagesData[]) {
+      latestMessages = messages;
+      const waitMs = Math.max(0, intervalMs - (Date.now() - lastEmitAt));
+      if (waitMs === 0) {
+        emit();
+        return;
+      }
+      if (!timer) timer = setTimeout(emit, waitMs);
+    },
+    flush() {
+      emit();
+    },
+    cancel() {
+      if (timer) clearTimeout(timer);
+      timer = null;
+      latestMessages = null;
+    },
+  };
+}
+
 export default (nsp: Namespace) => {
   nsp.on("connection", async (socket: Socket) => {
     const token = socket.handshake.auth.token;
@@ -48,6 +85,9 @@ export default (nsp: Namespace) => {
     }
 
     console.log("[productionAgent] 已连接:", socket.id);
+    const messageSync = createThrottledMessageSync(socket);
+    let chatQueue: Promise<void> = Promise.resolve();
+    let queuedJobs = 0;
 
     const globalContext: GlobalContext = {
       remoteTools: [],
@@ -62,7 +102,7 @@ export default (nsp: Namespace) => {
 
     const bindChatKit = () => {
       globalContext.kit = new ChatKit(globalContext.messages, {
-        onChange: (messages: ChatMessagesData[]) => socket.emit("syncMessages", messages),
+        onChange: (messages: ChatMessagesData[]) => messageSync.schedule(messages),
       });
     };
     bindChatKit();
@@ -70,6 +110,7 @@ export default (nsp: Namespace) => {
     socket.on("remoteTools", async (remoteTools) => (globalContext.remoteTools = remoteTools));
 
     socket.on("syncMessages", (messages: ChatMessagesData[]) => {
+      messageSync.cancel();
       globalContext.messages = Array.isArray(messages) ? messages : [];
       bindChatKit();
     });
@@ -88,30 +129,54 @@ export default (nsp: Namespace) => {
 
     socket.on("stop", () => {
       globalContext.abortSignal.abort();
-      globalContext.abortSignal = new AbortController();
+      messageSync.flush();
     });
 
-    socket.on("chat", async (payload: string | { content?: string }) => runWithUser(authUser, async () => {
+    socket.on("disconnect", () => {
+      messageSync.cancel();
+    });
+
+    socket.on("chat", (payload: string | { content?: string }) => {
       const text = normalizeChatText(payload).trim();
       if (!text) return;
       console.log("[productionAgent] 收到消息:", text.slice(0, 120));
 
-      globalContext.abortSignal.abort();
-      globalContext.abortSignal = new AbortController();
-
+      const queuedAhead = queuedJobs;
+      queuedJobs += 1;
       const userBox = globalContext.kit.user();
       userBox.text(text).end();
-
-      try {
-        await agent.runDecisionAI(globalContext, text);
-      } catch (err: any) {
-        if (err?.name !== "AbortError" && !globalContext.abortSignal.signal.aborted) {
-          const message = u.error(err).message;
-          console.error("[productionAgent] chat error:", message);
-          globalContext.kit.box().name("导演").text(message).end("error");
-        }
+      if (queuedAhead > 0) {
+        globalContext.kit
+          .box()
+          .name("导演")
+          .text(`已收到，会在当前任务结束后继续处理。前方还有 ${queuedAhead} 条消息。`)
+          .end();
       }
-    }));
+      messageSync.flush();
+
+      chatQueue = chatQueue
+        .catch((err) => {
+          console.error("[productionAgent] queue error:", u.error(err).message);
+        })
+        .then(async () => {
+          const abortSignal = new AbortController();
+          globalContext.abortSignal = abortSignal;
+          try {
+            await runWithUser(authUser, async () => {
+              await agent.runDecisionAI(globalContext, text);
+            });
+          } catch (err: any) {
+            if (err?.name !== "AbortError" && !abortSignal.signal.aborted) {
+              const message = u.error(err).message;
+              console.error("[productionAgent] chat error:", message);
+              globalContext.kit.box().name("导演").text(message).end("error");
+            }
+          } finally {
+            queuedJobs = Math.max(0, queuedJobs - 1);
+            messageSync.flush();
+          }
+        });
+    });
   });
 
   nsp.on("disconnect", (socket: Socket) => {

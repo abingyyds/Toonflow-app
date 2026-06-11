@@ -2,6 +2,13 @@ import isPathInside from "is-path-inside";
 import getPath, { isEletron } from "@/utils/getPath";
 import fs from "node:fs/promises";
 import path from "node:path";
+import sharp from "sharp";
+
+interface ImageBase64Options {
+  maxBytes?: number;
+  maxEdge?: number;
+  quality?: number;
+}
 
 // 规范化路径：去除前导斜杠，并将路径分隔符统一转换为系统分隔符
 function normalizeUserPath(userPath: string): string {
@@ -29,6 +36,30 @@ function resolveSafeLocalPath(userPath: string, rootDir: string): string {
     throw new Error(`${userPath} 不在 OSS 根目录内`);
   }
   return absPath;
+}
+
+async function compressImageBuffer(buffer: Buffer<ArrayBufferLike>, options: Required<ImageBase64Options>): Promise<Buffer<ArrayBufferLike>> {
+  let quality = options.quality;
+  let maxEdge = options.maxEdge;
+  let output: Buffer<ArrayBufferLike> = buffer;
+
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    output = await sharp(buffer)
+      .rotate()
+      .resize({ width: maxEdge, height: maxEdge, fit: "inside", withoutEnlargement: true })
+      .flatten({ background: "#ffffff" })
+      .jpeg({ quality, mozjpeg: true })
+      .toBuffer();
+
+    if (output.length <= options.maxBytes) return output;
+    if (quality > 52) {
+      quality -= 10;
+    } else {
+      maxEdge = Math.max(512, Math.floor(maxEdge * 0.82));
+    }
+  }
+
+  return output;
 }
 
 class OSS {
@@ -84,7 +115,7 @@ class OSS {
    * @returns base64 编码的 Data URL (例如: data:image/png;base64,iVBORw0KGgo...)
    * @throws 路径不在 OSS 根目录内、文件不存在、不是图片文件等错误
    */
-  async getImageBase64(userRelPath: string): Promise<string> {
+  async getImageBase64(userRelPath: string, options?: ImageBase64Options): Promise<string> {
     await this.ensureInit();
     const absPath = resolveSafeLocalPath(userRelPath, this.rootDir);
 
@@ -117,11 +148,25 @@ class OSS {
     }
 
     // 读取文件并转换为 base64
-    const data = await fs.readFile(absPath);
+    let data: Buffer<ArrayBufferLike> = await fs.readFile(absPath);
+    let outputMimeType = mimeType;
+    const shouldCompress =
+      options?.maxBytes &&
+      mimeType.startsWith("image/") &&
+      mimeType !== "image/svg+xml" &&
+      mimeType !== "image/gif";
+    if (shouldCompress) {
+      data = await compressImageBuffer(data, {
+        maxBytes: options.maxBytes!,
+        maxEdge: options.maxEdge ?? 1280,
+        quality: options.quality ?? 82,
+      });
+      outputMimeType = "image/jpeg";
+    }
     const base64 = data.toString("base64");
 
     // 返回完整的 Data URL
-    return `data:${mimeType};base64,${base64}`;
+    return `data:${outputMimeType};base64,${base64}`;
   }
   /**
    * 删除指定路径的文件。

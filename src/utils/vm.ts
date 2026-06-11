@@ -38,6 +38,7 @@ export default function runCode(code: string, vendor?: Record<string, any>) {
     FormData,
     logger,
     jsonwebtoken,
+    Buffer,
   };
   if (vendor !== undefined) {
     sandbox.vendor = vendor;

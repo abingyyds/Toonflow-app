@@ -5,6 +5,7 @@ import u from "@/utils";
 import Memory from "@/utils/agent/memory";
 import * as fs from "fs";
 import path from "path";
+import type { MessageHandle } from "@/socket/chatKit";
 
 type ProductionFlowDataKey = "script" | "scriptPlan" | "plan" | "storyboardTable" | "assets" | "storyboard" | "workbench" | "all";
 
@@ -25,53 +26,64 @@ function buildMemPrompt(mem: Awaited<ReturnType<Memory["get"]>>): string {
 }
 
 export async function runDecisionAI(ctx: GlobalContext, text: string) {
-  const memory = new Memory("productionAgent", ctx.isolationKey);
-  await memory.add("user", text);
+  const initialBox = ctx.kit.box().name("导演").status("pending");
+  initialBox.text("已收到，正在读取项目配置并安排制作流程...").end();
 
-  const skill = path.join(u.getPath("skills"), "production_agent_decision.md");
-  const prompt = await fs.promises.readFile(skill, "utf-8");
-  const decisionPrompt = `${prompt}
+  const memory = new Memory("productionAgent", ctx.isolationKey);
+  try {
+    await memory.add("user", text);
+
+    const skill = path.join(u.getPath("skills"), "production_agent_decision.md");
+    const prompt = await fs.promises.readFile(skill, "utf-8");
+    const decisionPrompt = `${prompt}
 
 ## 当前产品入口语义
 
 当用户点击「开始制作视频」或输入「请帮我开始制作视频」时，含义是「从头开始 / 完整制作」，应从阶段1导演规划开始按流水线推进。
 这不是视频生成面板里的最终合成视频请求，不要按“生成视频/合成视频”拒绝执行。`;
 
-  const projectInfo = await u.db("o_project").where("id", ctx.projectId).first();
-  if (!projectInfo) throw new Error(`项目不存在，ID: ${ctx.projectId}`);
-  const [_, imageModelName] = projectInfo.imageModel!.split(/:(.+)/);
-  const [id, videoModelName] = projectInfo.videoModel!.split(/:(.+)/);
-  const models = await u.vendor.getModelList(id);
-  if (!models.length) throw new Error(`项目使用的模型不存在，ID: ${projectInfo.videoModel}`);
-  let videoMode = "";
-  try {
-    videoMode = JSON.parse(projectInfo.mode ?? "");
-  } catch (e) {
-    videoMode = projectInfo.mode ?? "";
+    const projectInfo = await u.db("o_project").where("id", ctx.projectId).first();
+    if (!projectInfo) throw new Error(`项目不存在，ID: ${ctx.projectId}`);
+    const [_, imageModelName] = projectInfo.imageModel!.split(/:(.+)/);
+    const [id, videoModelName] = projectInfo.videoModel!.split(/:(.+)/);
+    const models = await u.vendor.getModelList(id);
+    if (!models.length) throw new Error(`项目使用的模型不存在，ID: ${projectInfo.videoModel}`);
+    let videoMode = "";
+    try {
+      videoMode = JSON.parse(projectInfo.mode ?? "");
+    } catch (e) {
+      videoMode = projectInfo.mode ?? "";
+    }
+    const isRef = Array.isArray(videoMode) ? true : false;
+    // const findData = models.find((i: any) => i.modelName == videoModelName);
+    // const isRef = findData.mode.every((i: any) => Array.isArray(i));
+
+    const modelInfo = `项目使用的模型如下：\n图像模型：${imageModelName}\n视频模型：${videoModelName}\n多参：${isRef ? "是" : "否"}`;
+
+    const mem = buildMemPrompt(await memory.get(text));
+
+    const { fullStream } = await u.Ai.Text("productionAgent", ctx.thinkLevel).stream({
+      messages: [
+        { role: "system", content: decisionPrompt },
+        { role: "assistant", content: mem + "\n\n" + modelInfo },
+        { role: "user", content: text },
+      ],
+      abortSignal: ctx.abortSignal.signal,
+      tools: {
+        ...memory.getTools(),
+        ...createSubAgentTools(ctx),
+      },
+    });
+    const fullResponse = await consumeStream(ctx, fullStream, "导演", initialBox);
+    if (fullResponse.trim()) await memory.add("assistant:decision", fullResponse);
+    return fullResponse;
+  } catch (err: any) {
+    const status = initialBox.raw().status;
+    if (status === "pending" || status === "streaming") {
+      initialBox.end(err?.name === "AbortError" || ctx.abortSignal.signal.aborted ? "stop" : "error");
+    }
+    throw err;
   }
-  const isRef = Array.isArray(videoMode) ? true : false;
-  // const findData = models.find((i: any) => i.modelName == videoModelName);
-  // const isRef = findData.mode.every((i: any) => Array.isArray(i));
-
-  const modelInfo = `项目使用的模型如下：\n图像模型：${imageModelName}\n视频模型：${videoModelName}\n多参：${isRef ? "是" : "否"}`;
-
-  const mem = buildMemPrompt(await memory.get(text));
-
-  const { fullStream } = await u.Ai.Text("productionAgent", ctx.thinkLevel).stream({
-    messages: [
-      { role: "system", content: decisionPrompt },
-      { role: "assistant", content: mem + "\n\n" + modelInfo },
-      { role: "user", content: text },
-    ],
-    abortSignal: ctx.abortSignal.signal,
-    tools: {
-      ...memory.getTools(),
-      ...createSubAgentTools(ctx),
-    },
-  });
-  const fullResponse = await consumeStream(ctx, fullStream, "导演");
-  if (fullResponse.trim()) await memory.add("assistant:decision", fullResponse);
-  return fullResponse;
 }
 
 function createSubAgentTools(ctx: GlobalContext) {
@@ -235,8 +247,9 @@ function emitRemoteTool<T = any>(ctx: GlobalContext, event: string, payload: any
   });
 }
 
-async function consumeStream(ctx: GlobalContext, fullStream: AsyncIterable<any>, name: string): Promise<string> {
-  let box: ReturnType<typeof ctx.kit.box> | null = null;
+async function consumeStream(ctx: GlobalContext, fullStream: AsyncIterable<any>, name: string, initialBox?: MessageHandle): Promise<string> {
+  let box: MessageHandle | null = initialBox ?? null;
+  let shouldClearInitialBox = Boolean(initialBox);
   let decisionMsg: any = null;
   let thinking: any = null;
   let thinkTime = 0;
@@ -244,13 +257,18 @@ async function consumeStream(ctx: GlobalContext, fullStream: AsyncIterable<any>,
 
   // 容器可以早建：进流之前就显示一条 loading 占位消息
   const startBox = () => {
-    box = ctx.kit.box().name(name).status("pending"); // pending = loading
+    if (box) box.name(name).status("pending");
+    else box = ctx.kit.box().name(name).status("pending"); // pending = loading
     decisionMsg = null;
     thinking = null;
   };
   // 第一个内容块到了才把消息切到 streaming（内容块本身仍懒建，保证顺序）
   const liveBox = () => {
     if (!box) startBox();
+    if (shouldClearInitialBox && box === initialBox) {
+      box!.clear();
+      shouldClearInitialBox = false;
+    }
     box!.status("streaming");
     return box!;
   };
@@ -290,6 +308,7 @@ async function consumeStream(ctx: GlobalContext, fullStream: AsyncIterable<any>,
     } else if (chunk.type === "finish-step") {
       flushStep();
     } else if (chunk.type === "error") {
+      box?.end("error");
       throw chunk.error;
     }
   }
