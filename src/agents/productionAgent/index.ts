@@ -6,8 +6,13 @@ import Memory from "@/utils/agent/memory";
 import * as fs from "fs";
 import path from "path";
 import type { MessageHandle } from "@/socket/chatKit";
+import type { ChatMessagesData, AIMessageContent } from "@/socket/chatMessagesData";
 
 type ProductionFlowDataKey = "script" | "scriptPlan" | "plan" | "storyboardTable" | "assets" | "storyboard" | "workbench" | "all";
+type DeterministicAction =
+  | "retry_stage1_supervision"
+  | "continue_stage2_after_failed_supervision"
+  | "revise_stage1_plan_after_failed_supervision";
 
 function buildMemPrompt(mem: Awaited<ReturnType<Memory["get"]>>): string {
   let memoryContext = "";
@@ -26,8 +31,9 @@ function buildMemPrompt(mem: Awaited<ReturnType<Memory["get"]>>): string {
 }
 
 export async function runDecisionAI(ctx: GlobalContext, text: string) {
+  const deterministicAction = detectDeterministicAction(ctx.messages, text);
   const initialBox = ctx.kit.box().name("导演").status("pending");
-  initialBox.text("已收到，正在读取项目配置并安排制作流程...").end();
+  initialBox.text(deterministicAction ? "已收到，正在按您的选择继续处理..." : "已收到，正在读取项目配置并安排制作流程...").end();
 
   const memory = new Memory("productionAgent", ctx.isolationKey);
   try {
@@ -61,12 +67,13 @@ export async function runDecisionAI(ctx: GlobalContext, text: string) {
     const modelInfo = `项目使用的模型如下：\n图像模型：${imageModelName}\n视频模型：${videoModelName}\n多参：${isRef ? "是" : "否"}`;
 
     const mem = buildMemPrompt(await memory.get(text));
+    const userText = deterministicAction ? buildDeterministicUserText(deterministicAction, text) : text;
 
     const { fullStream } = await u.Ai.Text("productionAgent", ctx.thinkLevel).stream({
       messages: [
         { role: "system", content: decisionPrompt },
         { role: "assistant", content: mem + "\n\n" + modelInfo },
-        { role: "user", content: text },
+        { role: "user", content: userText },
       ],
       abortSignal: ctx.abortSignal.signal,
       tools: {
@@ -84,6 +91,68 @@ export async function runDecisionAI(ctx: GlobalContext, text: string) {
     }
     throw err;
   }
+}
+
+function buildDeterministicUserText(action: DeterministicAction, originalText: string): string {
+  if (action === "retry_stage1_supervision") {
+    return [
+      `用户原始回复：${originalText}`,
+      "用户选择了上一次菜单中的 A：立即重新发起阶段1导演规划审核。",
+      "请不要解释选项，不要等待，不要重做导演规划；直接调用监督层审核阶段1导演规划。",
+      "审核指令：请审核【导演规划】的产出物。审核维度：剧情覆盖、资产覆盖、衍生预划、节奏结构、视觉与声音方向。",
+    ].join("\n");
+  }
+  if (action === "continue_stage2_after_failed_supervision") {
+    return [
+      `用户原始回复：${originalText}`,
+      "用户选择了上一次菜单中的 B：跳过本次失败的阶段1审核，按当前导演规划继续进入阶段2衍生资产分析。",
+      "请不要再次询问 A/B/C；直接派发阶段2衍生资产分析。",
+    ].join("\n");
+  }
+  return [
+    `用户原始回复：${originalText}`,
+    "用户选择了上一次菜单中的 C：先调整导演规划内容后再审核。",
+    "如果用户未给出具体调整要求，请明确询问要调整哪些内容；不要静默等待。",
+  ].join("\n");
+}
+
+function detectDeterministicAction(messages: ChatMessagesData[], text: string): DeterministicAction | null {
+  const normalized = text.trim().replace(/\s+/g, " ");
+  const choice = normalized.match(/^([ABC])(?:[.。．、\s]|$)/i)?.[1]?.toUpperCase();
+  const latestAssistantText = getLatestAssistantText(messages);
+  const isFailedStage1Menu =
+    latestAssistantText.includes("阶段1审核") &&
+    latestAssistantText.includes("暂时失败") &&
+    latestAssistantText.includes("A. 稍后重新发起阶段1审核") &&
+    latestAssistantText.includes("B. 先根据当前导演规划继续进入阶段2衍生资产分析");
+
+  if (!isFailedStage1Menu) return null;
+  if (choice === "A" || /重新发起阶段1审核|稍后重新发起阶段1审核|重新审核|再审核/.test(normalized)) return "retry_stage1_supervision";
+  if (choice === "B" || /继续进入阶段2|衍生资产分析/.test(normalized)) return "continue_stage2_after_failed_supervision";
+  if (choice === "C" || /调整导演规划|调整规划|再次调整/.test(normalized)) return "revise_stage1_plan_after_failed_supervision";
+  return null;
+}
+
+function getLatestAssistantText(messages: ChatMessagesData[]): string {
+  for (let i = messages.length - 1; i >= 0; i -= 1) {
+    const message = messages[i];
+    if (message.role !== "assistant") continue;
+    return collectContentText(message.content ?? []);
+  }
+  return "";
+}
+
+function collectContentText(content: AIMessageContent[]): string {
+  return content
+    .map((item) => {
+      if (item.type === "text" || item.type === "markdown") return item.data;
+      if (item.type === "thinking") return item.data.text ?? "";
+      if (item.type === "reasoning") return collectContentText(item.data);
+      if (item.type === "activity") return typeof item.data.content === "string" ? item.data.content : "";
+      return "";
+    })
+    .filter(Boolean)
+    .join("\n");
 }
 
 function createSubAgentTools(ctx: GlobalContext) {
@@ -254,6 +323,7 @@ async function consumeStream(ctx: GlobalContext, fullStream: AsyncIterable<any>,
   let thinking: any = null;
   let thinkTime = 0;
   let fullResponse = "";
+  let toolErrorText = "";
 
   // 容器可以早建：进流之前就显示一条 loading 占位消息
   const startBox = () => {
@@ -305,6 +375,15 @@ async function consumeStream(ctx: GlobalContext, fullStream: AsyncIterable<any>,
       if (!decisionMsg) decisionMsg = liveBox().text();
       decisionMsg.append(chunk.text);
       fullResponse += chunk.text;
+    } else if (chunk.type === "tool-error") {
+      const message = `工具调用失败：${u.error(chunk.error).message}`;
+      toolErrorText += `${message}\n`;
+      if (!decisionMsg) decisionMsg = liveBox().text();
+      decisionMsg.append(`\n${message}\n`);
+      fullResponse += `\n${message}\n`;
+    } else if (chunk.type === "abort") {
+      box?.end("stop");
+      throw new Error("请求已停止");
     } else if (chunk.type === "finish-step") {
       flushStep();
     } else if (chunk.type === "error") {
@@ -313,6 +392,7 @@ async function consumeStream(ctx: GlobalContext, fullStream: AsyncIterable<any>,
     }
   }
   flushStep();
+  if (toolErrorText && !fullResponse.trim()) return toolErrorText;
   return fullResponse;
 }
 
