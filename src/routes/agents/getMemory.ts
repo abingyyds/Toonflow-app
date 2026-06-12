@@ -3,6 +3,8 @@ import u from "@/utils";
 import { z } from "zod";
 import { success } from "@/lib/responseFormat";
 import { validateFields } from "@/middleware/middleware";
+import { buildAgentMemoryIsolationKeys } from "@/utils/agent/isolation";
+import { getCurrentUser } from "@/utils/requestContext";
 const router = express.Router();
 
 function normalizeRole(role?: string | null): "user" | "assistant" {
@@ -18,11 +20,17 @@ export default router.post(
   }),
   async (req, res) => {
     const { projectId, agentType, episodesId } = req.body;
-    const isolationKey = `${projectId}:${agentType}${episodesId ? `:${episodesId}` : ""}`;
+    const isolationKeys = buildAgentMemoryIsolationKeys({
+      agentType,
+      projectId,
+      episodesId,
+      user: getCurrentUser(),
+    });
 
     const rows = await u
       .db("memories")
-      .where({ isolationKey, type: "message" })
+      .whereIn("isolationKey", isolationKeys)
+      .andWhere({ type: "message" })
       .orderBy("createTime", "asc")
       .select("id", "role", "name", "content", "createTime");
 

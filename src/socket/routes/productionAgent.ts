@@ -6,6 +6,7 @@ import { ChatMessagesData } from "@/socket/chatMessagesData";
 import * as agent from "@/agents/productionAgent/index";
 import ChatKit from "@/socket/chatKit";
 import { AuthUser, normalizeAuthUser, runWithUser } from "@/utils/requestContext";
+import { buildAgentMemoryIsolationKey } from "@/utils/agent/isolation";
 
 async function verifyToken(rawToken: string): Promise<AuthUser | null> {
   const setting = await u.db("o_setting").where("key", "tokenKey").select("value").first();
@@ -21,13 +22,33 @@ async function verifyToken(rawToken: string): Promise<AuthUser | null> {
   }
 }
 
-function parseProjectId(value: unknown) {
+function parseProjectId(value: unknown): number | null {
   const projectId = Number(value);
-  return Number.isFinite(projectId) && projectId > 0 ? projectId : 1777638289380;
+  return Number.isFinite(projectId) && projectId > 0 ? projectId : null;
 }
 
 function normalizeChatText(payload: string | { content?: string }) {
   return typeof payload === "string" ? payload : payload?.content ?? "";
+}
+
+function parseEpisodesId(value: unknown): number | null {
+  const episodesId = Number(value);
+  return Number.isFinite(episodesId) && episodesId > 0 ? episodesId : null;
+}
+
+function buildIsolationKey(authUser: AuthUser, projectId: number, episodesId: number | null) {
+  return buildAgentMemoryIsolationKey({
+    agentType: "productionAgent",
+    projectId,
+    episodesId,
+    user: authUser,
+  });
+}
+
+async function canAccessProject(authUser: AuthUser, projectId: number): Promise<boolean> {
+  const project = await u.db("o_project").where("id", projectId).select("id", "userId").first();
+  if (!project) return false;
+  return project.userId == null || Number(project.userId) === authUser.id;
 }
 
 function createThrottledMessageSync(socket: Socket, intervalMs = 120) {
@@ -77,14 +98,20 @@ export default (nsp: Namespace) => {
       return;
     }
 
-    const isolationKey = socket.handshake.auth.isolationKey;
-    if (!isolationKey) {
-      console.log("[productionAgent] 连接失败，缺少 isolationKey");
-      socket.disconnect();
-      return;
-    }
+    const projectId = parseProjectId(socket.handshake.auth.projectId);
+    const episodesId = parseEpisodesId(socket.handshake.auth.episodesId);
+    const hasProjectAccess = projectId ? await canAccessProject(authUser, projectId) : false;
+    const initialProjectId = hasProjectAccess ? projectId : null;
+    const isolationKey = initialProjectId ? buildIsolationKey(authUser, initialProjectId, episodesId) : "";
 
-    console.log("[productionAgent] 已连接:", socket.id);
+    console.log("[productionAgent] 已连接:", {
+      socketId: socket.id,
+      userId: authUser.id,
+      projectId: initialProjectId,
+      requestedProjectId: projectId,
+      episodesId,
+      isolationKey,
+    });
     const messageSync = createThrottledMessageSync(socket);
     let chatQueue: Promise<void> = Promise.resolve();
     let queuedJobs = 0;
@@ -95,7 +122,7 @@ export default (nsp: Namespace) => {
       socket,
       kit: undefined as any,
       isolationKey,
-      projectId: parseProjectId(socket.handshake.auth.projectId),
+      projectId: initialProjectId ?? 0,
       thinkLevel: 0,
       messages: [],
     };
@@ -107,19 +134,56 @@ export default (nsp: Namespace) => {
     };
     bindChatKit();
 
-    socket.on("remoteTools", async (remoteTools) => (globalContext.remoteTools = remoteTools));
+    socket.on("remoteTools", async (remoteTools) => {
+      globalContext.remoteTools = Array.isArray(remoteTools) ? remoteTools : [];
+      console.log("[productionAgent] 已接收远端工具:", {
+        socketId: socket.id,
+        userId: authUser.id,
+        count: globalContext.remoteTools.length,
+      });
+    });
 
     socket.on("syncMessages", (messages: ChatMessagesData[]) => {
       messageSync.cancel();
       globalContext.messages = Array.isArray(messages) ? messages : [];
+      console.log("[productionAgent] 已同步前端消息:", {
+        socketId: socket.id,
+        userId: authUser.id,
+        count: globalContext.messages.length,
+      });
       bindChatKit();
     });
 
-    socket.on("updateContext", (data: { isolationKey?: string; projectId?: number }, callback) => {
-      if (data?.isolationKey) globalContext.isolationKey = data.isolationKey;
-      if (data?.projectId) globalContext.projectId = parseProjectId(data.projectId);
-      console.log("[productionAgent] 上下文已更新:", globalContext.isolationKey);
-      callback?.({ success: true });
+    socket.on("updateContext", async (data: { isolationKey?: string; projectId?: number; episodesId?: number }, callback) => {
+      const nextProjectId = parseProjectId(data?.projectId);
+      if (!nextProjectId) {
+        const message = "缺少有效 projectId，无法更新生产 Agent 上下文";
+        console.warn("[productionAgent] 上下文更新失败:", { socketId: socket.id, userId: authUser.id, data });
+        callback?.({ success: false, message });
+        globalContext.kit.box().name("导演").text(message).end("error");
+        messageSync.flush();
+        return;
+      }
+      if (!(await canAccessProject(authUser, nextProjectId))) {
+        const message = "无权访问该项目，无法更新生产 Agent 上下文";
+        console.warn("[productionAgent] 上下文更新失败，项目无权限:", { socketId: socket.id, userId: authUser.id, projectId: nextProjectId });
+        callback?.({ success: false, message });
+        globalContext.kit.box().name("导演").text(message).end("error");
+        messageSync.flush();
+        return;
+      }
+
+      const nextEpisodesId = parseEpisodesId(data?.episodesId);
+      globalContext.projectId = nextProjectId;
+      globalContext.isolationKey = buildIsolationKey(authUser, nextProjectId, nextEpisodesId);
+      console.log("[productionAgent] 上下文已更新:", {
+        socketId: socket.id,
+        userId: authUser.id,
+        projectId: globalContext.projectId,
+        episodesId: nextEpisodesId,
+        isolationKey: globalContext.isolationKey,
+      });
+      callback?.({ success: true, isolationKey: globalContext.isolationKey });
     });
 
     socket.on("updateThinkConfig", (data: { thinlLevel?: 0 | 1 | 2 | 3; thinkLevel?: 0 | 1 | 2 | 3 }) => {
@@ -139,7 +203,27 @@ export default (nsp: Namespace) => {
     socket.on("chat", (payload: string | { content?: string }) => {
       const text = normalizeChatText(payload).trim();
       if (!text) return;
-      console.log("[productionAgent] 收到消息:", text.slice(0, 120));
+      if (!globalContext.projectId || !globalContext.isolationKey) {
+        const message = "生产 Agent 尚未拿到项目上下文，请先选择项目/剧集，或刷新工作台后重试。";
+        console.warn("[productionAgent] 拒绝处理消息，缺少上下文:", {
+          socketId: socket.id,
+          userId: authUser.id,
+          projectId: globalContext.projectId,
+          isolationKey: globalContext.isolationKey,
+          text: text.slice(0, 120),
+        });
+        globalContext.kit.user().text(text).end();
+        globalContext.kit.box().name("导演").text(message).end("error");
+        messageSync.flush();
+        return;
+      }
+      console.log("[productionAgent] 收到消息:", {
+        socketId: socket.id,
+        userId: authUser.id,
+        projectId: globalContext.projectId,
+        isolationKey: globalContext.isolationKey,
+        text: text.slice(0, 120),
+      });
 
       const queuedAhead = queuedJobs;
       queuedJobs += 1;

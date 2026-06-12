@@ -3,6 +3,7 @@ import u from "@/utils";
 import { z } from "zod";
 import { success } from "@/lib/responseFormat";
 import { validateFields } from "@/middleware/middleware";
+import { buildProjectMemoryIsolationLikePatterns } from "@/utils/agent/isolation";
 const router = express.Router();
 
 // 删除项目
@@ -49,7 +50,9 @@ export default router.post(
     await u.db("o_video").where("projectId", id).delete();
     //删除项目下的资源
 
-    await u.db("memories").where("isolationKey", "like", `${id}:%`).delete();
+    for (const pattern of buildProjectMemoryIsolationLikePatterns(id)) {
+      await u.db("memories").where("isolationKey", "like", pattern).delete();
+    }
 
     try {
       await u.oss.deleteDirectory(`${id}/`);
