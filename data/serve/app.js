@@ -21285,16 +21285,16 @@ var require_router = __commonJS({
         return new Router(options);
       }
       const opts = options || {};
-      function router190(req, res, next) {
-        router190.handle(req, res, next);
+      function router192(req, res, next) {
+        router192.handle(req, res, next);
       }
-      Object.setPrototypeOf(router190, this);
-      router190.caseSensitive = opts.caseSensitive;
-      router190.mergeParams = opts.mergeParams;
-      router190.params = {};
-      router190.strict = opts.strict;
-      router190.stack = [];
-      return router190;
+      Object.setPrototypeOf(router192, this);
+      router192.caseSensitive = opts.caseSensitive;
+      router192.mergeParams = opts.mergeParams;
+      router192.params = {};
+      router192.strict = opts.strict;
+      router192.stack = [];
+      return router192;
     }
     Router.prototype = function() {
     };
@@ -21682,7 +21682,7 @@ var require_application = __commonJS({
     var app2 = exports2 = module2.exports = {};
     var trustProxyDefaultSymbol = "@@symbol:trust_proxy_default";
     app2.init = function init() {
-      var router190 = null;
+      var router192 = null;
       this.cache = /* @__PURE__ */ Object.create(null);
       this.engines = /* @__PURE__ */ Object.create(null);
       this.settings = /* @__PURE__ */ Object.create(null);
@@ -21691,13 +21691,13 @@ var require_application = __commonJS({
         configurable: true,
         enumerable: true,
         get: function getrouter() {
-          if (router190 === null) {
-            router190 = new Router({
+          if (router192 === null) {
+            router192 = new Router({
               caseSensitive: this.enabled("case sensitive routing"),
               strict: this.enabled("strict routing")
             });
           }
-          return router190;
+          return router192;
         }
       });
     };
@@ -21768,15 +21768,15 @@ var require_application = __commonJS({
       if (fns.length === 0) {
         throw new TypeError("app.use() requires a middleware function");
       }
-      var router190 = this.router;
+      var router192 = this.router;
       fns.forEach(function(fn2) {
         if (!fn2 || !fn2.handle || !fn2.set) {
-          return router190.use(path38, fn2);
+          return router192.use(path38, fn2);
         }
         debug(".use app under %s", path38);
         fn2.mountpath = path38;
         fn2.parent = this;
-        router190.use(path38, function mounted_app(req, res, next) {
+        router192.use(path38, function mounted_app(req, res, next) {
           var orig = req.app;
           fn2.handle(req, res, function(err) {
             Object.setPrototypeOf(req, orig.request);
@@ -49337,8 +49337,8 @@ var require_lib4 = __commonJS({
         getWss: function getWss() {
           return wsServer;
         },
-        applyTo: function applyTo(router190) {
-          (0, _addWsMethod2.default)(router190);
+        applyTo: function applyTo(router192) {
+          (0, _addWsMethod2.default)(router192);
         }
       };
     }
@@ -193392,13 +193392,13 @@ var require_dist11 = __commonJS({
     var import_provider_utils310 = require_dist10();
     var import_zod210 = require_zod();
     var import_provider_utils178 = require_dist10();
-    var import_zod164 = require_zod();
-    var qwenErrorDataSchema = import_zod164.z.object({
-      object: import_zod164.z.literal("error"),
-      message: import_zod164.z.string(),
-      type: import_zod164.z.string(),
-      param: import_zod164.z.string().nullable(),
-      code: import_zod164.z.string().nullable()
+    var import_zod165 = require_zod();
+    var qwenErrorDataSchema = import_zod165.z.object({
+      object: import_zod165.z.literal("error"),
+      message: import_zod165.z.string(),
+      type: import_zod165.z.string(),
+      param: import_zod165.z.string().nullable(),
+      code: import_zod165.z.string().nullable()
     });
     var qwenFailedResponseHandler = (0, import_provider_utils178.createJsonErrorResponseHandler)({
       errorSchema: qwenErrorDataSchema,
@@ -237439,18 +237439,35 @@ async function refreshStoredModels(userId, provider, baseUrl) {
   await autoSelectDefaultTextAgentModels(userId, models);
   return models;
 }
+function parseStoredModels(value) {
+  if (typeof value !== "string" || !value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
 async function selectSubrouterModel(userId, modelName, targets) {
   const vendorId = SUBROUTER_VENDOR_ID;
   const model = modelName.includes(":") ? modelName.split(/:(.+)/)[1] : modelName;
+  const account = await getStoredSubrouterAccount(userId);
+  if (!account) throw new Error("\u672A\u7ED1\u5B9A\u5185\u7F6E\u667A\u80FD\u8DEF\u7531\u8D26\u6237");
+  const availableModel = parseStoredModels(account.models).find((item) => item.modelName === model);
+  if (!availableModel) throw new Error("\u5F53\u524D\u8D26\u53F7\u6A21\u578B\u5217\u8868\u4E2D\u672A\u627E\u5230\u8BE5\u6A21\u578B\uFF0C\u8BF7\u5237\u65B0\u6A21\u578B\u540E\u91CD\u8BD5");
+  if (availableModel.type !== "text") throw new Error("Agent \u53EA\u80FD\u9009\u62E9\u6587\u672C\u6A21\u578B");
   const modelId = `${vendorId}:${model}`;
   const deployRows = await db_default("o_agentDeploy").select("*");
   const targetSet = new Set(targets.length ? targets : ["scriptAgent", "productionAgent", "universalAi"]);
   for (const row of deployRows) {
-    if (!row.key || !targetSet.has(row.key)) continue;
+    const rowKey = String(row.key || "");
+    if (!rowKey) continue;
+    const shouldApply = [...targetSet].some((target) => rowKey === target || rowKey.startsWith(`${target}:`));
+    if (!shouldApply) continue;
     await upsertUserAgentDeploy(userId, {
       ...row,
-      key: row.key,
-      agentKey: row.key,
+      key: rowKey,
+      agentKey: rowKey,
       vendorId,
       model,
       modelName: modelId
@@ -254989,7 +255006,8 @@ var init_addProject = __esm({
       }),
       async (req, res) => {
         const { projectType, name: name28, intro, type, directorManual, artStyle, videoRatio, imageModel, videoModel, imageQuality, mode } = req.body;
-        const userId = getCurrentUserId() ?? 1;
+        const userId = getCurrentUserId();
+        if (!userId) return res.status(401).send({ message: "\u672A\u63D0\u4F9Btoken" });
         await utils_default.db("o_project").insert({
           id: Date.now(),
           projectType,
@@ -269319,8 +269337,9 @@ var init_selectModel = __esm({
         const userId = getCurrentUserId();
         if (!userId) return res.status(401).send({ message: "\u672A\u63D0\u4F9Btoken" });
         try {
-          await selectSubrouterModel(userId, req.body.modelName, req.body.targets || []);
-          res.status(200).send(success3("\u6A21\u578B\u5DF2\u8BBE\u7F6E\u5230\u5F53\u524D\u7528\u6237"));
+          const targets = req.body.targets || [];
+          await selectSubrouterModel(userId, req.body.modelName, targets);
+          res.status(200).send(success3({ modelName: req.body.modelName, targets }, "\u6A21\u578B\u5DF2\u8BBE\u7F6E\u5230\u5F53\u524D\u7528\u6237"));
         } catch (err) {
           res.status(400).send(error53(formatSubrouterError(err)));
         }
@@ -269330,6 +269349,25 @@ var init_selectModel = __esm({
 });
 
 // src/routes/subrouter/status.ts
+function parseModels2(value) {
+  if (typeof value !== "string" || !value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+function countModelsByType(models) {
+  return models.reduce(
+    (acc, model) => {
+      const type = model.type === "image" || model.type === "video" || model.type === "text" ? model.type : "other";
+      acc[type] += 1;
+      return acc;
+    },
+    { text: 0, image: 0, video: 0, other: 0 }
+  );
+}
 var import_express184, router184, status_default;
 var init_status2 = __esm({
   "src/routes/subrouter/status.ts"() {
@@ -269340,11 +269378,14 @@ var init_status2 = __esm({
     init_subrouter();
     router184 = import_express184.default.Router();
     status_default = router184.post("/", async (req, res) => {
+      const user = getCurrentUser();
       const userId = getCurrentUserId();
       if (!userId) return res.status(401).send({ message: "\u672A\u63D0\u4F9Btoken" });
       const account = await getStoredSubrouterAccount(userId, req.body?.provider, req.body?.baseUrl);
+      const models = parseModels2(account?.models);
       res.status(200).send(
         success3({
+          user,
           connected: Boolean(account),
           account: account ? {
             provider: account.provider,
@@ -269352,26 +269393,214 @@ var init_status2 = __esm({
             username: account.username,
             email: account.email,
             displayName: account.displayName,
+            distributorId: account.distributorId,
+            distributorSlug: account.distributorSlug,
+            distributorName: account.distributorName,
             apiKeyReady: Boolean(account.apiKey),
             updatedTime: account.updatedTime
-          } : null
+          } : null,
+          modelCount: models.length,
+          modelStats: countModelsByType(models)
         })
       );
     });
   }
 });
 
+// src/routes/subrouter/summary.ts
+function parseModels3(value) {
+  if (typeof value !== "string" || !value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.filter((item) => item && typeof item === "object") : [];
+  } catch {
+    return [];
+  }
+}
+function normalizeModelType(value) {
+  return value === "text" || value === "image" || value === "video" ? value : "other";
+}
+function countModelsByType2(models) {
+  return models.reduce(
+    (acc, model) => {
+      acc[normalizeModelType(model.type)] += 1;
+      return acc;
+    },
+    { text: 0, image: 0, video: 0, other: 0 }
+  );
+}
+function splitModelName(modelName) {
+  if (!modelName) return { vendorId: "", model: "" };
+  const [vendorId, model] = modelName.split(/:(.+)/);
+  return { vendorId: vendorId || "", model: model || "" };
+}
+function summarizeAgents(rows, models) {
+  const modelNames = new Set(models.map((model) => model.modelName).filter(Boolean));
+  return rows.filter((row) => DEFAULT_TARGETS.has(row.key || row.agentKey || "")).map((row) => {
+    const key = row.key || row.agentKey || "";
+    const parsed = splitModelName(row.modelName);
+    return {
+      key,
+      name: row.name || key,
+      desc: row.desc || "",
+      model: row.model || parsed.model,
+      modelName: row.modelName || "",
+      vendorId: row.vendorId || parsed.vendorId,
+      usingSubrouter: (row.vendorId || parsed.vendorId) === "subrouter",
+      available: (row.vendorId || parsed.vendorId) === "subrouter" ? modelNames.has(row.model || parsed.model) : null
+    };
+  });
+}
+function pickSelectedTextModel(agents) {
+  const selected = agents.find((agent) => agent.key === "scriptAgent" && agent.usingSubrouter && agent.model);
+  if (selected) return selected.model;
+  return agents.find((agent) => agent.usingSubrouter && agent.model)?.model || "";
+}
+var import_express185, router185, DEFAULT_TARGETS, summary_default;
+var init_summary = __esm({
+  "src/routes/subrouter/summary.ts"() {
+    "use strict";
+    import_express185 = __toESM(require_express2());
+    init_responseFormat();
+    init_requestContext();
+    init_userConfig();
+    init_subrouter();
+    router185 = import_express185.default.Router();
+    DEFAULT_TARGETS = /* @__PURE__ */ new Set(["scriptAgent", "productionAgent", "universalAi"]);
+    summary_default = router185.post("/", async (req, res) => {
+      const user = getCurrentUser();
+      const userId = getCurrentUserId();
+      if (!userId) return res.status(401).send({ message: "\u672A\u63D0\u4F9Btoken" });
+      const account = await getStoredSubrouterAccount(userId, req.body?.provider, req.body?.baseUrl);
+      const models = parseModels3(account?.models);
+      const modelStats = countModelsByType2(models);
+      const agents = summarizeAgents(await getEffectiveAgentDeployList(userId), models);
+      const selectedTextModel = pickSelectedTextModel(agents);
+      const diagnostics = [
+        !account ? "\u672A\u7ED1\u5B9A\u5185\u7F6E\u667A\u80FD\u8DEF\u7531\u8D26\u6237" : "",
+        account && !account.apiKey ? "\u81EA\u52A8 API Key \u672A\u751F\u6210" : "",
+        account && models.length === 0 ? "\u5F53\u524D\u8D26\u53F7\u6CA1\u6709\u53EF\u7528\u6A21\u578B\uFF0C\u8BF7\u5237\u65B0\u6216\u68C0\u67E5\u8BA2\u9605/\u5206\u7AD9\u4E0A\u67B6" : "",
+        account && modelStats.text === 0 ? "\u672A\u53D1\u73B0\u6587\u672C\u6A21\u578B\uFF0CAgent \u6682\u4E0D\u80FD\u4F7F\u7528\u5185\u7F6E\u667A\u80FD\u8DEF\u7531" : "",
+        account && modelStats.text > 0 && !selectedTextModel ? "\u5C1A\u672A\u4E3A\u5F53\u524D\u7528\u6237\u9009\u62E9 Agent \u6587\u672C\u6A21\u578B" : ""
+      ].filter(Boolean);
+      res.status(200).send(
+        success3({
+          user,
+          connected: Boolean(account),
+          account: account ? {
+            provider: account.provider,
+            baseUrl: account.baseUrl,
+            username: account.username,
+            email: account.email,
+            displayName: account.displayName,
+            distributorId: account.distributorId,
+            distributorSlug: account.distributorSlug,
+            distributorName: account.distributorName,
+            apiKeyReady: Boolean(account.apiKey),
+            updatedTime: account.updatedTime
+          } : null,
+          models,
+          modelStats,
+          selectedTextModel,
+          agentUseMode: await getUserSetting("agentUseMode", "0"),
+          agents,
+          diagnostics
+        })
+      );
+    });
+  }
+});
+
+// src/routes/subrouter/testModel.ts
+function parseModels4(value) {
+  if (typeof value !== "string" || !value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.filter((item) => item && typeof item === "object") : [];
+  } catch {
+    return [];
+  }
+}
+var import_express186, router186, testModel_default;
+var init_testModel = __esm({
+  "src/routes/subrouter/testModel.ts"() {
+    "use strict";
+    import_express186 = __toESM(require_express2());
+    init_zod();
+    init_responseFormat();
+    init_middleware();
+    init_requestContext();
+    init_subrouter();
+    init_utils3();
+    router186 = import_express186.default.Router();
+    testModel_default = router186.post(
+      "/",
+      validateFields({
+        modelName: external_exports.string().min(1),
+        prompt: external_exports.string().optional()
+      }),
+      async (req, res) => {
+        const userId = getCurrentUserId();
+        if (!userId) return res.status(401).send({ message: "\u672A\u63D0\u4F9Btoken" });
+        const account = await getStoredSubrouterAccount(userId);
+        if (!account) return res.status(400).send(error53("\u672A\u7ED1\u5B9A\u5185\u7F6E\u667A\u80FD\u8DEF\u7531\u8D26\u6237"));
+        const modelName = String(req.body.modelName).includes(":") ? String(req.body.modelName).split(/:(.+)/)[1] : String(req.body.modelName);
+        const model = parseModels4(account.models).find((item) => item.modelName === modelName);
+        if (!model) return res.status(400).send(error53("\u5F53\u524D\u8D26\u53F7\u6A21\u578B\u5217\u8868\u4E2D\u672A\u627E\u5230\u8BE5\u6A21\u578B\uFF0C\u8BF7\u5237\u65B0\u6A21\u578B\u540E\u91CD\u8BD5"));
+        if (model.type !== "text") {
+          return res.status(200).send(
+            success3({
+              available: true,
+              checked: false,
+              modelName,
+              message: "\u6A21\u578B\u5728\u5F53\u524D\u8D26\u53F7\u5217\u8868\u4E2D\uFF1B\u975E\u6587\u672C\u6A21\u578B\u4E0D\u5728\u8BBE\u7F6E\u9875\u53D1\u8D77\u751F\u6210\u6D4B\u8BD5"
+            })
+          );
+        }
+        const started = Date.now();
+        try {
+          const result = await utils_default.Ai.Text(`subrouter:${modelName}`).invoke({
+            prompt: req.body.prompt || "\u8BF7\u53EA\u56DE\u590D OK",
+            temperature: 0,
+            maxOutputTokens: 16
+          });
+          const output = String(result.text || "").trim();
+          if (!output) return res.status(500).send(error53("\u6A21\u578B\u672A\u8FD4\u56DE\u5185\u5BB9"));
+          res.status(200).send(
+            success3({
+              available: true,
+              checked: true,
+              modelName,
+              latencyMs: Date.now() - started,
+              output: output.slice(0, 200)
+            })
+          );
+        } catch (err) {
+          res.status(500).send(
+            error53(formatSubrouterError(err), {
+              available: false,
+              checked: true,
+              modelName,
+              latencyMs: Date.now() - started
+            })
+          );
+        }
+      }
+    );
+  }
+});
+
 // src/routes/task/getProject.ts
-var import_express185, router185, getProject_default2;
+var import_express187, router187, getProject_default2;
 var init_getProject2 = __esm({
   "src/routes/task/getProject.ts"() {
     "use strict";
-    import_express185 = __toESM(require_express2());
+    import_express187 = __toESM(require_express2());
     init_utils3();
     init_responseFormat();
     init_requestContext();
-    router185 = import_express185.default.Router();
-    getProject_default2 = router185.post("/", async (req, res) => {
+    router187 = import_express187.default.Router();
+    getProject_default2 = router187.post("/", async (req, res) => {
       const userId = getCurrentUserId();
       const query = utils_default.db("o_project").select("id", "name").groupBy("name");
       if (userId) query.where("userId", userId);
@@ -269383,18 +269612,18 @@ var init_getProject2 = __esm({
 });
 
 // src/routes/task/getTaskApi.ts
-var import_express186, router186, getTaskApi_default;
+var import_express188, router188, getTaskApi_default;
 var init_getTaskApi = __esm({
   "src/routes/task/getTaskApi.ts"() {
     "use strict";
-    import_express186 = __toESM(require_express2());
+    import_express188 = __toESM(require_express2());
     init_utils3();
     init_responseFormat();
     init_middleware();
     init_zod();
     init_requestContext();
-    router186 = import_express186.default.Router();
-    getTaskApi_default = router186.post(
+    router188 = import_express188.default.Router();
+    getTaskApi_default = router188.post(
       "/",
       validateFields({
         state: external_exports.string().optional().nullable(),
@@ -269442,15 +269671,15 @@ var init_getTaskApi = __esm({
 });
 
 // src/routes/task/getTaskCategories.ts
-var import_express187, router187, getTaskCategories_default;
+var import_express189, router189, getTaskCategories_default;
 var init_getTaskCategories = __esm({
   "src/routes/task/getTaskCategories.ts"() {
     "use strict";
-    import_express187 = __toESM(require_express2());
+    import_express189 = __toESM(require_express2());
     init_utils3();
     init_responseFormat();
-    router187 = import_express187.default.Router();
-    getTaskCategories_default = router187.post("/", async (req, res) => {
+    router189 = import_express189.default.Router();
+    getTaskCategories_default = router189.post("/", async (req, res) => {
       const list2 = await utils_default.db("o_tasks").select("taskClass").groupBy("taskClass");
       const data = list2.filter((item) => item.taskClass);
       res.status(200).send(success3(data));
@@ -269459,17 +269688,17 @@ var init_getTaskCategories = __esm({
 });
 
 // src/routes/task/taskDetails.ts
-var import_express188, router188, taskDetails_default;
+var import_express190, router190, taskDetails_default;
 var init_taskDetails = __esm({
   "src/routes/task/taskDetails.ts"() {
     "use strict";
-    import_express188 = __toESM(require_express2());
+    import_express190 = __toESM(require_express2());
     init_utils3();
     init_responseFormat();
     init_middleware();
     init_zod();
-    router188 = import_express188.default.Router();
-    taskDetails_default = router188.post(
+    router190 = import_express190.default.Router();
+    taskDetails_default = router190.post(
       "/",
       validateFields({
         taskId: external_exports.number()
@@ -269484,15 +269713,15 @@ var init_taskDetails = __esm({
 });
 
 // src/routes/test/test.ts
-var import_express189, import_fs22, router189, test_default;
+var import_express191, import_fs22, router191, test_default;
 var init_test = __esm({
   "src/routes/test/test.ts"() {
     "use strict";
-    import_express189 = __toESM(require_express2());
+    import_express191 = __toESM(require_express2());
     init_utils3();
     import_fs22 = __toESM(require("fs"));
-    router189 = import_express189.default.Router();
-    test_default = router189.get("/", async (req, res) => {
+    router191 = import_express191.default.Router();
+    test_default = router191.get("/", async (req, res) => {
       return res.send("ok");
       const test2 = await utils_default.db("o_vendorConfig").select("*");
       import_fs22.default.writeFileSync("test.json", JSON.stringify(test2, null, 2));
@@ -269694,6 +269923,8 @@ var init_router = __esm({
     init_models();
     init_selectModel();
     init_status2();
+    init_summary();
+    init_testModel();
     init_getProject2();
     init_getTaskApi();
     init_getTaskCategories();
@@ -270068,6 +270299,10 @@ var init_router = __esm({
       app2.use("/subrouter/selectModel", selectModel_default);
       app2.use("/api/subrouter/status", status_default);
       app2.use("/subrouter/status", status_default);
+      app2.use("/api/subrouter/summary", summary_default);
+      app2.use("/subrouter/summary", summary_default);
+      app2.use("/api/subrouter/testModel", testModel_default);
+      app2.use("/subrouter/testModel", testModel_default);
       app2.use("/api/task/getProject", getProject_default2);
       app2.use("/task/getProject", getProject_default2);
       app2.use("/api/task/getTaskApi", getTaskApi_default);
@@ -270134,7 +270369,7 @@ if (!env) {
 }
 
 // src/app.ts
-var import_express190 = __toESM(require_express2());
+var import_express192 = __toESM(require_express2());
 
 // node_modules/.pnpm/socket.io@4.8.3/node_modules/socket.io/wrapper.mjs
 var import_dist = __toESM(require_dist4(), 1);
@@ -272520,9 +272755,9 @@ var socket_default = (io2) => {
 // src/app.ts
 init_getPath();
 init_requestContext();
-var app = (0, import_express190.default)();
+var app = (0, import_express192.default)();
 var server = import_node_http.default.createServer(app);
-var WEB_CACHE_VERSION = "v9";
+var WEB_CACHE_VERSION = "v10";
 var WEB_MAIN_SCRIPT_PREFIX = "toonflow-inline-main";
 var WEB_STYLESHEET_PREFIX = "toonflow-inline-style";
 var LONG_CACHE_SECONDS = 60 * 60 * 24 * 365;
@@ -272723,6 +272958,509 @@ function getWebApiBaseUrlPatch() {
 })();
 </script>`;
 }
+function getSubrouterSettingsPatch() {
+  return `<script>
+(function () {
+  if (window.__TOONFLOW_SUBROUTER_SETTINGS__) return;
+  window.__TOONFLOW_SUBROUTER_SETTINGS__ = true;
+
+  var TARGET_LABELS = {
+    scriptAgent: "\u5267\u672C Agent",
+    productionAgent: "\u751F\u4EA7 Agent",
+    universalAi: "\u901A\u7528 AI"
+  };
+  var TYPE_LABELS = {
+    text: "\u6587\u672C",
+    image: "\u56FE\u7247",
+    video: "\u89C6\u9891",
+    other: "\u5176\u4ED6"
+  };
+  var state = {
+    open: false,
+    loading: false,
+    refreshing: false,
+    saving: false,
+    testing: false,
+    error: "",
+    toast: "",
+    filter: "text",
+    search: "",
+    selectedModel: "",
+    targets: { scriptAgent: true, productionAgent: true, universalAi: true },
+    summary: null,
+    testResult: null
+  };
+
+  function apiBase() {
+    return window.__TOONFLOW_API_BASE_URL__ || (location.origin + "/api");
+  }
+
+  function safeJsonParse(value) {
+    try { return JSON.parse(value); } catch (err) { return null; }
+  }
+
+  function extractToken(value, depth) {
+    if (depth > 4 || value == null) return "";
+    if (typeof value === "string") {
+      var text = value.trim();
+      if (/^Bearer\\s+/i.test(text)) return text;
+      if (/^[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+$/.test(text)) return "Bearer " + text;
+      var matched = text.match(/Bearer\\s+[A-Za-z0-9._~+\\/-]+=*/i);
+      if (matched) return matched[0];
+      var parsed = safeJsonParse(text);
+      return parsed ? extractToken(parsed, depth + 1) : "";
+    }
+    if (Array.isArray(value)) {
+      for (var i = 0; i < value.length; i += 1) {
+        var arrToken = extractToken(value[i], depth + 1);
+        if (arrToken) return arrToken;
+      }
+      return "";
+    }
+    if (typeof value === "object") {
+      var preferred = ["token", "accessToken", "access_token", "authorization", "Authorization", "auth", "user", "userInfo", "login"];
+      for (var p = 0; p < preferred.length; p += 1) {
+        if (Object.prototype.hasOwnProperty.call(value, preferred[p])) {
+          var directToken = extractToken(value[preferred[p]], depth + 1);
+          if (directToken) return directToken;
+        }
+      }
+      var keys = Object.keys(value);
+      for (var k = 0; k < keys.length; k += 1) {
+        var token = extractToken(value[keys[k]], depth + 1);
+        if (token) return token;
+      }
+    }
+    return "";
+  }
+
+  function findToken() {
+    var storages = [];
+    try { storages.push(localStorage); } catch (err) {}
+    try { storages.push(sessionStorage); } catch (err) {}
+    var preferredKeys = ["token", "user", "userInfo", "login", "auth", "pinia-user", "toonflow-user"];
+    for (var s = 0; s < storages.length; s += 1) {
+      var storage = storages[s];
+      for (var p = 0; p < preferredKeys.length; p += 1) {
+        var rawPreferred = storage.getItem(preferredKeys[p]);
+        var preferredToken = extractToken(rawPreferred, 0);
+        if (preferredToken) return preferredToken;
+      }
+      for (var i = 0; i < storage.length; i += 1) {
+        var key = storage.key(i);
+        if (!key) continue;
+        var token = extractToken(storage.getItem(key), 0);
+        if (token) return token;
+      }
+    }
+    return "";
+  }
+
+  function post(path, body) {
+    var token = findToken();
+    if (!token) return Promise.reject(new Error("\u672A\u627E\u5230\u767B\u5F55\u4EE4\u724C\uFF0C\u8BF7\u91CD\u65B0\u767B\u5F55"));
+    return fetch(apiBase() + path, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": token
+      },
+      body: JSON.stringify(body || {})
+    }).then(function (res) {
+      return res.text().then(function (text) {
+        var json = safeJsonParse(text) || {};
+        if (!res.ok) throw new Error(json.message || json.error || text || "\u8BF7\u6C42\u5931\u8D25");
+        if (json.code && json.code !== 200) throw new Error(json.message || "\u8BF7\u6C42\u5931\u8D25");
+        return json.data;
+      });
+    });
+  }
+
+  function escapeHtml(value) {
+    return String(value == null ? "" : value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  function formatTime(value) {
+    var n = Number(value || 0);
+    if (!Number.isFinite(n) || n <= 0) return "-";
+    try { return new Date(n).toLocaleString(); } catch (err) { return "-"; }
+  }
+
+  function setToast(message) {
+    state.toast = message || "";
+    render();
+    if (message) {
+      window.clearTimeout(setToast.timer);
+      setToast.timer = window.setTimeout(function () {
+        state.toast = "";
+        render();
+      }, 2600);
+    }
+  }
+
+  function setLoading(key, value) {
+    state[key] = value;
+    render();
+  }
+
+  function loadSummary() {
+    state.loading = true;
+    state.error = "";
+    render();
+    return post("/subrouter/summary", {})
+      .then(function (data) {
+        state.summary = data;
+        if (!state.selectedModel && data && data.selectedTextModel) state.selectedModel = data.selectedTextModel;
+        state.error = "";
+      })
+      .catch(function (err) {
+        state.error = err && err.message ? err.message : String(err);
+      })
+      .finally(function () {
+        state.loading = false;
+        render();
+      });
+  }
+
+  function refreshModels() {
+    state.refreshing = true;
+    state.error = "";
+    render();
+    return post("/subrouter/models", { refresh: true })
+      .then(function () {
+        setToast("\u6A21\u578B\u5217\u8868\u5DF2\u5237\u65B0");
+        return loadSummary();
+      })
+      .catch(function (err) {
+        state.error = err && err.message ? err.message : String(err);
+      })
+      .finally(function () {
+        state.refreshing = false;
+        render();
+      });
+  }
+
+  function saveModel() {
+    if (!state.selectedModel) {
+      setToast("\u8BF7\u9009\u62E9\u6587\u672C\u6A21\u578B");
+      return;
+    }
+    var targets = Object.keys(state.targets).filter(function (key) { return state.targets[key]; });
+    if (targets.length === 0) {
+      setToast("\u8BF7\u9009\u62E9\u4F5C\u7528\u76EE\u6807");
+      return;
+    }
+    state.saving = true;
+    state.error = "";
+    render();
+    return post("/subrouter/selectModel", { modelName: state.selectedModel, targets: targets })
+      .then(function () {
+        setToast("\u6A21\u578B\u5DF2\u4FDD\u5B58\u5230\u5F53\u524D\u7528\u6237");
+        return loadSummary();
+      })
+      .catch(function (err) {
+        state.error = err && err.message ? err.message : String(err);
+      })
+      .finally(function () {
+        state.saving = false;
+        render();
+      });
+  }
+
+  function testModel() {
+    if (!state.selectedModel) {
+      setToast("\u8BF7\u9009\u62E9\u6587\u672C\u6A21\u578B");
+      return;
+    }
+    state.testing = true;
+    state.testResult = null;
+    state.error = "";
+    render();
+    return post("/subrouter/testModel", { modelName: state.selectedModel })
+      .then(function (data) {
+        state.testResult = data || {};
+        setToast("\u6A21\u578B\u6D4B\u8BD5\u901A\u8FC7");
+      })
+      .catch(function (err) {
+        state.testResult = { available: false, message: err && err.message ? err.message : String(err) };
+      })
+      .finally(function () {
+        state.testing = false;
+        render();
+      });
+  }
+
+  function installStyle() {
+    if (document.getElementById("toonflow-subrouter-style")) return;
+    var style = document.createElement("style");
+    style.id = "toonflow-subrouter-style";
+    style.textContent = [
+      ".tf-subrouter-entry{position:fixed;right:18px;top:76px;z-index:9998;height:40px;padding:0 14px;border:1px solid rgba(17,24,39,.16);border-radius:8px;background:#111827;color:#fff;box-shadow:0 10px 28px rgba(15,23,42,.18);display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;cursor:pointer;letter-spacing:0}",
+      ".tf-subrouter-entry:hover{background:#0f172a}",
+      ".tf-subrouter-dot{width:8px;height:8px;border-radius:50%;background:#9ca3af;box-shadow:0 0 0 3px rgba(156,163,175,.18);flex:0 0 auto}",
+      ".tf-subrouter-dot.is-on{background:#10b981;box-shadow:0 0 0 3px rgba(16,185,129,.18)}",
+      ".tf-subrouter-backdrop{position:fixed;inset:0;z-index:10000;background:rgba(15,23,42,.32);display:flex;justify-content:flex-end}",
+      ".tf-subrouter-backdrop[hidden]{display:none}",
+      ".tf-subrouter-panel{width:min(760px,100vw);height:100vh;background:#f8fafc;color:#111827;box-shadow:-18px 0 36px rgba(15,23,42,.22);display:flex;flex-direction:column;border-left:1px solid rgba(15,23,42,.08)}",
+      ".tf-subrouter-head{height:64px;padding:0 20px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between;background:#fff;flex:0 0 auto}",
+      ".tf-subrouter-title{font-size:18px;font-weight:700;letter-spacing:0}",
+      ".tf-subrouter-close{width:34px;height:34px;border:1px solid #d1d5db;border-radius:8px;background:#fff;color:#374151;cursor:pointer;font-size:22px;line-height:28px}",
+      ".tf-subrouter-body{padding:18px 20px 28px;overflow:auto;display:flex;flex-direction:column;gap:14px}",
+      ".tf-subrouter-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}",
+      ".tf-subrouter-card{background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:14px;min-width:0}",
+      ".tf-subrouter-card h3{margin:0 0 12px;font-size:15px;font-weight:700;color:#111827;letter-spacing:0}",
+      ".tf-subrouter-kv{display:grid;grid-template-columns:92px minmax(0,1fr);gap:8px 10px;font-size:13px;line-height:1.55}",
+      ".tf-subrouter-kv span:nth-child(odd){color:#6b7280}",
+      ".tf-subrouter-kv span:nth-child(even){overflow:hidden;text-overflow:ellipsis;white-space:nowrap}",
+      ".tf-subrouter-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}",
+      ".tf-subrouter-stat{border:1px solid #e5e7eb;border-radius:8px;padding:10px;background:#f9fafb}",
+      ".tf-subrouter-stat b{display:block;font-size:20px;line-height:1.1}",
+      ".tf-subrouter-stat span{font-size:12px;color:#6b7280}",
+      ".tf-subrouter-alert{border:1px solid #f59e0b;background:#fffbeb;color:#92400e;border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.5}",
+      ".tf-subrouter-error{border-color:#fecaca;background:#fef2f2;color:#991b1b}",
+      ".tf-subrouter-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}",
+      ".tf-subrouter-btn{height:34px;padding:0 12px;border-radius:8px;border:1px solid #d1d5db;background:#fff;color:#111827;cursor:pointer;font-size:13px;font-weight:600}",
+      ".tf-subrouter-btn.primary{border-color:#0f766e;background:#0f766e;color:#fff}",
+      ".tf-subrouter-btn:disabled{opacity:.55;cursor:not-allowed}",
+      ".tf-subrouter-control{display:flex;flex-direction:column;gap:6px;min-width:0}",
+      ".tf-subrouter-control label{font-size:12px;color:#6b7280}",
+      ".tf-subrouter-select,.tf-subrouter-input{height:36px;border:1px solid #d1d5db;border-radius:8px;background:#fff;color:#111827;padding:0 10px;font-size:13px;min-width:0}",
+      ".tf-subrouter-targets{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}",
+      ".tf-subrouter-check{display:flex;align-items:center;gap:6px;font-size:13px;color:#374151}",
+      ".tf-subrouter-tabs{display:flex;gap:6px;flex-wrap:wrap}",
+      ".tf-subrouter-tab{height:30px;padding:0 10px;border:1px solid #d1d5db;border-radius:8px;background:#fff;color:#374151;font-size:13px;cursor:pointer}",
+      ".tf-subrouter-tab.is-active{background:#ecfdf5;border-color:#10b981;color:#065f46}",
+      ".tf-subrouter-model-list{display:grid;grid-template-columns:1fr 1fr;gap:8px;max-height:310px;overflow:auto;padding-right:2px}",
+      ".tf-subrouter-model{border:1px solid #e5e7eb;border-radius:8px;background:#fff;padding:10px;display:flex;flex-direction:column;gap:6px;min-width:0}",
+      ".tf-subrouter-model strong{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}",
+      ".tf-subrouter-model small{font-size:12px;color:#6b7280}",
+      ".tf-subrouter-pill{display:inline-flex;align-items:center;width:max-content;height:22px;padding:0 8px;border-radius:999px;background:#eef2ff;color:#3730a3;font-size:12px}",
+      ".tf-subrouter-agent{width:100%;border-collapse:collapse;font-size:13px}",
+      ".tf-subrouter-agent th,.tf-subrouter-agent td{padding:8px;border-bottom:1px solid #e5e7eb;text-align:left;vertical-align:top}",
+      ".tf-subrouter-agent th{color:#6b7280;font-weight:600;background:#f9fafb}",
+      ".tf-subrouter-muted{color:#6b7280;font-size:13px;line-height:1.5}",
+      ".tf-subrouter-toast{position:fixed;right:24px;top:130px;z-index:10002;background:#111827;color:#fff;border-radius:8px;padding:10px 12px;font-size:13px;box-shadow:0 10px 28px rgba(15,23,42,.2)}",
+      "@media (max-width:720px){.tf-subrouter-entry{right:12px;top:auto;bottom:18px}.tf-subrouter-panel{width:100vw}.tf-subrouter-body{padding:14px}.tf-subrouter-row{grid-template-columns:1fr}.tf-subrouter-model-list{grid-template-columns:1fr}.tf-subrouter-stats{grid-template-columns:repeat(2,1fr)}}"
+    ].join("\\n");
+    document.head.appendChild(style);
+  }
+
+  function accountHtml(summary) {
+    var account = summary && summary.account;
+    if (!account) {
+      return '<div class="tf-subrouter-muted">\u5F53\u524D\u7528\u6237\u672A\u7ED1\u5B9A\u5185\u7F6E\u667A\u80FD\u8DEF\u7531\u8D26\u53F7\u3002</div>';
+    }
+    return [
+      '<div class="tf-subrouter-kv">',
+      '<span>\u8D26\u53F7</span><span>' + escapeHtml(account.displayName || account.username || account.email || "-") + '</span>',
+      '<span>\u670D\u52A1</span><span>' + escapeHtml(account.provider || "-") + '</span>',
+      '<span>\u5206\u7AD9</span><span>' + escapeHtml(account.distributorName || account.distributorSlug || "-") + '</span>',
+      '<span>Key</span><span>' + (account.apiKeyReady ? "\u5DF2\u751F\u6210" : "\u672A\u751F\u6210") + '</span>',
+      '<span>\u66F4\u65B0\u65F6\u95F4</span><span>' + escapeHtml(formatTime(account.updatedTime)) + '</span>',
+      '</div>'
+    ].join("");
+  }
+
+  function statsHtml(summary) {
+    var stats = summary && summary.modelStats || {};
+    return ["text", "image", "video", "other"].map(function (type) {
+      return '<div class="tf-subrouter-stat"><b>' + Number(stats[type] || 0) + '</b><span>' + TYPE_LABELS[type] + '</span></div>';
+    }).join("");
+  }
+
+  function modelSelectHtml(models, selected) {
+    var textModels = models.filter(function (model) { return model.type === "text"; });
+    if (!selected && textModels.length > 0) selected = textModels[0].modelName || "";
+    if (!state.selectedModel && selected) state.selectedModel = selected;
+    var options = ['<option value="">\u8BF7\u9009\u62E9\u6587\u672C\u6A21\u578B</option>'].concat(textModels.map(function (model) {
+      var name = model.modelName || model.name || "";
+      return '<option value="' + escapeHtml(name) + '"' + (name === state.selectedModel ? " selected" : "") + '>' + escapeHtml(name) + '</option>';
+    }));
+    return '<select class="tf-subrouter-select" data-action="select-model">' + options.join("") + '</select>';
+  }
+
+  function targetsHtml() {
+    return '<div class="tf-subrouter-targets">' + Object.keys(TARGET_LABELS).map(function (key) {
+      return '<label class="tf-subrouter-check"><input type="checkbox" data-target="' + key + '"' + (state.targets[key] ? " checked" : "") + '> ' + TARGET_LABELS[key] + '</label>';
+    }).join("") + '</div>';
+  }
+
+  function modelsHtml(summary) {
+    var models = summary && Array.isArray(summary.models) ? summary.models : [];
+    var filter = state.filter || "text";
+    var search = String(state.search || "").trim().toLowerCase();
+    var filtered = models.filter(function (model) {
+      var type = model.type || "other";
+      var name = String(model.modelName || model.name || "");
+      return (filter === "all" || type === filter) && (!search || name.toLowerCase().indexOf(search) >= 0);
+    }).slice(0, 180);
+    return [
+      '<div class="tf-subrouter-card">',
+      '<h3>\u6A21\u578B\u5217\u8868</h3>',
+      '<div class="tf-subrouter-actions" style="justify-content:space-between;margin-bottom:10px">',
+      '<div class="tf-subrouter-tabs">',
+      ["text", "image", "video", "all"].map(function (type) {
+        var label = type === "all" ? "\u5168\u90E8" : TYPE_LABELS[type];
+        return '<button class="tf-subrouter-tab ' + (filter === type ? "is-active" : "") + '" data-filter="' + type + '">' + label + '</button>';
+      }).join(""),
+      '</div>',
+      '<input class="tf-subrouter-input" data-action="search" placeholder="\u641C\u7D22\u6A21\u578B" value="' + escapeHtml(state.search) + '" style="width:210px">',
+      '</div>',
+      filtered.length
+        ? '<div class="tf-subrouter-model-list">' + filtered.map(function (model) {
+            var type = model.type || "other";
+            var name = model.modelName || model.name || "";
+            return '<div class="tf-subrouter-model"><strong title="' + escapeHtml(name) + '">' + escapeHtml(name) + '</strong><div><span class="tf-subrouter-pill">' + escapeHtml(TYPE_LABELS[type] || type) + '</span></div><small>' + (model.think ? "\u652F\u6301\u601D\u8003" : "\u53EF\u7528") + '</small></div>';
+          }).join("") + '</div>'
+        : '<div class="tf-subrouter-muted">\u6CA1\u6709\u5339\u914D\u7684\u6A21\u578B\u3002</div>',
+      '</div>'
+    ].join("");
+  }
+
+  function agentsHtml(summary) {
+    var agents = summary && Array.isArray(summary.agents) ? summary.agents : [];
+    if (!agents.length) return '<div class="tf-subrouter-muted">\u6682\u65E0 Agent \u914D\u7F6E\u3002</div>';
+    return '<table class="tf-subrouter-agent"><thead><tr><th>\u76EE\u6807</th><th>\u5F53\u524D\u6A21\u578B</th><th>\u72B6\u6001</th></tr></thead><tbody>' + agents.map(function (agent) {
+      var status = agent.usingSubrouter ? (agent.available === false ? "\u6A21\u578B\u4E0D\u5B58\u5728" : "\u5185\u7F6E\u667A\u80FD\u8DEF\u7531") : (agent.modelName ? "\u5176\u4ED6\u4F9B\u5E94\u5546" : "\u672A\u914D\u7F6E");
+      return '<tr><td>' + escapeHtml(agent.name || TARGET_LABELS[agent.key] || agent.key) + '</td><td>' + escapeHtml(agent.model || "-") + '</td><td>' + escapeHtml(status) + '</td></tr>';
+    }).join("") + '</tbody></table>';
+  }
+
+  function bodyHtml() {
+    var token = findToken();
+    var summary = state.summary;
+    var models = summary && Array.isArray(summary.models) ? summary.models : [];
+    if (!token) {
+      return '<div class="tf-subrouter-card"><h3>\u8D26\u53F7\u4E0E\u6A21\u578B</h3><div class="tf-subrouter-alert tf-subrouter-error">\u672A\u627E\u5230\u767B\u5F55\u4EE4\u724C\uFF0C\u8BF7\u91CD\u65B0\u767B\u5F55\u540E\u518D\u6253\u5F00\u8BBE\u7F6E\u3002</div></div>';
+    }
+    var diagnostics = summary && Array.isArray(summary.diagnostics) ? summary.diagnostics : [];
+    return [
+      state.error ? '<div class="tf-subrouter-alert tf-subrouter-error">' + escapeHtml(state.error) + '</div>' : '',
+      diagnostics.length ? '<div class="tf-subrouter-alert">' + diagnostics.map(escapeHtml).join('<br>') + '</div>' : '',
+      '<div class="tf-subrouter-row">',
+      '<div class="tf-subrouter-card"><h3>\u5F53\u524D\u8D26\u53F7</h3>' + accountHtml(summary) + '</div>',
+      '<div class="tf-subrouter-card"><h3>\u53EF\u7528\u6A21\u578B</h3><div class="tf-subrouter-stats">' + statsHtml(summary) + '</div></div>',
+      '</div>',
+      '<div class="tf-subrouter-card">',
+      '<h3>Agent \u6587\u672C\u6A21\u578B</h3>',
+      '<div class="tf-subrouter-row">',
+      '<div class="tf-subrouter-control"><label>\u6587\u672C\u6A21\u578B</label>' + modelSelectHtml(models, summary && summary.selectedTextModel) + '</div>',
+      '<div class="tf-subrouter-control"><label>\u64CD\u4F5C</label><div class="tf-subrouter-actions">',
+      '<button class="tf-subrouter-btn primary" data-action="save" ' + (state.saving ? "disabled" : "") + '>' + (state.saving ? "\u4FDD\u5B58\u4E2D" : "\u4FDD\u5B58\u9009\u62E9") + '</button>',
+      '<button class="tf-subrouter-btn" data-action="test" ' + (state.testing ? "disabled" : "") + '>' + (state.testing ? "\u6D4B\u8BD5\u4E2D" : "\u6D4B\u8BD5\u6A21\u578B") + '</button>',
+      '<button class="tf-subrouter-btn" data-action="refresh" ' + (state.refreshing ? "disabled" : "") + '>' + (state.refreshing ? "\u5237\u65B0\u4E2D" : "\u5237\u65B0\u6A21\u578B") + '</button>',
+      '</div></div>',
+      '</div>',
+      targetsHtml(),
+      state.testResult ? '<div class="tf-subrouter-alert ' + (state.testResult.available === false ? "tf-subrouter-error" : "") + '" style="margin-top:10px">' + escapeHtml(state.testResult.available === false ? (state.testResult.message || "\u6A21\u578B\u6D4B\u8BD5\u5931\u8D25") : ("\u6A21\u578B\u53EF\u7528\uFF0C\u8017\u65F6 " + (state.testResult.latencyMs || 0) + "ms")) + '</div>' : '',
+      '</div>',
+      '<div class="tf-subrouter-card"><h3>\u5F53\u524D Agent \u914D\u7F6E</h3>' + agentsHtml(summary) + '</div>',
+      modelsHtml(summary),
+      state.loading && !summary ? '<div class="tf-subrouter-card"><div class="tf-subrouter-muted">\u52A0\u8F7D\u4E2D...</div></div>' : ''
+    ].join("");
+  }
+
+  function render() {
+    var root = document.getElementById("toonflow-subrouter-root");
+    if (!root) return;
+    var connected = state.summary && state.summary.connected;
+    root.innerHTML = [
+      '<button class="tf-subrouter-entry" data-action="open" type="button"><span class="tf-subrouter-dot ' + (connected ? "is-on" : "") + '"></span><span>\u6A21\u578B\u8BBE\u7F6E</span></button>',
+      '<div class="tf-subrouter-backdrop" ' + (state.open ? "" : "hidden") + ' data-action="backdrop">',
+      '<section class="tf-subrouter-panel" role="dialog" aria-modal="true" aria-label="\u8D26\u53F7\u4E0E\u6A21\u578B\u8BBE\u7F6E">',
+      '<header class="tf-subrouter-head"><div class="tf-subrouter-title">\u8D26\u53F7\u4E0E\u6A21\u578B\u8BBE\u7F6E</div><button class="tf-subrouter-close" data-action="close" type="button">\xD7</button></header>',
+      '<main class="tf-subrouter-body">' + bodyHtml() + '</main>',
+      '</section></div>',
+      state.toast ? '<div class="tf-subrouter-toast">' + escapeHtml(state.toast) + '</div>' : ''
+    ].join("");
+    refreshEntryVisibility();
+  }
+
+  function refreshEntryVisibility() {
+    var button = document.querySelector(".tf-subrouter-entry");
+    if (!button) return;
+    var onLoginPage = !!document.querySelector(".loginPage");
+    button.style.display = !findToken() && onLoginPage ? "none" : "flex";
+  }
+
+  function installEvents(root) {
+    root.addEventListener("click", function (event) {
+      var target = event.target;
+      var actionEl = target && target.closest ? target.closest("[data-action]") : null;
+      if (!actionEl) return;
+      var action = actionEl.getAttribute("data-action");
+      if (action === "open") {
+        state.open = true;
+        render();
+        loadSummary();
+      } else if (action === "close") {
+        state.open = false;
+        render();
+      } else if (action === "backdrop" && actionEl === event.target) {
+        state.open = false;
+        render();
+      } else if (action === "refresh") {
+        refreshModels();
+      } else if (action === "save") {
+        saveModel();
+      } else if (action === "test") {
+        testModel();
+      }
+    });
+    root.addEventListener("change", function (event) {
+      var target = event.target;
+      if (!target) return;
+      if (target.getAttribute("data-action") === "select-model") {
+        state.selectedModel = target.value;
+        state.testResult = null;
+        render();
+      }
+      var targetKey = target.getAttribute("data-target");
+      if (targetKey) {
+        state.targets[targetKey] = !!target.checked;
+        render();
+      }
+    });
+    root.addEventListener("input", function (event) {
+      var target = event.target;
+      if (target && target.getAttribute("data-action") === "search") {
+        state.search = target.value || "";
+        render();
+      }
+    });
+    root.addEventListener("click", function (event) {
+      var target = event.target;
+      var filterEl = target && target.closest ? target.closest("[data-filter]") : null;
+      if (!filterEl) return;
+      state.filter = filterEl.getAttribute("data-filter") || "text";
+      render();
+    });
+  }
+
+  function install() {
+    installStyle();
+    if (document.getElementById("toonflow-subrouter-root")) return;
+    var root = document.createElement("div");
+    root.id = "toonflow-subrouter-root";
+    document.body.appendChild(root);
+    installEvents(root);
+    render();
+    window.setInterval(refreshEntryVisibility, 1200);
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", install);
+  } else {
+    install();
+  }
+})();
+</script>`;
+}
 function patchLegacyApiBaseUrls(content) {
   return content.replace(/(["'])http:\/\/(?:localhost|127\.0\.0\.1):10588\/api\1/g, '(location.origin + "/api")').replace(/(["'])http:\/\/(?:localhost|127\.0\.0\.1):10588\1/g, '(location.origin + "/api")').replace(
     /fetch\("toonflow:\/\/getAppUrl"\)/g,
@@ -272740,12 +273478,17 @@ function prepareWebAssets(webDir) {
   import_fs23.default.mkdirSync(cacheDir, { recursive: true });
   let html = import_fs23.default.readFileSync(indexPath, "utf8");
   const hasPatchedApiBaseUrl = html.includes("window.__TOONFLOW_API_BASE_URL__");
+  const hasSubrouterSettingsPatch = html.includes("window.__TOONFLOW_SUBROUTER_SETTINGS__");
   html = patchLegacyApiBaseUrls(html);
   if (!hasPatchedApiBaseUrl && !html.includes('(location.origin + "/api")')) {
     html = html.replace('<script type="module"', `${getWebApiBaseUrlPatch()}
     <script type="module"`);
   } else if (!hasPatchedApiBaseUrl) {
     html = html.replace('<script type="module"', `${getWebApiBaseUrlPatch()}
+    <script type="module"`);
+  }
+  if (!hasSubrouterSettingsPatch) {
+    html = html.replace('<script type="module"', `${getSubrouterSettingsPatch()}
     <script type="module"`);
   }
   const inlineModuleScript = /<script type="module" crossorigin>([\s\S]*?)<\/script>/;
@@ -272795,33 +273538,224 @@ function setWebStaticHeaders(res, filePath) {
 function getStaticContentType(fileName) {
   return fileName.endsWith(".css") ? "text/css; charset=utf-8" : "application/javascript; charset=utf-8";
 }
-function getProjectIdForAuth(req) {
-  const body = req.body || {};
-  const projectId = Number(body.projectId);
-  if (Number.isFinite(projectId) && projectId > 0) return projectId;
-  const apiPath = req.path.startsWith("/api/") ? req.path : `/api${req.path}`;
-  const idIsProjectRoutes = /* @__PURE__ */ new Set([
-    "/api/project/delProject",
-    "/api/project/editProject",
-    "/api/general/getSingleProject",
-    "/api/general/updateProject",
-    "/api/general/generalStatistics"
-  ]);
-  const id = Number(body.id);
-  if (idIsProjectRoutes.has(apiPath) && Number.isFinite(id) && id > 0) return id;
+var projectIdFromIdRoutes = /* @__PURE__ */ new Set([
+  "/api/project/delProject",
+  "/api/project/editProject",
+  "/api/general/getSingleProject",
+  "/api/general/updateProject",
+  "/api/general/generalStatistics"
+]);
+var assetIdFromIdRoutes = /* @__PURE__ */ new Set([
+  "/api/assets/batchDelete",
+  "/api/assets/delAssets",
+  "/api/assets/saveAssets",
+  "/api/assets/updateAssets",
+  "/api/assets/updateAudioAssets",
+  "/api/assetsGenerate/generateAssets",
+  "/api/cornerScape/pollingAudio",
+  "/api/production/assets/deleteAssetsDireve",
+  "/api/production/assets/pollingImage",
+  "/api/production/assets/updateAssetsUrl"
+]);
+var scriptIdFromIdRoutes = /* @__PURE__ */ new Set(["/api/script/delScript", "/api/script/exportScript", "/api/script/pollScriptAssets", "/api/script/updateScript"]);
+var storyboardIdFromIdRoutes = /* @__PURE__ */ new Set([
+  "/api/production/storyboard/batchDelete",
+  "/api/production/storyboard/editStoryboardInfo",
+  "/api/production/storyboard/pollingImage",
+  "/api/production/storyboard/removeFrame",
+  "/api/production/storyboard/updateStoryboardUrl"
+]);
+var novelIdFromIdRoutes = /* @__PURE__ */ new Set(["/api/novel/batchDeleteNovel", "/api/novel/delNovel", "/api/novel/getNovelEventState", "/api/novel/updateNovel"]);
+var eventIdFromIdRoutes = /* @__PURE__ */ new Set(["/api/novel/event/batchDeleteEvent", "/api/novel/event/deletEvent"]);
+var imageIdFromIdRoutes = /* @__PURE__ */ new Set(["/api/assets/delImage", "/api/assetsGenerate/cancelGenerate"]);
+var videoIdFromIdRoutes = /* @__PURE__ */ new Set(["/api/production/workbench/delVideo"]);
+var videoTrackIdFromIdRoutes = /* @__PURE__ */ new Set(["/api/production/workbench/deleteTrack", "/api/production/workbench/updateVideoDuration", "/api/production/workbench/updateVideoPrompt"]);
+var flowIdFromIdRoutes = /* @__PURE__ */ new Set(["/api/production/editImage/getImageFlow"]);
+var agentWorkDataIdFromIdRoutes = /* @__PURE__ */ new Set(["/api/scriptAgent/updateData"]);
+var scriptAssetsFieldRoutes = /* @__PURE__ */ new Set(["/api/script/addScript", "/api/script/updateScript"]);
+function getApiPath(req) {
+  return req.path.startsWith("/api/") ? req.path : `/api${req.path}`;
+}
+function asRecord(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return value;
+}
+function normalizePositiveId2(value) {
+  if (typeof value === "number" || typeof value === "string") {
+    const id = Number(value);
+    return Number.isFinite(id) && id > 0 ? id : null;
+  }
   return null;
 }
-async function assertProjectAccess(req, res, userId) {
-  const projectId = getProjectIdForAuth(req);
-  if (!projectId) return true;
-  const project = await utils_default.db("o_project").where("id", projectId).select("userId").first();
-  if (!project) {
-    res.status(404).send({ message: "\u9879\u76EE\u4E0D\u5B58\u5728" });
-    return false;
+function collectPositiveIds(value) {
+  if (Array.isArray(value)) return value.flatMap((item) => collectPositiveIds(item));
+  const id = normalizePositiveId2(value);
+  return id ? [id] : [];
+}
+function addIds(target, ids) {
+  ids.forEach((id) => target.add(id));
+}
+function collectIdsFromKeys(req, keys2) {
+  const records = [asRecord(req.body), asRecord(req.query)];
+  return keys2.flatMap((key) => records.flatMap((record3) => collectPositiveIds(record3[key])));
+}
+function collectNestedIdsByKey(value, key) {
+  if (Array.isArray(value)) return value.flatMap((item) => collectNestedIdsByKey(item, key));
+  if (!value || typeof value !== "object") return [];
+  const record3 = value;
+  return [...collectPositiveIds(record3[key]), ...Object.values(record3).flatMap((item) => collectNestedIdsByKey(item, key))];
+}
+function collectSourceScopedIds(value, resourceIds) {
+  if (Array.isArray(value)) {
+    value.forEach((item) => collectSourceScopedIds(item, resourceIds));
+    return;
   }
-  if (project.userId != null && Number(project.userId) !== userId) {
-    res.status(403).send({ message: "\u65E0\u6743\u8BBF\u95EE\u8BE5\u9879\u76EE" });
-    return false;
+  if (!value || typeof value !== "object") return;
+  const record3 = value;
+  const source = String(record3.sources || record3.source || "");
+  const ids = collectPositiveIds(record3.id);
+  if (source === "assets" || source === "asset") addIds(resourceIds.assetIds, ids);
+  if (source === "storyboard") addIds(resourceIds.storyboardIds, ids);
+  Object.values(record3).forEach((item) => collectSourceScopedIds(item, resourceIds));
+}
+function collectRequestResourceIds(req) {
+  const apiPath = getApiPath(req);
+  const body = asRecord(req.body);
+  const query = asRecord(req.query);
+  const resourceIds = {
+    directProjectIds: /* @__PURE__ */ new Set(),
+    assetIds: /* @__PURE__ */ new Set(),
+    scriptIds: /* @__PURE__ */ new Set(),
+    storyboardIds: /* @__PURE__ */ new Set(),
+    novelIds: /* @__PURE__ */ new Set(),
+    eventIds: /* @__PURE__ */ new Set(),
+    imageIds: /* @__PURE__ */ new Set(),
+    videoIds: /* @__PURE__ */ new Set(),
+    videoTrackIds: /* @__PURE__ */ new Set(),
+    taskIds: /* @__PURE__ */ new Set(),
+    flowIds: /* @__PURE__ */ new Set(),
+    agentWorkDataIds: /* @__PURE__ */ new Set()
+  };
+  addIds(resourceIds.directProjectIds, collectIdsFromKeys(req, ["projectId"]));
+  addIds(resourceIds.assetIds, collectIdsFromKeys(req, ["assetIds", "assetsId", "assetsIds"]));
+  addIds(resourceIds.assetIds, collectNestedIdsByKey(body, "associateAssetsIds"));
+  addIds(resourceIds.assetIds, collectNestedIdsByKey(query, "associateAssetsIds"));
+  addIds(resourceIds.scriptIds, collectIdsFromKeys(req, ["scriptId", "scriptIds"]));
+  addIds(resourceIds.storyboardIds, collectIdsFromKeys(req, ["storyboardIds"]));
+  addIds(resourceIds.novelIds, collectIdsFromKeys(req, ["novelIds"]));
+  addIds(resourceIds.imageIds, collectIdsFromKeys(req, ["imageId", "imageIds"]));
+  addIds(resourceIds.videoIds, collectIdsFromKeys(req, ["videoId", "videoIds"]));
+  addIds(resourceIds.videoTrackIds, collectIdsFromKeys(req, ["trackId", "trackIds"]));
+  addIds(resourceIds.videoTrackIds, collectNestedIdsByKey(body, "trackId"));
+  addIds(resourceIds.videoTrackIds, collectNestedIdsByKey(query, "trackId"));
+  addIds(resourceIds.taskIds, collectIdsFromKeys(req, ["taskId", "taskIds"]));
+  addIds(resourceIds.flowIds, collectIdsFromKeys(req, ["flowId", "flowIds"]));
+  collectSourceScopedIds(body, resourceIds);
+  collectSourceScopedIds(query, resourceIds);
+  if (projectIdFromIdRoutes.has(apiPath)) addIds(resourceIds.directProjectIds, collectIdsFromKeys(req, ["id", "ids"]));
+  if (assetIdFromIdRoutes.has(apiPath)) addIds(resourceIds.assetIds, collectIdsFromKeys(req, ["id", "ids"]));
+  if (scriptAssetsFieldRoutes.has(apiPath)) addIds(resourceIds.assetIds, collectIdsFromKeys(req, ["assets"]));
+  if (apiPath === "/api/assets/updateAudioAssets") {
+    addIds(resourceIds.assetIds, collectNestedIdsByKey(body.assetsItem, "id"));
+    addIds(resourceIds.assetIds, collectNestedIdsByKey(query.assetsItem, "id"));
+  }
+  if (apiPath === "/api/assetsGenerate/batchGenerateImageAssets") {
+    addIds(resourceIds.assetIds, collectNestedIdsByKey(body.items, "id"));
+    addIds(resourceIds.assetIds, collectNestedIdsByKey(query.items, "id"));
+  }
+  if (scriptIdFromIdRoutes.has(apiPath)) addIds(resourceIds.scriptIds, collectIdsFromKeys(req, ["id", "ids"]));
+  if (apiPath === "/api/production/getFlowData" || apiPath === "/api/production/saveFlowData") {
+    addIds(resourceIds.scriptIds, collectIdsFromKeys(req, ["episodesId"]));
+  }
+  if (storyboardIdFromIdRoutes.has(apiPath)) addIds(resourceIds.storyboardIds, collectIdsFromKeys(req, ["id", "ids"]));
+  if (novelIdFromIdRoutes.has(apiPath)) addIds(resourceIds.novelIds, collectIdsFromKeys(req, ["id", "ids"]));
+  if (eventIdFromIdRoutes.has(apiPath)) addIds(resourceIds.eventIds, collectIdsFromKeys(req, ["id", "ids"]));
+  if (imageIdFromIdRoutes.has(apiPath)) addIds(resourceIds.imageIds, collectIdsFromKeys(req, ["id", "ids"]));
+  if (videoIdFromIdRoutes.has(apiPath)) addIds(resourceIds.videoIds, collectIdsFromKeys(req, ["id", "ids"]));
+  if (videoTrackIdFromIdRoutes.has(apiPath)) addIds(resourceIds.videoTrackIds, collectIdsFromKeys(req, ["id", "ids"]));
+  if (flowIdFromIdRoutes.has(apiPath)) addIds(resourceIds.flowIds, collectIdsFromKeys(req, ["id", "ids"]));
+  if (agentWorkDataIdFromIdRoutes.has(apiPath)) addIds(resourceIds.agentWorkDataIds, collectIdsFromKeys(req, ["id", "ids"]));
+  return resourceIds;
+}
+function projectIdFromRow(row) {
+  const projectId = normalizePositiveId2(row.projectId);
+  return projectId;
+}
+function uniqueIds(ids) {
+  return Array.from(ids);
+}
+async function addTableProjectIds(projectIds, table, idColumn, ids) {
+  const list2 = uniqueIds(ids);
+  if (!list2.length) return;
+  const rows = await utils_default.db(table).whereIn(idColumn, list2).select("projectId");
+  rows.forEach((row) => {
+    const projectId = projectIdFromRow(row);
+    if (projectId) projectIds.add(projectId);
+  });
+}
+async function addImageProjectIds(projectIds, imageIds) {
+  const list2 = uniqueIds(imageIds);
+  if (!list2.length) return;
+  const rows = await utils_default.db("o_image").leftJoin("o_assets", "o_image.assetsId", "o_assets.id").whereIn("o_image.id", list2).select("o_assets.projectId as projectId");
+  rows.forEach((row) => {
+    const projectId = projectIdFromRow(row);
+    if (projectId) projectIds.add(projectId);
+  });
+}
+async function addEventProjectIds(projectIds, eventIds) {
+  const list2 = uniqueIds(eventIds);
+  if (!list2.length) return;
+  const rows = await utils_default.db("o_eventChapter").leftJoin("o_novel", "o_eventChapter.novelId", "o_novel.id").whereIn("o_eventChapter.eventId", list2).select("o_novel.projectId as projectId");
+  rows.forEach((row) => {
+    const projectId = projectIdFromRow(row);
+    if (projectId) projectIds.add(projectId);
+  });
+}
+async function addFlowProjectIds(projectIds, flowIds) {
+  const list2 = uniqueIds(flowIds);
+  if (!list2.length) return;
+  const [assetRows, storyboardRows] = await Promise.all([
+    utils_default.db("o_assets").whereIn("flowId", list2).select("projectId"),
+    utils_default.db("o_storyboard").whereIn("flowId", list2).select("projectId")
+  ]);
+  [...assetRows, ...storyboardRows].forEach((row) => {
+    const projectId = projectIdFromRow(row);
+    if (projectId) projectIds.add(projectId);
+  });
+}
+async function getProjectIdsForAuth(req) {
+  const resourceIds = collectRequestResourceIds(req);
+  const projectIds = new Set(resourceIds.directProjectIds);
+  await Promise.all([
+    addTableProjectIds(projectIds, "o_assets", "id", resourceIds.assetIds),
+    addTableProjectIds(projectIds, "o_script", "id", resourceIds.scriptIds),
+    addTableProjectIds(projectIds, "o_storyboard", "id", resourceIds.storyboardIds),
+    addTableProjectIds(projectIds, "o_novel", "id", resourceIds.novelIds),
+    addTableProjectIds(projectIds, "o_video", "id", resourceIds.videoIds),
+    addTableProjectIds(projectIds, "o_videoTrack", "id", resourceIds.videoTrackIds),
+    addTableProjectIds(projectIds, "o_tasks", "id", resourceIds.taskIds),
+    addTableProjectIds(projectIds, "o_agentWorkData", "id", resourceIds.agentWorkDataIds),
+    addImageProjectIds(projectIds, resourceIds.imageIds),
+    addEventProjectIds(projectIds, resourceIds.eventIds),
+    addFlowProjectIds(projectIds, resourceIds.flowIds)
+  ]);
+  return uniqueIds(projectIds);
+}
+async function assertProjectAccess(req, res, userId) {
+  const projectIds = await getProjectIdsForAuth(req);
+  if (!projectIds.length) return true;
+  const projects = await utils_default.db("o_project").whereIn("id", projectIds).select("id", "userId");
+  const projectById = new Map(projects.map((project) => [Number(project.id), project]));
+  for (const projectId of projectIds) {
+    const project = projectById.get(projectId);
+    if (!project) {
+      res.status(404).send({ message: "\u9879\u76EE\u4E0D\u5B58\u5728" });
+      return false;
+    }
+    if (project.userId != null && Number(project.userId) !== userId) {
+      res.status(403).send({ message: "\u65E0\u6743\u8BBF\u95EE\u8BE5\u9879\u76EE" });
+      return false;
+    }
   }
   return true;
 }
@@ -272884,8 +273818,8 @@ async function startServe(randomPort = false) {
   (0, import_express_ws.default)(app);
   app.use((0, import_morgan.default)("dev"));
   app.use((0, import_cors.default)({ origin: "*" }));
-  app.use(import_express190.default.json({ limit: "100mb" }));
-  app.use(import_express190.default.urlencoded({ extended: true, limit: "100mb" }));
+  app.use(import_express192.default.json({ limit: "100mb" }));
+  app.use(import_express192.default.urlencoded({ extended: true, limit: "100mb" }));
   app.get("/healthz", (_2, res) => res.status(200).send("ok"));
   const ossDir = utils_default.getPath("oss");
   if (!import_fs23.default.existsSync(ossDir)) {
@@ -272916,7 +273850,7 @@ async function startServe(randomPort = false) {
           sizeSubDir = `${percentMatch[1]}p`;
           sizeOpts = { type: "percentage", value: pct };
         } else {
-          import_express190.default.static(ossDir, { acceptRanges: false })(req, res, next);
+          import_express192.default.static(ossDir, { acceptRanges: false })(req, res, next);
           return;
         }
         const ext = import_path36.default.extname(req.path);
@@ -272927,14 +273861,14 @@ async function startServe(randomPort = false) {
           if (thumbnailPath) {
             res.sendFile(thumbnailPath);
           } else {
-            import_express190.default.static(ossDir, { acceptRanges: false })(req, res, next);
+            import_express192.default.static(ossDir, { acceptRanges: false })(req, res, next);
           }
         });
         return;
       }
       next();
     },
-    import_express190.default.static(ossDir, { acceptRanges: false }),
+    import_express192.default.static(ossDir, { acceptRanges: false }),
     (_2, res) => res.status(404).end()
   );
   const pluginDir = utils_default.getPath("plugin");
@@ -272942,7 +273876,7 @@ async function startServe(randomPort = false) {
     import_fs23.default.mkdirSync(pluginDir, { recursive: true });
   }
   console.log("\u6587\u4EF6\u76EE\u5F55:", pluginDir);
-  app.use("/plugin", import_express190.default.static(pluginDir, { acceptRanges: false }));
+  app.use("/plugin", import_express192.default.static(pluginDir, { acceptRanges: false }));
   const skillsDir = utils_default.getPath("skills");
   if (!import_fs23.default.existsSync(skillsDir)) {
     import_fs23.default.mkdirSync(skillsDir, { recursive: true });
@@ -272953,21 +273887,21 @@ async function startServe(randomPort = false) {
     (req, res, next) => {
       /\.(jpe?g|png|gif|webp|svg|ico|bmp)$/i.test(req.path) ? next() : res.status(403).end();
     },
-    import_express190.default.static(skillsDir, { acceptRanges: false })
+    import_express192.default.static(skillsDir, { acceptRanges: false })
   );
   const assetsDir = utils_default.getPath("assets");
   if (!import_fs23.default.existsSync(assetsDir)) {
     import_fs23.default.mkdirSync(assetsDir, { recursive: true });
   }
   console.log("\u6587\u4EF6\u76EE\u5F55:", assetsDir);
-  app.use("/assets", import_express190.default.static(assetsDir, { acceptRanges: false }));
+  app.use("/assets", import_express192.default.static(assetsDir, { acceptRanges: false }));
   const webDir = utils_default.getPath("web");
   if (import_fs23.default.existsSync(webDir)) {
     console.log("\u9759\u6001\u7F51\u7AD9\u76EE\u5F55:", webDir);
     const preparedWebDir = prepareWebAssets(webDir);
     app.use(sendPrecompressedStatic(preparedWebDir));
-    app.use(import_express190.default.static(preparedWebDir, { acceptRanges: false, setHeaders: setWebStaticHeaders }));
-    app.use(import_express190.default.static(webDir, { acceptRanges: false, setHeaders: setWebStaticHeaders }));
+    app.use(import_express192.default.static(preparedWebDir, { acceptRanges: false, setHeaders: setWebStaticHeaders }));
+    app.use(import_express192.default.static(webDir, { acceptRanges: false, setHeaders: setWebStaticHeaders }));
   } else {
     console.warn("\u9759\u6001\u7F51\u7AD9\u76EE\u5F55\u4E0D\u5B58\u5728:", webDir);
   }
@@ -272992,8 +273926,8 @@ async function startServe(randomPort = false) {
       return res.status(401).send({ message: "\u65E0\u6548\u7684token" });
     }
   });
-  const router190 = await Promise.resolve().then(() => (init_router(), router_exports));
-  await router190.default(app);
+  const router192 = await Promise.resolve().then(() => (init_router(), router_exports));
+  await router192.default(app);
   app.use((_2, res, next) => {
     return res.status(404).send({ message: "API 404 Not Found" });
   });

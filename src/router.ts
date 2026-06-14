@@ -1,4 +1,4 @@
-// @routes-hash f7de942780defdb7b976decdb87b0ac0
+// @routes-hash 83e58b812f7b2638e08259c819777c5f
 import { Express } from "express";
 
 import route1 from "./routes/agents/clearMemory";
@@ -185,11 +185,13 @@ import route181 from "./routes/subrouter/login";
 import route182 from "./routes/subrouter/models";
 import route183 from "./routes/subrouter/selectModel";
 import route184 from "./routes/subrouter/status";
-import route185 from "./routes/task/getProject";
-import route186 from "./routes/task/getTaskApi";
-import route187 from "./routes/task/getTaskCategories";
-import route188 from "./routes/task/taskDetails";
-import route189 from "./routes/test/test";
+import route185 from "./routes/subrouter/summary";
+import route186 from "./routes/subrouter/testModel";
+import route187 from "./routes/task/getProject";
+import route188 from "./routes/task/getTaskApi";
+import route189 from "./routes/task/getTaskCategories";
+import route190 from "./routes/task/taskDetails";
+import route191 from "./routes/test/test";
 
 export default async (app: Express) => {
   app.use("/api/agents/clearMemory", route1);
@@ -560,14 +562,18 @@ export default async (app: Express) => {
   app.use("/subrouter/selectModel", route183);
   app.use("/api/subrouter/status", route184);
   app.use("/subrouter/status", route184);
-  app.use("/api/task/getProject", route185);
-  app.use("/task/getProject", route185);
-  app.use("/api/task/getTaskApi", route186);
-  app.use("/task/getTaskApi", route186);
-  app.use("/api/task/getTaskCategories", route187);
-  app.use("/task/getTaskCategories", route187);
-  app.use("/api/task/taskDetails", route188);
-  app.use("/task/taskDetails", route188);
-  app.use("/api/test/test", route189);
-  app.use("/test/test", route189);
+  app.use("/api/subrouter/summary", route185);
+  app.use("/subrouter/summary", route185);
+  app.use("/api/subrouter/testModel", route186);
+  app.use("/subrouter/testModel", route186);
+  app.use("/api/task/getProject", route187);
+  app.use("/task/getProject", route187);
+  app.use("/api/task/getTaskApi", route188);
+  app.use("/task/getTaskApi", route188);
+  app.use("/api/task/getTaskCategories", route189);
+  app.use("/task/getTaskCategories", route189);
+  app.use("/api/task/taskDetails", route190);
+  app.use("/task/taskDetails", route190);
+  app.use("/api/test/test", route191);
+  app.use("/test/test", route191);
 }

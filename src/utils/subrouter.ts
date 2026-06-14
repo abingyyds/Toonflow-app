@@ -993,18 +993,36 @@ export async function refreshStoredModels(userId: number, provider?: SubrouterPr
   return models;
 }
 
+function parseStoredModels(value: unknown): NormalizedModel[] {
+  if (typeof value !== "string" || !value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 export async function selectSubrouterModel(userId: number, modelName: string, targets: string[]): Promise<void> {
   const vendorId = SUBROUTER_VENDOR_ID;
   const model = modelName.includes(":") ? modelName.split(/:(.+)/)[1] : modelName;
+  const account = await getStoredSubrouterAccount(userId);
+  if (!account) throw new Error("未绑定内置智能路由账户");
+  const availableModel = parseStoredModels(account.models).find((item) => item.modelName === model);
+  if (!availableModel) throw new Error("当前账号模型列表中未找到该模型，请刷新模型后重试");
+  if (availableModel.type !== "text") throw new Error("Agent 只能选择文本模型");
   const modelId = `${vendorId}:${model}`;
   const deployRows = await db("o_agentDeploy").select("*");
   const targetSet = new Set(targets.length ? targets : ["scriptAgent", "productionAgent", "universalAi"]);
   for (const row of deployRows) {
-    if (!row.key || !targetSet.has(row.key)) continue;
+    const rowKey = String(row.key || "");
+    if (!rowKey) continue;
+    const shouldApply = [...targetSet].some((target) => rowKey === target || rowKey.startsWith(`${target}:`));
+    if (!shouldApply) continue;
     await upsertUserAgentDeploy(userId, {
       ...row,
-      key: row.key,
-      agentKey: row.key,
+      key: rowKey,
+      agentKey: rowKey,
       vendorId,
       model,
       modelName: modelId,
