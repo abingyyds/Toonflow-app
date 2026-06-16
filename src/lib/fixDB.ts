@@ -284,19 +284,6 @@ export default async (knex: Knex): Promise<void> => {
   await dropColumn("o_vendorConfig", "inputs");
   await dropColumn("o_vendorConfig", "createTime");
 
-  //清除 Agent 配置 中的生产agent
-  const deleteAgentDeployKey = [
-    "productionAgent:decisionAgent",
-    "productionAgent:supervisionAgent",
-    "productionAgent:deriveAssetsAgent",
-    "productionAgent:generateAssetsAgent",
-    "productionAgent:directorPlanAgent",
-    "productionAgent:storyboardGenAgent",
-    "productionAgent:storyboardPanelAgent",
-    "productionAgent:storyboardTableAgent",
-  ];
-  await u.db("o_agentDeploy").whereIn("key", deleteAgentDeployKey).delete();
-
   const getVendorVersion = (id: string): number => {
     try {
       return Number(u.vendor.getVendor(id)?.version ?? 0);

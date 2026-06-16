@@ -215,9 +215,31 @@ export async function getEffectiveAgentDeployList(userId = getCurrentUserId()): 
 
   const userRows = (await db("o_userAgentDeploy").where({ userId }).select("*")) as AgentDeployRow[];
   const userByKey = new Map(userRows.map((row) => [row.agentKey, row]));
-  return globalRows.map((global) => {
+  const globalKeys = new Set(globalRows.map((row) => row.key).filter(Boolean));
+  const effectiveRows = globalRows.map((global) => {
     const userRow = userByKey.get(global.key ?? "");
     return userRow ? { ...global, ...userRow, id: global.id, key: global.key } : global;
+  });
+  const userOnlyRows = userRows
+    .filter((row) => row.agentKey && !globalKeys.has(row.agentKey))
+    .map((row) => ({ ...row, key: row.agentKey }));
+  const rows = [...effectiveRows, ...userOnlyRows];
+  const rowsByKey = new Map(rows.map((row) => [row.key || row.agentKey, row]));
+
+  return rows.map((row) => {
+    const key = row.key || row.agentKey || "";
+    if (!key.includes(":") || row.modelName) return row;
+
+    const [mainKey] = key.split(/:(.+)/);
+    const main = rowsByKey.get(mainKey);
+    if (!main?.modelName) return row;
+
+    return {
+      ...row,
+      model: main.model,
+      modelName: main.modelName,
+      vendorId: main.vendorId,
+    };
   });
 }
 

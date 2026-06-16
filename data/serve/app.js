@@ -80994,9 +80994,26 @@ async function getEffectiveAgentDeployList(userId = getCurrentUserId()) {
   if (!userId) return globalRows;
   const userRows = await db_default("o_userAgentDeploy").where({ userId }).select("*");
   const userByKey = new Map(userRows.map((row) => [row.agentKey, row]));
-  return globalRows.map((global2) => {
+  const globalKeys = new Set(globalRows.map((row) => row.key).filter(Boolean));
+  const effectiveRows = globalRows.map((global2) => {
     const userRow = userByKey.get(global2.key ?? "");
     return userRow ? { ...global2, ...userRow, id: global2.id, key: global2.key } : global2;
+  });
+  const userOnlyRows = userRows.filter((row) => row.agentKey && !globalKeys.has(row.agentKey)).map((row) => ({ ...row, key: row.agentKey }));
+  const rows = [...effectiveRows, ...userOnlyRows];
+  const rowsByKey = new Map(rows.map((row) => [row.key || row.agentKey, row]));
+  return rows.map((row) => {
+    const key = row.key || row.agentKey || "";
+    if (!key.includes(":") || row.modelName) return row;
+    const [mainKey] = key.split(/:(.+)/);
+    const main = rowsByKey.get(mainKey);
+    if (!main?.modelName) return row;
+    return {
+      ...row,
+      model: main.model,
+      modelName: main.modelName,
+      vendorId: main.vendorId
+    };
   });
 }
 async function upsertUserAgentDeploy(userId, agent) {
@@ -81342,6 +81359,94 @@ var init_initDB = __esm({
                 key: "scriptAgent:scriptAgent",
                 name: "\u5267\u672CAgent:\u5267\u672C\u751F\u6210",
                 desc: "\u5267\u672C\u751F\u6210",
+                temperature: 1,
+                maxOutputTokens: 0,
+                disabled: false
+              },
+              {
+                model: "",
+                modelName: "",
+                vendorId: null,
+                key: "productionAgent:decisionAgent",
+                name: "\u751F\u4EA7Agent:\u51B3\u7B56\u5C42",
+                desc: "\u51B3\u7B56\u5C42",
+                temperature: 1,
+                maxOutputTokens: 0,
+                disabled: false
+              },
+              {
+                model: "",
+                modelName: "",
+                vendorId: null,
+                key: "productionAgent:supervisionAgent",
+                name: "\u751F\u4EA7Agent:\u76D1\u7763\u5C42",
+                desc: "\u76D1\u7763\u5C42",
+                temperature: 1,
+                maxOutputTokens: 0,
+                disabled: false
+              },
+              {
+                model: "",
+                modelName: "",
+                vendorId: null,
+                key: "productionAgent:deriveAssetsAgent",
+                name: "\u751F\u4EA7Agent:\u884D\u751F\u8D44\u4EA7",
+                desc: "\u884D\u751F\u8D44\u4EA7",
+                temperature: 1,
+                maxOutputTokens: 0,
+                disabled: false
+              },
+              {
+                model: "",
+                modelName: "",
+                vendorId: null,
+                key: "productionAgent:generateAssetsAgent",
+                name: "\u751F\u4EA7Agent:\u751F\u6210\u8D44\u4EA7",
+                desc: "\u751F\u6210\u8D44\u4EA7",
+                temperature: 1,
+                maxOutputTokens: 0,
+                disabled: false
+              },
+              {
+                model: "",
+                modelName: "",
+                vendorId: null,
+                key: "productionAgent:directorPlanAgent",
+                name: "\u751F\u4EA7Agent:\u5BFC\u6F14\u89C4\u5212",
+                desc: "\u5BFC\u6F14\u89C4\u5212",
+                temperature: 1,
+                maxOutputTokens: 0,
+                disabled: false
+              },
+              {
+                model: "",
+                modelName: "",
+                vendorId: null,
+                key: "productionAgent:storyboardGenAgent",
+                name: "\u751F\u4EA7Agent:\u5206\u955C\u751F\u6210",
+                desc: "\u5206\u955C\u751F\u6210",
+                temperature: 1,
+                maxOutputTokens: 0,
+                disabled: false
+              },
+              {
+                model: "",
+                modelName: "",
+                vendorId: null,
+                key: "productionAgent:storyboardPanelAgent",
+                name: "\u751F\u4EA7Agent:\u5206\u955C\u9762\u677F",
+                desc: "\u5206\u955C\u9762\u677F\u751F\u6210",
+                temperature: 1,
+                maxOutputTokens: 0,
+                disabled: false
+              },
+              {
+                model: "",
+                modelName: "",
+                vendorId: null,
+                key: "productionAgent:storyboardTableAgent",
+                name: "\u751F\u4EA7Agent:\u5206\u955C\u8868\u683C",
+                desc: "\u5206\u955C\u8868\u683C\u751F\u6210",
                 temperature: 1,
                 maxOutputTokens: 0,
                 disabled: false
@@ -107350,17 +107455,6 @@ A medium tracking shot follows the woman from behind as she ascends and approach
       await dropColumn("o_vendorConfig", "icon");
       await dropColumn("o_vendorConfig", "inputs");
       await dropColumn("o_vendorConfig", "createTime");
-      const deleteAgentDeployKey = [
-        "productionAgent:decisionAgent",
-        "productionAgent:supervisionAgent",
-        "productionAgent:deriveAssetsAgent",
-        "productionAgent:generateAssetsAgent",
-        "productionAgent:directorPlanAgent",
-        "productionAgent:storyboardGenAgent",
-        "productionAgent:storyboardPanelAgent",
-        "productionAgent:storyboardTableAgent"
-      ];
-      await utils_default.db("o_agentDeploy").whereIn("key", deleteAgentDeployKey).delete();
       const getVendorVersion = (id) => {
         try {
           return Number(utils_default.vendor.getVendor(id)?.version ?? 0);
@@ -237666,11 +237760,32 @@ var init_subrouter = __esm({
 });
 
 // src/utils/ai.ts
+function getMainAgentKey(value) {
+  return value.split(/:(.+)/)[0];
+}
+async function getAgentDeployWithMainFallback(value) {
+  const agentDeployData = await getEffectiveAgentDeploy(value);
+  if (agentDeployData?.modelName) return agentDeployData;
+  const agentKey = String(agentDeployData?.key || agentDeployData?.agentKey || value);
+  if (!agentKey.includes(":")) return agentDeployData;
+  const mainlyData = await getEffectiveAgentDeploy(getMainAgentKey(agentKey));
+  if (!mainlyData?.modelName) return agentDeployData;
+  return {
+    ...agentDeployData || {},
+    key: agentDeployData?.key || agentKey,
+    agentKey: agentDeployData?.agentKey || agentKey,
+    model: mainlyData.model,
+    modelName: mainlyData.modelName,
+    vendorId: mainlyData.vendorId,
+    temperature: agentDeployData?.temperature ?? mainlyData.temperature,
+    maxOutputTokens: agentDeployData?.maxOutputTokens ?? mainlyData.maxOutputTokens
+  };
+}
 async function resolveModelName(value) {
   if (AiTypeValues.includes(value)) {
     const agentUseModeValue = await getUserSetting("agentUseMode", "0");
     if (agentUseModeValue == "1") {
-      const agentDeployData2 = await getEffectiveAgentDeploy(value);
+      const agentDeployData2 = await getAgentDeployWithMainFallback(value);
       if (!agentDeployData2?.modelName) throw new Error(`\u9AD8\u7EA7\u914D\u7F6E\u6A21\u5F0F\u4E0B\uFF0C\u672A\u627E\u5230\u5BF9\u5E94\u7684\u6A21\u578B\u914D\u7F6E ${value}`);
       return agentDeployData2?.modelName;
     }
@@ -237683,7 +237798,7 @@ async function resolveModelName(value) {
     const agentDeployData = await getEffectiveAgentDeploy(value);
     let modelName = null;
     if (!agentDeployData?.modelName) {
-      const [mainly] = agentDeployData.key.split(/:(.+)/);
+      const mainly = getMainAgentKey(agentDeployData?.key || agentDeployData?.agentKey || String(value));
       const mainlyData = await getEffectiveAgentDeploy(mainly);
       if (!mainlyData?.modelName) throw new Error(`\u672A\u627E\u5230\u90E8\u7F72\u914D\u7F6E ${value}`);
       modelName = mainlyData.modelName;
@@ -237697,7 +237812,7 @@ async function getModelConfig(value) {
   if (AiTypeValues.includes(value)) {
     const agentUseModeValue = await getUserSetting("agentUseMode", "0");
     if (agentUseModeValue == "1") {
-      const agentDeployData2 = await getEffectiveAgentDeploy(value);
+      const agentDeployData2 = await getAgentDeployWithMainFallback(value);
       if (!agentDeployData2?.modelName) throw new Error(`\u9AD8\u7EA7\u914D\u7F6E\u6A21\u5F0F\u4E0B\uFF0C\u672A\u627E\u5230\u5BF9\u5E94\u7684\u6A21\u578B\u914D\u7F6E ${value}`);
       return agentDeployData2;
     }
@@ -237709,7 +237824,7 @@ async function getModelConfig(value) {
     }
     const agentDeployData = await getEffectiveAgentDeploy(value);
     if (!agentDeployData?.modelName) {
-      const [mainly] = agentDeployData.key.split(/:(.+)/);
+      const mainly = getMainAgentKey(agentDeployData?.key || agentDeployData?.agentKey || String(value));
       const mainlyData = await getEffectiveAgentDeploy(mainly);
       if (!mainlyData?.modelName) throw new Error(`\u672A\u627E\u5230\u90E8\u7F72\u914D\u7F6E ${value}`);
       return mainlyData;

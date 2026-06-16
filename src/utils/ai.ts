@@ -44,6 +44,33 @@ const AiTypeValues: AiType[] = [
   "productionAgent:storyboardTableAgent",
   "universalAi",
 ];
+
+function getMainAgentKey(value: string): string {
+  return value.split(/:(.+)/)[0];
+}
+
+async function getAgentDeployWithMainFallback(value: AiType | `${string}:${string}`) {
+  const agentDeployData = await getEffectiveAgentDeploy(value);
+  if (agentDeployData?.modelName) return agentDeployData;
+
+  const agentKey = String(agentDeployData?.key || agentDeployData?.agentKey || value);
+  if (!agentKey.includes(":")) return agentDeployData;
+
+  const mainlyData = await getEffectiveAgentDeploy(getMainAgentKey(agentKey));
+  if (!mainlyData?.modelName) return agentDeployData;
+
+  return {
+    ...(agentDeployData || {}),
+    key: agentDeployData?.key || agentKey,
+    agentKey: agentDeployData?.agentKey || agentKey,
+    model: mainlyData.model,
+    modelName: mainlyData.modelName,
+    vendorId: mainlyData.vendorId,
+    temperature: agentDeployData?.temperature ?? mainlyData.temperature,
+    maxOutputTokens: agentDeployData?.maxOutputTokens ?? mainlyData.maxOutputTokens,
+  };
+}
+
 async function resolveModelName(value: AiType | `${string}:${string}`): Promise<`${string}:${string}`> {
   if (AiTypeValues.includes(value as AiType)) {
     const agentUseModeValue = await getUserSetting("agentUseMode", "0");
@@ -51,7 +78,7 @@ async function resolveModelName(value: AiType | `${string}:${string}`): Promise<
     //正常流程
     //高级配置
     if (agentUseModeValue == "1") {
-      const agentDeployData = await getEffectiveAgentDeploy(value);
+      const agentDeployData = await getAgentDeployWithMainFallback(value);
       if (!agentDeployData?.modelName) throw new Error(`高级配置模式下，未找到对应的模型配置 ${value}`);
       return agentDeployData?.modelName as `${number}:${string}`;
     }
@@ -68,7 +95,7 @@ async function resolveModelName(value: AiType | `${string}:${string}`): Promise<
     let modelName = null;
 
     if (!agentDeployData?.modelName) {
-      const [mainly] = agentDeployData!.key!.split(/:(.+)/);
+      const mainly = getMainAgentKey(agentDeployData?.key || agentDeployData?.agentKey || String(value));
       const mainlyData = await getEffectiveAgentDeploy(mainly);
       if (!mainlyData?.modelName) throw new Error(`未找到部署配置 ${value}`);
       modelName = mainlyData.modelName;
@@ -85,7 +112,7 @@ async function getModelConfig(value: AiType | `${string}:${string}`) {
     //正常流程
     //高级配置
     if (agentUseModeValue == "1") {
-      const agentDeployData = await getEffectiveAgentDeploy(value);
+      const agentDeployData = await getAgentDeployWithMainFallback(value);
       if (!agentDeployData?.modelName) throw new Error(`高级配置模式下，未找到对应的模型配置 ${value}`);
       return agentDeployData;
     }
@@ -101,7 +128,7 @@ async function getModelConfig(value: AiType | `${string}:${string}`) {
     const agentDeployData = await getEffectiveAgentDeploy(value);
 
     if (!agentDeployData?.modelName) {
-      const [mainly] = agentDeployData!.key!.split(/:(.+)/);
+      const mainly = getMainAgentKey(agentDeployData?.key || agentDeployData?.agentKey || String(value));
       const mainlyData = await getEffectiveAgentDeploy(mainly);
       if (!mainlyData?.modelName) throw new Error(`未找到部署配置 ${value}`);
       return mainlyData;
