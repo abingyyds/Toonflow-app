@@ -6,6 +6,7 @@ import { validateFields } from "@/middleware/middleware";
 import { useSkill } from "@/utils/agent/skillsTools";
 import { tool, jsonSchema } from "ai";
 import { o_script } from "@/types/database";
+import { getEffectivePromptByType, resolvePromptContent } from "@/utils/userConfig";
 
 const router = express.Router();
 
@@ -204,13 +205,8 @@ export default router.post(
               return "无需回复用户任何内容";
             },
           });
-          const promptData = await u.db("o_prompt").where("type", "scriptAssetExtraction").first();
-          let scriptAssetExtraction = "" as string | undefined;
-          if (promptData && promptData.useData) {
-            scriptAssetExtraction = promptData.useData;
-          } else {
-            scriptAssetExtraction = promptData?.data ?? undefined;
-          }
+          const promptData = await getEffectivePromptByType("scriptAssetExtraction");
+          const scriptAssetExtraction = resolvePromptContent(promptData);
           const existingHint = existingAssetsList
             ? `\n\n【已有资产列表】：${existingAssetsList}\n对于已有资产，如果在剧本中出现，只需在 existingAssetRefs 中给出资产名称和对应的 scriptIds 数组即可，无需重复生成 desc/type。对于新发现的资产（不在已有列表中），请在 newAssets 中给出完整信息。`
             : "";

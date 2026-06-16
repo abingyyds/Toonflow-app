@@ -1,11 +1,10 @@
 import express from "express";
-import { success, error } from "@/lib/responseFormat";
-import u from "@/utils";
-import initDB from "@/lib/initDB";
+import { success } from "@/lib/responseFormat";
+import { getUserSetting } from "@/utils/userConfig";
 
 const router = express.Router();
 
 export default router.get("/", async (req, res) => {
-    const switchAiDevTool = await u.db("o_setting").where("key", "switchAiDevTool").first();
-    res.status(200).send(success(switchAiDevTool?.value || "0"));
+  const switchAiDevTool = await getUserSetting("switchAiDevTool", "0");
+  res.status(200).send(success(switchAiDevTool || "0"));
 });

@@ -3,7 +3,16 @@ import u from "@/utils";
 import { z } from "zod";
 import { success, error } from "@/lib/responseFormat";
 import { validateFields } from "@/middleware/middleware";
-import { info } from "node:console";
+import fs from "fs/promises";
+import path from "path";
+import {
+  getEffectiveModelPrompt,
+  getEffectivePromptByType,
+  getGlobalModelPromptRoot,
+  getModelPromptFullPath,
+  getModelPromptRootForUser,
+  resolvePromptContent,
+} from "@/utils/userConfig";
 const router = express.Router();
 
 export default router.post(
@@ -85,12 +94,35 @@ export default router.post(
 
     const [id, modelData] = model.split(/:(.+)/);
     const projectData = await u.db("o_project").select("*").where({ id: projectId }).first();
-    const videoPrompt = await u.db("o_prompt").where("type", "videoPromptGeneration").first();
+    const videoPrompt = await getEffectivePromptByType("videoPromptGeneration");
     let videoPromptGeneration = "" as string | undefined;
-    if (videoPrompt && videoPrompt.useData) {
-      videoPromptGeneration = videoPrompt.useData;
-    } else {
-      videoPromptGeneration = videoPrompt?.data ?? undefined;
+    const modelPromptData = await getEffectiveModelPrompt(id, modelData);
+    if (modelPromptData?.path) {
+      try {
+        videoPromptGeneration = await fs.readFile(getModelPromptFullPath(modelPromptData.path), "utf-8");
+      } catch {}
+    }
+    if (!videoPromptGeneration) {
+      const modelLower = (modelData ?? "").toLowerCase();
+      let fileName: string | null = null;
+      if (modelLower.includes("wan") && modelLower.includes("2.6")) {
+        fileName = "wan2.6Single-imageFirstFrameMode.md";
+      } else if (/seedance.*2[.\-]0/i.test(modelData)) {
+        fileName = "seedance2Multi-parameterMode.md";
+      } else {
+        fileName = "universalMulti-parameterMode.md";
+      }
+      try {
+        const userFullPath = path.join(getModelPromptRootForUser(), "video", fileName);
+        const fullPath = await fs
+          .access(userFullPath)
+          .then(() => userFullPath)
+          .catch(() => path.join(getGlobalModelPromptRoot(), "video", fileName));
+        videoPromptGeneration = await fs.readFile(fullPath, "utf-8");
+      } catch {}
+    }
+    if (!videoPromptGeneration) {
+      videoPromptGeneration = resolvePromptContent(videoPrompt);
     }
     const artStyle = projectData?.artStyle || "无";
     const visualManual = u.getArtPrompt(artStyle, "art_skills", "art_storyboard_video");

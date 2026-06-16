@@ -4,6 +4,7 @@ import { Namespace, Socket } from "socket.io";
 import * as agent from "@/agents/scriptAgent/index";
 import ResTool from "@/socket/resTool";
 import { AuthUser, normalizeAuthUser, runWithUser } from "@/utils/requestContext";
+import { buildAgentMemoryIsolationKey } from "@/utils/agent/isolation";
 
 async function verifyToken(rawToken: string): Promise<AuthUser | null> {
   const setting = await u.db("o_setting").where("key", "tokenKey").select("value").first();
@@ -19,6 +20,17 @@ async function verifyToken(rawToken: string): Promise<AuthUser | null> {
   }
 }
 
+function parseProjectId(value: unknown): number | null {
+  const projectId = Number(value);
+  return Number.isFinite(projectId) && projectId > 0 ? projectId : null;
+}
+
+async function canAccessProject(authUser: AuthUser, projectId: number): Promise<boolean> {
+  const project = await u.db("o_project").where("id", projectId).select("id", "userId").first();
+  if (!project) return false;
+  return project.userId == null || Number(project.userId) === authUser.id;
+}
+
 export default (nsp: Namespace) => {
   nsp.on("connection", async (socket: Socket) => {
     const token = socket.handshake.auth.token;
@@ -28,17 +40,27 @@ export default (nsp: Namespace) => {
       socket.disconnect();
       return;
     }
-    const isolationKey = socket.handshake.auth.isolationKey;
-    if (!isolationKey) {
-      console.log("[scriptAgent] 连接失败，缺少 isolationKey");
+    const projectId = parseProjectId(socket.handshake.auth.projectId);
+    if (!projectId) {
+      console.log("[scriptAgent] 连接失败，缺少 projectId");
       socket.disconnect();
       return;
     }
+    if (!(await canAccessProject(authUser, projectId))) {
+      console.log("[scriptAgent] 连接失败，项目无权限", { userId: authUser.id, projectId });
+      socket.disconnect();
+      return;
+    }
+    const isolationKey = buildAgentMemoryIsolationKey({
+      agentType: "scriptAgent",
+      projectId,
+      user: authUser,
+    });
 
-    console.log("[scriptAgent] 已连接:", socket.id);
+    console.log("[scriptAgent] 已连接:", { socketId: socket.id, userId: authUser.id, projectId, isolationKey });
 
     const resTool = new ResTool(socket, {
-      projectId: socket.handshake.auth.projectId,
+      projectId,
     });
     let abortController: AbortController | null = null;
 
@@ -70,7 +92,7 @@ export default (nsp: Namespace) => {
       } catch (err: any) {
         if (err.name !== "AbortError" && !currentController.signal.aborted) {
           console.error("[scriptAgent] chat error:", u.error(err).message);
-          msg.error(u.error(err).message)
+          msg.error(u.error(err).message);
         }
       } finally {
         if (abortController === currentController) {

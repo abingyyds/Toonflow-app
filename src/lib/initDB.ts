@@ -202,6 +202,31 @@ export default async (knex: Knex, forceInit: boolean = false): Promise<void> => 
         table.unique(["userId", "key"]);
       },
     },
+    // 用户级提示词覆盖表
+    {
+      name: "o_userPrompt",
+      builder: (table) => {
+        table.integer("userId").notNullable();
+        table.integer("promptId").notNullable();
+        table.text("data");
+        table.text("useData");
+        table.primary(["userId", "promptId"]);
+        table.unique(["userId", "promptId"]);
+      },
+    },
+    // 用户级模型提示词绑定表
+    {
+      name: "o_userModelPrompt",
+      builder: (table) => {
+        table.integer("userId").notNullable();
+        table.text("vendorId").notNullable();
+        table.text("model").notNullable();
+        table.text("fileName");
+        table.text("path");
+        table.primary(["userId", "vendorId", "model"]);
+        table.unique(["userId", "vendorId", "model"]);
+      },
+    },
     //设置表
     {
       name: "o_setting",

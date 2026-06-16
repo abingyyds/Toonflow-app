@@ -99,7 +99,7 @@ export default (nsp: Namespace) => {
     }
 
     const projectId = parseProjectId(socket.handshake.auth.projectId);
-    const episodesId = parseEpisodesId(socket.handshake.auth.episodesId);
+    const episodesId = parseEpisodesId(socket.handshake.auth.episodesId ?? socket.handshake.auth.scriptId);
     const hasProjectAccess = projectId ? await canAccessProject(authUser, projectId) : false;
     const initialProjectId = hasProjectAccess ? projectId : null;
     const isolationKey = initialProjectId ? buildIsolationKey(authUser, initialProjectId, episodesId) : "";
@@ -154,7 +154,7 @@ export default (nsp: Namespace) => {
       bindChatKit();
     });
 
-    socket.on("updateContext", async (data: { isolationKey?: string; projectId?: number; episodesId?: number }, callback) => {
+    socket.on("updateContext", async (data: { isolationKey?: string; projectId?: number; episodesId?: number; scriptId?: number }, callback) => {
       const nextProjectId = parseProjectId(data?.projectId);
       if (!nextProjectId) {
         const message = "缺少有效 projectId，无法更新生产 Agent 上下文";
@@ -173,7 +173,7 @@ export default (nsp: Namespace) => {
         return;
       }
 
-      const nextEpisodesId = parseEpisodesId(data?.episodesId);
+      const nextEpisodesId = parseEpisodesId(data?.episodesId ?? data?.scriptId);
       globalContext.projectId = nextProjectId;
       globalContext.isolationKey = buildIsolationKey(authUser, nextProjectId, nextEpisodesId);
       console.log("[productionAgent] 上下文已更新:", {

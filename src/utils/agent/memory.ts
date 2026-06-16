@@ -4,6 +4,7 @@ import { getEmbedding, cosineSimilarity } from "./embedding";
 import type { memories as MemoryRow } from "@/types/database";
 import { tool, jsonSchema } from "ai";
 import { z } from "zod";
+import { getUserSettings } from "@/utils/userConfig";
 
 // ── 可调配置默认值 ──
 const DEFAULTS: {
@@ -65,17 +66,12 @@ class Memory {
     return [];
   }
   private async getConfigData<T extends Record<string, string | number>>(defaults: T): Promise<T> {
-    const keys = Object.keys(defaults) as (keyof T & string)[];
-    const rows = await u.db("o_setting").whereIn("key", keys);
-
-    const dbMap: Record<string, string | null> = {};
-    for (const row of rows) {
-      if (row.key != null) dbMap[row.key] = row.value ?? null;
-    }
+    const stringDefaults = Object.fromEntries(Object.entries(defaults).map(([key, value]) => [key, String(value)])) as Record<string, string>;
+    const settings = await getUserSettings(stringDefaults);
 
     const result = { ...defaults };
-    for (const key of keys) {
-      const raw = dbMap[key];
+    for (const key of Object.keys(defaults)) {
+      const raw = settings[key];
       if (raw == null) continue; // null / undefined 使用默认值
       const num = Number(raw);
       (result as Record<string, string | number>)[key] = Number.isNaN(num) ? raw : num;

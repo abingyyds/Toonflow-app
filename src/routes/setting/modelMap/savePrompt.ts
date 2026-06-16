@@ -1,10 +1,10 @@
 import express from "express";
 import { error, success } from "@/lib/responseFormat";
-import u from "@/utils";
 import { z } from "zod";
 import { validateFields } from "@/middleware/middleware";
 import fs from "fs/promises";
 import path from "path";
+import { getModelPromptRootForUser } from "@/utils/userConfig";
 
 const router = express.Router();
 
@@ -17,14 +17,22 @@ export default router.post(
   }),
   async (req, res) => {
     const { name, data, type } = req.body;
+    if (path.basename(name) !== name) {
+      return res.status(400).send(error("非法文件名"));
+    }
 
-    const modelPromptRoot = u.getPath(["modelPrompt"]);
+    const modelPromptRoot = getModelPromptRootForUser();
     const dir = path.join(modelPromptRoot, type);
-
-    await fs.mkdir(dir, { recursive: true });
-
     const filePath = path.join(dir, `${name}.md`);
-    await fs.writeFile(filePath, data, "utf-8");
+
+    const resolvedRoot = path.resolve(dir);
+    const resolvedFile = path.resolve(filePath);
+    if (!resolvedFile.startsWith(resolvedRoot + path.sep)) {
+      return res.status(400).send(error("非法路径"));
+    }
+
+    await fs.mkdir(path.dirname(resolvedFile), { recursive: true });
+    await fs.writeFile(resolvedFile, data, "utf-8");
 
     res.status(200).send(success("保存成功"));
   },

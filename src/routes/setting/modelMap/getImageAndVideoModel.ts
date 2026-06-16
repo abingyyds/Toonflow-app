@@ -1,7 +1,7 @@
 import express from "express";
 import u from "@/utils";
 import { success } from "@/lib/responseFormat";
-import { getEffectiveEnabledVendors } from "@/utils/userConfig";
+import { getEffectiveEnabledVendors, getEffectiveModelPromptList } from "@/utils/userConfig";
 const router = express.Router();
 
 export default router.post("/", async (req, res) => {
@@ -12,7 +12,7 @@ export default router.post("/", async (req, res) => {
   const data = await Promise.all(
     dataList.map(async (item) => {
       const vendor = u.vendor.getVendor(item.id!);
-      const promptList = await u.db("o_modelPrompt").andWhere("vendorId", vendor.id).select("*");
+      const promptList = await getEffectiveModelPromptList(vendor.id);
       const promptMap = new Map(promptList.map((p) => [p.model, { fileName: p.fileName, path: p.path }]));
       const models = await u.vendor.getModelList(item.id!);
       const filteredModels = models

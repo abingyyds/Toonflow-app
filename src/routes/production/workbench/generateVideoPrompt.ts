@@ -5,6 +5,14 @@ import { success, error } from "@/lib/responseFormat";
 import { validateFields } from "@/middleware/middleware";
 import fs from "fs/promises";
 import path from "path";
+import {
+  getEffectiveModelPrompt,
+  getEffectivePromptByType,
+  getGlobalModelPromptRoot,
+  getModelPromptRootForUser,
+  getModelPromptFullPath,
+  resolvePromptContent,
+} from "@/utils/userConfig";
 const router = express.Router();
 
 export default router.post(
@@ -96,15 +104,14 @@ export default router.post(
 
     const [id, modelData] = model.split(/:(.+)/);
     const projectData = await u.db("o_project").select("*").where({ id: projectId }).first();
-    const videoPrompt = await u.db("o_prompt").where("type", "videoPromptGeneration").first();
+    const videoPrompt = await getEffectivePromptByType("videoPromptGeneration");
     let videoPromptGeneration = "" as string | undefined;
 
-    const modelPromptData = await u.db("o_modelPrompt").where("vendorId", id).where("model", modelData).first();
+    const modelPromptData = await getEffectiveModelPrompt(id, modelData);
     //查询到 有绑定对应视频提示词
-    if (modelPromptData) {
-      const modelPromptRoot = u.getPath(["modelPrompt"]);
+    if (modelPromptData?.path) {
       try {
-        const fullPath = path.join(modelPromptRoot, modelPromptData?.path!);
+        const fullPath = getModelPromptFullPath(modelPromptData.path);
         const content = await fs.readFile(fullPath, "utf-8");
         videoPromptGeneration = content ?? "";
       } catch {}
@@ -112,7 +119,7 @@ export default router.post(
 
     // 未查询到绑定，根据模型名称 + mode 自动匹配 modelPrompt/video/ 下的文件
     if (!videoPromptGeneration) {
-      const modelPromptRoot = u.getPath(["modelPrompt"]);
+      const modelPromptRoot = getGlobalModelPromptRoot();
       const videoPromptDir = path.join(modelPromptRoot, "video");
       const modelLower = (modelData ?? "").toLowerCase();
 
@@ -133,7 +140,11 @@ export default router.post(
       }
       if (fileName) {
         try {
-          const fullPath = path.join(videoPromptDir, fileName);
+          const userFullPath = path.join(getModelPromptRootForUser(), "video", fileName);
+          const fullPath = await fs
+            .access(userFullPath)
+            .then(() => userFullPath)
+            .catch(() => path.join(videoPromptDir, fileName));
           videoPromptGeneration = await fs.readFile(fullPath, "utf-8");
         } catch {
           // 文件不存在则忽略，继续用备选
@@ -143,11 +154,7 @@ export default router.post(
 
     //备选
     if (!videoPromptGeneration) {
-      if (videoPrompt && videoPrompt.useData) {
-        videoPromptGeneration = videoPrompt.useData;
-      } else {
-        videoPromptGeneration = videoPrompt?.data ?? undefined;
-      }
+      videoPromptGeneration = resolvePromptContent(videoPrompt);
     }
 
     const artStyle = projectData?.artStyle || "无";

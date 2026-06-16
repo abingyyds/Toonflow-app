@@ -105,6 +105,25 @@ export default async (knex: Knex): Promise<void> => {
     table.unique(["userId", "vendorId"]);
   });
 
+  await createTable("o_userPrompt", (table) => {
+    table.integer("userId").notNullable();
+    table.integer("promptId").notNullable();
+    table.text("data");
+    table.text("useData");
+    table.primary(["userId", "promptId"]);
+    table.unique(["userId", "promptId"]);
+  });
+
+  await createTable("o_userModelPrompt", (table) => {
+    table.integer("userId").notNullable();
+    table.text("vendorId").notNullable();
+    table.text("model").notNullable();
+    table.text("fileName");
+    table.text("path");
+    table.primary(["userId", "vendorId", "model"]);
+    table.unique(["userId", "vendorId", "model"]);
+  });
+
   await createTable("o_subrouterAccount", (table) => {
     table.integer("userId").notNullable();
     table.string("provider").notNullable();

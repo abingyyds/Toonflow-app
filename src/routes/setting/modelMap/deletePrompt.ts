@@ -1,10 +1,12 @@
 import express from "express";
 import { error, success } from "@/lib/responseFormat";
-import u from "@/utils";
 import { z } from "zod";
 import { validateFields } from "@/middleware/middleware";
 import fs from "fs/promises";
 import path from "path";
+import { getCurrentUserId } from "@/utils/requestContext";
+import { getModelPromptRootForUser } from "@/utils/userConfig";
+import u from "@/utils";
 
 const router = express.Router();
 
@@ -15,12 +17,23 @@ export default router.post(
   }),
   async (req, res) => {
     const { path: filePath } = req.body;
+    const userId = getCurrentUserId();
+    const prefix = userId ? `users/${userId}/` : "";
+    const normalizedPath = filePath.replace(/\\/g, "/");
 
-    const modelPromptRoot = u.getPath(["modelPrompt"]);
+    if (userId && !normalizedPath.startsWith(prefix)) {
+      return res.status(403).send(error("无权删除全局或其他用户的提示词模板"));
+    }
+
+    const modelPromptRoot = getModelPromptRootForUser(userId);
+    const relativePath = userId ? normalizedPath.slice(prefix.length) : normalizedPath;
+    if (!relativePath.startsWith("image/") && !relativePath.startsWith("video/")) {
+      return res.status(400).send(error("非法路径"));
+    }
 
     // 路径隧穿检测
     const resolvedRoot = path.resolve(modelPromptRoot);
-    const resolvedFile = path.resolve(modelPromptRoot, filePath);
+    const resolvedFile = path.resolve(modelPromptRoot, relativePath);
     if (!resolvedFile.startsWith(resolvedRoot + path.sep)) {
       return res.status(400).send(error("非法路径"));
     }
@@ -33,6 +46,9 @@ export default router.post(
     }
 
     await fs.unlink(resolvedFile);
+    if (userId) {
+      await u.db("o_userModelPrompt").where({ userId, path: normalizedPath }).delete();
+    }
     res.status(200).send(success("删除成功"));
   },
 );

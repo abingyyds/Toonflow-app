@@ -235,6 +235,19 @@ export interface o_userAgentDeploy {
   'userId'?: number;
   'vendorId'?: string | null;
 }
+export interface o_userModelPrompt {
+  'fileName'?: string | null;
+  'model'?: string;
+  'path'?: string | null;
+  'userId'?: number;
+  'vendorId'?: string;
+}
+export interface o_userPrompt {
+  'data'?: string | null;
+  'promptId'?: number;
+  'useData'?: string | null;
+  'userId'?: number;
+}
 export interface o_userSetting {
   'key'?: string;
   'userId'?: number;
@@ -302,6 +315,8 @@ export interface DB {
   "o_tasks": o_tasks;
   "o_user": o_user;
   "o_userAgentDeploy": o_userAgentDeploy;
+  "o_userModelPrompt": o_userModelPrompt;
+  "o_userPrompt": o_userPrompt;
   "o_userSetting": o_userSetting;
   "o_userVendorConfig": o_userVendorConfig;
   "o_vendorConfig": o_vendorConfig;

@@ -26,7 +26,7 @@ export function buildAgentMemoryIsolationKey({ agentType, projectId, episodesId,
   if (!normalizedProjectId) throw new Error("缺少有效 projectId，无法生成 Agent 记忆隔离键");
 
   const normalizedEpisodesId = normalizePositiveId(episodesId);
-  if (agentType === "productionAgent" && user?.id) {
+  if (user?.id) {
     return [`u${user.id}`, `p${normalizedProjectId}`, agentType, normalizedEpisodesId ? `e${normalizedEpisodesId}` : null]
       .filter(Boolean)
       .join(":");

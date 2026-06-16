@@ -4,6 +4,7 @@ import { z } from "zod";
 import { error, success } from "@/lib/responseFormat";
 import { validateFields } from "@/middleware/middleware";
 import { tool, jsonSchema } from "ai";
+import { getEffectivePromptByType, resolvePromptContent } from "@/utils/userConfig";
 const router = express.Router();
 
 // 获取资产
@@ -49,13 +50,8 @@ export default router.post(
         });
 
         const audioList = audioData.map((i) => `- ID:${i.id} | 名称:${i.name} | 描述:${i.describe ?? "无"}`).join("\n");
-        const promptData = await u.db("o_prompt").where("type", "audioBindPrompt").first();
-        let audioBindPrompt = "" as string | undefined;
-        if (promptData && promptData.useData) {
-          audioBindPrompt = promptData.useData;
-        } else {
-          audioBindPrompt = promptData?.data ?? undefined;
-        }
+        const promptData = await getEffectivePromptByType("audioBindPrompt");
+        const audioBindPrompt = resolvePromptContent(promptData);
         const { text } = await u.Ai.Text("universalAi").invoke({
           messages: [
             {
