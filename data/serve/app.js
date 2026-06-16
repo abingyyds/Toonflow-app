@@ -271040,6 +271040,54 @@ var memory_default = Memory;
 // src/agents/productionAgent/index.ts
 var fs12 = __toESM(require("fs"));
 var import_path11 = __toESM(require("path"));
+var MODEL_START_TIMEOUT_MS = 6e4;
+var STREAM_IDLE_NOTICE_MS = 3e4;
+var STREAM_IDLE_TIMEOUT_MS = 18e4;
+var REMOTE_TOOL_TIMEOUT_MS = 12e4;
+var STAGES = {
+  directorPlan: {
+    key: "productionAgent:directorPlanAgent",
+    skillFile: "production_execution_director_plan.md",
+    name: "\u5BFC\u6F14\u89C4\u5212",
+    description: "\u8FD0\u884C\u6267\u884C\u5C42Agent\u5B8C\u6210\u9636\u6BB51\uFF1A\u5BFC\u6F14\u89C4\u5212\uFF08\u542B\u884D\u751F\u8D44\u4EA7\u9884\u5212\uFF09"
+  },
+  deriveAssets: {
+    key: "productionAgent:deriveAssetsAgent",
+    skillFile: "production_execution_derive_assets.md",
+    name: "\u884D\u751F\u8D44\u4EA7",
+    description: "\u8FD0\u884C\u6267\u884C\u5C42Agent\u5B8C\u6210\u9636\u6BB52\uFF1A\u884D\u751F\u8D44\u4EA7\u5206\u6790\u4E0E\u5199\u5165"
+  },
+  generateAssets: {
+    key: "productionAgent:generateAssetsAgent",
+    skillFile: "production_execution_generate_assets.md",
+    name: "\u8D44\u4EA7\u751F\u6210",
+    description: "\u8FD0\u884C\u6267\u884C\u5C42Agent\u5B8C\u6210\u9636\u6BB53\uFF1A\u884D\u751F\u8D44\u4EA7\u56FE\u7247\u751F\u6210"
+  },
+  storyboardTable: {
+    key: "productionAgent:storyboardTableAgent",
+    skillFile: "production_execution_storyboard_table.md",
+    name: "\u5206\u955C\u8868",
+    description: "\u8FD0\u884C\u6267\u884C\u5C42Agent\u5B8C\u6210\u9636\u6BB54\uFF1A\u6784\u5EFA\u7ED3\u6784\u5316\u5206\u955C\u8868"
+  },
+  storyboardPanel: {
+    key: "productionAgent:storyboardPanelAgent",
+    skillFile: "production_execution_storyboard_panel.md",
+    name: "\u5206\u955C\u9762\u677F",
+    description: "\u8FD0\u884C\u6267\u884C\u5C42Agent\u5B8C\u6210\u9636\u6BB55\uFF1A\u5206\u955C\u9762\u677F\u5199\u5165"
+  },
+  storyboardGen: {
+    key: "productionAgent:storyboardGenAgent",
+    skillFile: "production_execution_storyboard_gen.md",
+    name: "\u5206\u955C\u56FE",
+    description: "\u8FD0\u884C\u6267\u884C\u5C42Agent\u5B8C\u6210\u9636\u6BB56\uFF1A\u5206\u955C\u56FE\u751F\u6210"
+  },
+  supervision: {
+    key: "productionAgent:supervisionAgent",
+    skillFile: "production_agent_supervision.md",
+    name: "\u76D1\u7763",
+    description: "\u8FD0\u884C\u76D1\u7763\u5C42Agent\u5BA1\u6838\u5F53\u524D\u9636\u6BB5\u4EA7\u51FA\u7269"
+  }
+};
 function buildMemPrompt(mem) {
   let memoryContext = "";
   if (mem.rag.length) {
@@ -271067,6 +271115,33 @@ async function runDecisionAI(ctx, text2) {
   const memory = new memory_default("productionAgent", ctx.isolationKey);
   try {
     await memory.add("user", text2);
+    if (deterministicAction === "retry_stage1_supervision") {
+      const fullResponse2 = await runDeterministicStage(ctx, STAGES.supervision, {
+        actionText: "\u9636\u6BB51\u5BA1\u6838\u91CD\u8BD5",
+        prompt: [
+          `\u7528\u6237\u539F\u59CB\u56DE\u590D\uFF1A${text2}`,
+          "\u7528\u6237\u9009\u62E9 A\uFF1A\u91CD\u65B0\u53D1\u8D77\u9636\u6BB51\u5BFC\u6F14\u89C4\u5212\u5BA1\u6838\u3002",
+          "\u8BF7\u5BA1\u6838\u3010\u5BFC\u6F14\u89C4\u5212\u3011\u5F53\u524D\u4EA7\u51FA\u7269\u3002\u5BA1\u6838\u7EF4\u5EA6\uFF1A\u5267\u60C5\u8986\u76D6\u3001\u8D44\u4EA7\u8986\u76D6\u3001\u884D\u751F\u9884\u5212\u3001\u8282\u594F\u7ED3\u6784\u3001\u89C6\u89C9\u4E0E\u58F0\u97F3\u65B9\u5411\u3002",
+          "\u8BF7\u660E\u786E\u7ED9\u51FA\uFF1A\u5BA1\u6838\u662F\u5426\u901A\u8FC7\u3001\u53D1\u73B0\u7684\u95EE\u9898\u3001\u4E0B\u4E00\u6B65\u5EFA\u8BAE\u3002\u5982\u679C\u5BA1\u6838\u670D\u52A1\u6216\u5DE5\u4F5C\u53F0\u6570\u636E\u4E0D\u53EF\u7528\uFF0C\u8BF7\u8BF4\u660E\u5177\u4F53\u5361\u4F4F\u539F\u56E0\u3002"
+        ].join("\n"),
+        initialBox
+      });
+      if (fullResponse2.trim()) await memory.add("assistant:decision", fullResponse2);
+      return fullResponse2;
+    }
+    if (deterministicAction === "continue_stage2_after_failed_supervision") {
+      const fullResponse2 = await runDeterministicStage(ctx, STAGES.deriveAssets, {
+        actionText: "\u7EE7\u7EED\u9636\u6BB52\u884D\u751F\u8D44\u4EA7\u5206\u6790",
+        prompt: [
+          `\u7528\u6237\u539F\u59CB\u56DE\u590D\uFF1A${text2}`,
+          "\u7528\u6237\u9009\u62E9 B\uFF1A\u8DF3\u8FC7\u672C\u6B21\u5931\u8D25\u7684\u9636\u6BB51\u5BA1\u6838\uFF0C\u6309\u5F53\u524D\u5BFC\u6F14\u89C4\u5212\u7EE7\u7EED\u8FDB\u5165\u9636\u6BB52\u884D\u751F\u8D44\u4EA7\u5206\u6790\u3002",
+          "\u8BF7\u8BFB\u53D6\u5F53\u524D\u751F\u4EA7\u5DE5\u4F5C\u533A\u6570\u636E\uFF0C\u57FA\u4E8E\u5BFC\u6F14\u89C4\u5212\u5206\u6790\u5E76\u5199\u5165\u884D\u751F\u8D44\u4EA7\u3002\u82E5\u65E0\u6CD5\u7EE7\u7EED\uFF0C\u8BF7\u8BF4\u660E\u7F3A\u5C11\u7684\u6570\u636E\u6216\u8FDC\u7AEF\u5DE5\u5177\u5931\u8D25\u539F\u56E0\u3002"
+        ].join("\n"),
+        initialBox
+      });
+      if (fullResponse2.trim()) await memory.add("assistant:decision", fullResponse2);
+      return fullResponse2;
+    }
     const skill = import_path11.default.join(utils_default.getPath("skills"), "production_agent_decision.md");
     const prompt = await fs12.promises.readFile(skill, "utf-8");
     const decisionPrompt = `${prompt}
@@ -271143,9 +271218,12 @@ function detectDeterministicAction(messages, text2) {
   const normalized = text2.trim().replace(/\s+/g, " ");
   const choice2 = normalized.match(/^([ABC])(?:[.。．、\s]|$)/i)?.[1]?.toUpperCase();
   const latestAssistantText = getLatestAssistantText(messages);
+  const compactLatestAssistantText = latestAssistantText.replace(/\s+/g, "");
   const isFailedStage1Menu = latestAssistantText.includes("\u9636\u6BB51\u5BA1\u6838") && latestAssistantText.includes("\u6682\u65F6\u5931\u8D25") && latestAssistantText.includes("A. \u7A0D\u540E\u91CD\u65B0\u53D1\u8D77\u9636\u6BB51\u5BA1\u6838") && latestAssistantText.includes("B. \u5148\u6839\u636E\u5F53\u524D\u5BFC\u6F14\u89C4\u5212\u7EE7\u7EED\u8FDB\u5165\u9636\u6BB52\u884D\u751F\u8D44\u4EA7\u5206\u6790");
-  if (!isFailedStage1Menu) return null;
+  const isPendingRetryAck = compactLatestAssistantText.includes("\u6309A\u5904\u7406") && compactLatestAssistantText.includes("\u91CD\u65B0\u53D1\u8D77\u9636\u6BB51\u5BA1\u6838") && !compactLatestAssistantText.includes("\u5BA1\u6838\u662F\u5426\u901A\u8FC7");
+  if (!isFailedStage1Menu && !isPendingRetryAck) return null;
   if (choice2 === "A" || /重新发起阶段1审核|稍后重新发起阶段1审核|重新审核|再审核/.test(normalized)) return "retry_stage1_supervision";
+  if (isPendingRetryAck && /继续|开始|执行|处理/.test(normalized)) return "retry_stage1_supervision";
   if (choice2 === "B" || /继续进入阶段2|衍生资产分析/.test(normalized)) return "continue_stage2_after_failed_supervision";
   if (choice2 === "C" || /调整导演规划|调整规划|再次调整/.test(normalized)) return "revise_stage1_plan_after_failed_supervision";
   return null;
@@ -271167,75 +271245,79 @@ function collectContentText(content) {
     return "";
   }).filter(Boolean).join("\n");
 }
+async function runDeterministicStage(ctx, stage, options) {
+  const box = options.initialBox;
+  box.name("\u5BFC\u6F14").clear().text(`\u5DF2\u6536\u5230\uFF0C\u6B63\u5728\u6267\u884C\uFF1A${options.actionText}\u3002
+\u5F53\u524D\u9636\u6BB5\uFF1A${stage.name}\u3002
+\u5904\u7406\u4E2D\u5982\u679C\u5361\u4F4F\uFF0C\u6211\u4F1A\u8F93\u51FA\u5177\u4F53\u505C\u5728\u54EA\u4E00\u6B65\u3002`).end();
+  console.log("[productionAgent] deterministic stage start:", {
+    action: options.actionText,
+    stage: stage.name,
+    projectId: ctx.projectId,
+    isolationKey: ctx.isolationKey
+  });
+  const fullResponse = await runStage(ctx, stage, options.prompt);
+  if (!fullResponse.trim()) {
+    const message = `${stage.name}\u6CA1\u6709\u8FD4\u56DE\u5185\u5BB9\u3002\u53EF\u80FD\u539F\u56E0\uFF1A\u6A21\u578B\u672A\u4EA7\u751F\u8F93\u51FA\u3001\u8FDC\u7AEF\u5DE5\u5177\u6CA1\u6709\u56DE\u8C03\uFF0C\u6216\u4E0A\u6E38\u670D\u52A1\u8D44\u6E90\u4E0D\u8DB3\u3002`;
+    ctx.kit.box().name(stage.name).text(message).end("error");
+    return message;
+  }
+  return fullResponse;
+}
+async function runStage(ctx, stage, prompt) {
+  const statusBox = ctx.kit.box().name(stage.name).status("pending");
+  statusBox.text(`\u5F53\u524D\u9636\u6BB5\uFF1A${stage.name}
+\u72B6\u6001\uFF1A\u6B63\u5728\u52A0\u8F7D\u9636\u6BB5\u63D0\u793A\u8BCD\u5E76\u51C6\u5907\u8C03\u7528\u6A21\u578B\u3002`).end();
+  const systemPrompt = await fs12.promises.readFile(import_path11.default.join(utils_default.getPath("skills"), stage.skillFile), "utf-8");
+  statusBox.clear().text(`\u5F53\u524D\u9636\u6BB5\uFF1A${stage.name}
+\u72B6\u6001\uFF1A\u6B63\u5728\u8BF7\u6C42\u6A21\u578B\u670D\u52A1\u3002`).end();
+  console.log("[productionAgent] stage model start:", { stage: stage.name, key: stage.key, projectId: ctx.projectId });
+  const startTimer = setTimeout(() => {
+    statusBox.clear().text(`\u5F53\u524D\u9636\u6BB5\uFF1A${stage.name}
+\u72B6\u6001\uFF1A\u6A21\u578B\u670D\u52A1\u4ECD\u672A\u8FD4\u56DE\u9996\u5305\uFF0C\u53EF\u80FD\u5728\u6392\u961F\u6216\u4E0A\u6E38\u8D44\u6E90\u4E0D\u8DB3\u3002`).end("streaming");
+    console.warn("[productionAgent] stage model no first chunk:", { stage: stage.name, key: stage.key });
+  }, MODEL_START_TIMEOUT_MS);
+  try {
+    const { fullStream } = await utils_default.Ai.Text(stage.key, ctx.thinkLevel).stream({
+      system: systemPrompt,
+      messages: [{ role: "user", content: prompt }],
+      abortSignal: ctx.abortSignal.signal,
+      tools: createProductionRemoteTools(ctx)
+    });
+    try {
+      return await consumeStream2(ctx, fullStream, stage.name, statusBox, {
+        onFirstChunk: () => clearTimeout(startTimer),
+        idleNoticeMs: STREAM_IDLE_NOTICE_MS,
+        idleTimeoutMs: STREAM_IDLE_TIMEOUT_MS
+      });
+    } finally {
+      clearTimeout(startTimer);
+    }
+  } catch (err) {
+    clearTimeout(startTimer);
+    throw err;
+  }
+}
 function createSubAgentTools(ctx) {
   const promptInput = external_exports.object({
     prompt: external_exports.string().describe("\u4EA4\u7ED9\u5B50Agent\u7684\u4EFB\u52A1\u7B80\u7EA6\u63CF\u8FF0\uFF0C100\u5B57\u4EE5\u5185")
   });
   return {
-    run_sub_agent_director_plan: createStageTool(ctx, {
-      key: "productionAgent:directorPlanAgent",
-      skillFile: "production_execution_director_plan.md",
-      name: "\u5BFC\u6F14\u89C4\u5212",
-      description: "\u8FD0\u884C\u6267\u884C\u5C42Agent\u5B8C\u6210\u9636\u6BB51\uFF1A\u5BFC\u6F14\u89C4\u5212\uFF08\u542B\u884D\u751F\u8D44\u4EA7\u9884\u5212\uFF09",
-      inputSchema: promptInput
-    }),
-    run_sub_agent_derive_assets: createStageTool(ctx, {
-      key: "productionAgent:deriveAssetsAgent",
-      skillFile: "production_execution_derive_assets.md",
-      name: "\u884D\u751F\u8D44\u4EA7",
-      description: "\u8FD0\u884C\u6267\u884C\u5C42Agent\u5B8C\u6210\u9636\u6BB52\uFF1A\u884D\u751F\u8D44\u4EA7\u5206\u6790\u4E0E\u5199\u5165",
-      inputSchema: promptInput
-    }),
-    run_sub_agent_generate_assets: createStageTool(ctx, {
-      key: "productionAgent:generateAssetsAgent",
-      skillFile: "production_execution_generate_assets.md",
-      name: "\u8D44\u4EA7\u751F\u6210",
-      description: "\u8FD0\u884C\u6267\u884C\u5C42Agent\u5B8C\u6210\u9636\u6BB53\uFF1A\u884D\u751F\u8D44\u4EA7\u56FE\u7247\u751F\u6210",
-      inputSchema: promptInput
-    }),
-    run_sub_agent_storyboard_table: createStageTool(ctx, {
-      key: "productionAgent:storyboardTableAgent",
-      skillFile: "production_execution_storyboard_table.md",
-      name: "\u5206\u955C\u8868",
-      description: "\u8FD0\u884C\u6267\u884C\u5C42Agent\u5B8C\u6210\u9636\u6BB54\uFF1A\u6784\u5EFA\u7ED3\u6784\u5316\u5206\u955C\u8868",
-      inputSchema: promptInput
-    }),
-    run_sub_agent_storyboard_panel: createStageTool(ctx, {
-      key: "productionAgent:storyboardPanelAgent",
-      skillFile: "production_execution_storyboard_panel.md",
-      name: "\u5206\u955C\u9762\u677F",
-      description: "\u8FD0\u884C\u6267\u884C\u5C42Agent\u5B8C\u6210\u9636\u6BB55\uFF1A\u5206\u955C\u9762\u677F\u5199\u5165",
-      inputSchema: promptInput
-    }),
-    run_sub_agent_storyboard_gen: createStageTool(ctx, {
-      key: "productionAgent:storyboardGenAgent",
-      skillFile: "production_execution_storyboard_gen.md",
-      name: "\u5206\u955C\u56FE",
-      description: "\u8FD0\u884C\u6267\u884C\u5C42Agent\u5B8C\u6210\u9636\u6BB56\uFF1A\u5206\u955C\u56FE\u751F\u6210",
-      inputSchema: promptInput
-    }),
-    run_sub_agent_supervision: createStageTool(ctx, {
-      key: "productionAgent:supervisionAgent",
-      skillFile: "production_agent_supervision.md",
-      name: "\u76D1\u7763",
-      description: "\u8FD0\u884C\u76D1\u7763\u5C42Agent\u5BA1\u6838\u5F53\u524D\u9636\u6BB5\u4EA7\u51FA\u7269",
-      inputSchema: promptInput
-    })
+    run_sub_agent_director_plan: createStageTool(ctx, STAGES.directorPlan, promptInput),
+    run_sub_agent_derive_assets: createStageTool(ctx, STAGES.deriveAssets, promptInput),
+    run_sub_agent_generate_assets: createStageTool(ctx, STAGES.generateAssets, promptInput),
+    run_sub_agent_storyboard_table: createStageTool(ctx, STAGES.storyboardTable, promptInput),
+    run_sub_agent_storyboard_panel: createStageTool(ctx, STAGES.storyboardPanel, promptInput),
+    run_sub_agent_storyboard_gen: createStageTool(ctx, STAGES.storyboardGen, promptInput),
+    run_sub_agent_supervision: createStageTool(ctx, STAGES.supervision, promptInput)
   };
 }
-function createStageTool(ctx, config3) {
+function createStageTool(ctx, config3, inputSchema) {
   return tool({
     description: config3.description,
-    inputSchema: config3.inputSchema,
+    inputSchema,
     execute: async ({ prompt }) => {
-      const systemPrompt = await fs12.promises.readFile(import_path11.default.join(utils_default.getPath("skills"), config3.skillFile), "utf-8");
-      const { fullStream } = await utils_default.Ai.Text(config3.key, ctx.thinkLevel).stream({
-        system: systemPrompt,
-        messages: [{ role: "user", content: prompt }],
-        abortSignal: ctx.abortSignal.signal,
-        tools: createProductionRemoteTools(ctx)
-      });
-      return consumeStream2(ctx, fullStream, config3.name);
+      return runStage(ctx, config3, prompt);
     }
   });
 }
@@ -271297,22 +271379,39 @@ function pickFlowData(data, key) {
 }
 function emitRemoteTool(ctx, event, payload) {
   return new Promise((resolve3, reject) => {
-    const timer = setTimeout(() => reject(new Error(`\u8FDC\u7AEF\u5DE5\u5177 ${event} \u8C03\u7528\u8D85\u65F6`)), 12e4);
+    const statusBox = ctx.kit.box().name("\u5DE5\u5177").status("pending");
+    statusBox.text(`\u5F53\u524D\u9636\u6BB5\uFF1A\u8FDC\u7AEF\u5DE5\u5177
+\u72B6\u6001\uFF1A\u6B63\u5728\u8C03\u7528 ${event}\uFF0C\u7B49\u5F85\u5DE5\u4F5C\u53F0\u8FD4\u56DE\u7ED3\u679C\u3002`).end();
+    console.log("[productionAgent] remote tool start:", { event, payload, projectId: ctx.projectId });
+    const timer = setTimeout(() => {
+      const message = `\u8FDC\u7AEF\u5DE5\u5177 ${event} \u8C03\u7528\u8D85\u65F6\u3002\u53EF\u80FD\u539F\u56E0\uFF1A\u524D\u7AEF\u5DE5\u4F5C\u53F0\u672A\u6CE8\u518C\u8BE5\u5DE5\u5177\u3001\u9875\u9762\u5DF2\u65AD\u5F00\u3001\u6D4F\u89C8\u5668\u4EFB\u52A1\u5361\u4F4F\uFF0C\u6216\u5DE5\u5177\u6267\u884C\u8D85\u8FC7 ${Math.round(
+        REMOTE_TOOL_TIMEOUT_MS / 1e3
+      )} \u79D2\u3002`;
+      statusBox.clear().text(message).end("error");
+      console.error("[productionAgent] remote tool timeout:", { event, projectId: ctx.projectId });
+      reject(new Error(message));
+    }, REMOTE_TOOL_TIMEOUT_MS);
     ctx.socket.emit(event, payload, (res) => {
       clearTimeout(timer);
+      console.log("[productionAgent] remote tool finish:", { event, state: res?.state, success: res?.success });
       if (res?.state === "error") {
-        reject(new Error(res.error || res.message || `${event} \u8C03\u7528\u5931\u8D25`));
+        const message = res.error || res.message || `${event} \u8C03\u7528\u5931\u8D25`;
+        statusBox.clear().text(`\u8FDC\u7AEF\u5DE5\u5177 ${event} \u8C03\u7528\u5931\u8D25\uFF1A${message}`).end("error");
+        reject(new Error(message));
         return;
       }
       if (res?.success === false) {
-        reject(new Error(res.message || `${event} \u8C03\u7528\u5931\u8D25`));
+        const message = res.message || `${event} \u8C03\u7528\u5931\u8D25`;
+        statusBox.clear().text(`\u8FDC\u7AEF\u5DE5\u5177 ${event} \u8C03\u7528\u5931\u8D25\uFF1A${message}`).end("error");
+        reject(new Error(message));
         return;
       }
+      statusBox.clear().text(`\u8FDC\u7AEF\u5DE5\u5177 ${event} \u5DF2\u8FD4\u56DE\u7ED3\u679C\u3002`).end();
       resolve3(res?.result ?? res?.data ?? res?.message ?? res);
     });
   });
 }
-async function consumeStream2(ctx, fullStream, name28, initialBox) {
+async function consumeStream2(ctx, fullStream, name28, initialBox, options = {}) {
   let box = initialBox ?? null;
   let shouldClearInitialBox = Boolean(initialBox);
   let decisionMsg = null;
@@ -271320,6 +271419,39 @@ async function consumeStream2(ctx, fullStream, name28, initialBox) {
   let thinkTime = 0;
   let fullResponse = "";
   let toolErrorText = "";
+  let receivedChunk = false;
+  let idleTimedOut = false;
+  let idleNoticeTimer = null;
+  let idleTimeoutTimer = null;
+  const clearIdleTimers = () => {
+    if (idleNoticeTimer) clearTimeout(idleNoticeTimer);
+    if (idleTimeoutTimer) clearTimeout(idleTimeoutTimer);
+    idleNoticeTimer = null;
+    idleTimeoutTimer = null;
+  };
+  const resetIdleTimers = () => {
+    clearIdleTimers();
+    const idleNoticeMs = options.idleNoticeMs ?? STREAM_IDLE_NOTICE_MS;
+    const idleTimeoutMs = options.idleTimeoutMs ?? STREAM_IDLE_TIMEOUT_MS;
+    idleNoticeTimer = setTimeout(() => {
+      const target = box ?? ctx.kit.box().name(name28).status("streaming");
+      target.text(`
+\u5F53\u524D\u9636\u6BB5\uFF1A${name28}
+\u72B6\u6001\uFF1A\u6A21\u578B\u6D41\u5F0F\u8F93\u51FA\u6682\u65F6\u6CA1\u6709\u65B0\u5185\u5BB9\uFF0C\u4ECD\u5728\u7B49\u5F85\u4E0A\u6E38\u8FD4\u56DE\u3002`).end("streaming");
+      console.warn("[productionAgent] stream idle notice:", { name: name28 });
+    }, idleNoticeMs);
+    idleTimeoutTimer = setTimeout(() => {
+      idleTimedOut = true;
+      const message = `\u5F53\u524D\u9636\u6BB5\uFF1A${name28}
+\u72B6\u6001\uFF1A\u7B49\u5F85\u6A21\u578B\u7EE7\u7EED\u8F93\u51FA\u8D85\u8FC7 ${Math.round(idleTimeoutMs / 1e3)} \u79D2\uFF0C\u5DF2\u81EA\u52A8\u505C\u6B62\u3002\u672C\u6B21\u5361\u4F4F\u5927\u6982\u7387\u53D1\u751F\u5728\u6A21\u578B\u670D\u52A1\u6D41\u5F0F\u8F93\u51FA\u6216\u4E0A\u6E38\u5DE5\u5177\u56DE\u8C03\u3002`;
+      const target = box ?? ctx.kit.box().name(name28).status("streaming");
+      target.text(`
+${message}`).end("error");
+      target.end("error");
+      console.error("[productionAgent] stream idle timeout:", { name: name28 });
+      ctx.abortSignal.abort();
+    }, idleTimeoutMs);
+  };
   const startBox = () => {
     if (box) box.name(name28).status("pending");
     else box = ctx.kit.box().name(name28).status("pending");
@@ -271349,43 +271481,53 @@ async function consumeStream2(ctx, fullStream, name28, initialBox) {
     thinking = null;
   };
   startBox();
-  for await (const chunk of fullStream) {
-    await new Promise((resolve3) => setTimeout(resolve3, 1));
-    if (chunk.type === "start-step") {
-      if (!box) startBox();
-    } else if (chunk.type === "reasoning-start") {
-      thinkTime = Date.now();
-      thinking = liveBox().thinking("\u601D\u8003\u4E2D...");
-    } else if (chunk.type === "reasoning-delta") {
-      thinking?.append(chunk.text);
-    } else if (chunk.type === "reasoning-end") {
-      thinkTime = Date.now() - thinkTime;
-      thinking?.title(`\u601D\u8003\u5B8C\u6BD5\uFF08${(thinkTime / 1e3).toFixed(1)} \u79D2\uFF09`).end();
-      thinking = null;
-    } else if (chunk.type === "text-delta") {
-      if (!decisionMsg) decisionMsg = liveBox().text();
-      decisionMsg.append(chunk.text);
-      fullResponse += chunk.text;
-    } else if (chunk.type === "tool-error") {
-      const message = `\u5DE5\u5177\u8C03\u7528\u5931\u8D25\uFF1A${utils_default.error(chunk.error).message}`;
-      toolErrorText += `${message}
+  resetIdleTimers();
+  try {
+    for await (const chunk of fullStream) {
+      await new Promise((resolve3) => setTimeout(resolve3, 1));
+      if (!receivedChunk) {
+        receivedChunk = true;
+        options.onFirstChunk?.();
+      }
+      resetIdleTimers();
+      if (chunk.type === "start-step") {
+        if (!box) startBox();
+      } else if (chunk.type === "reasoning-start") {
+        thinkTime = Date.now();
+        thinking = liveBox().thinking("\u601D\u8003\u4E2D...");
+      } else if (chunk.type === "reasoning-delta") {
+        thinking?.append(chunk.text);
+      } else if (chunk.type === "reasoning-end") {
+        thinkTime = Date.now() - thinkTime;
+        thinking?.title(`\u601D\u8003\u5B8C\u6BD5\uFF08${(thinkTime / 1e3).toFixed(1)} \u79D2\uFF09`).end();
+        thinking = null;
+      } else if (chunk.type === "text-delta") {
+        if (!decisionMsg) decisionMsg = liveBox().text();
+        decisionMsg.append(chunk.text);
+        fullResponse += chunk.text;
+      } else if (chunk.type === "tool-error") {
+        const message = `\u5DE5\u5177\u8C03\u7528\u5931\u8D25\uFF1A${utils_default.error(chunk.error).message}`;
+        toolErrorText += `${message}
 `;
-      if (!decisionMsg) decisionMsg = liveBox().text();
-      decisionMsg.append(`
+        if (!decisionMsg) decisionMsg = liveBox().text();
+        decisionMsg.append(`
 ${message}
 `);
-      fullResponse += `
+        fullResponse += `
 ${message}
 `;
-    } else if (chunk.type === "abort") {
-      box?.end("stop");
-      throw new Error("\u8BF7\u6C42\u5DF2\u505C\u6B62");
-    } else if (chunk.type === "finish-step") {
-      flushStep();
-    } else if (chunk.type === "error") {
-      box?.end("error");
-      throw chunk.error;
+      } else if (chunk.type === "abort") {
+        box?.end("stop");
+        throw new Error(idleTimedOut ? `${name28} \u7B49\u5F85\u6A21\u578B\u8F93\u51FA\u8D85\u65F6\uFF0C\u5DF2\u505C\u6B62` : "\u8BF7\u6C42\u5DF2\u505C\u6B62");
+      } else if (chunk.type === "finish-step") {
+        flushStep();
+      } else if (chunk.type === "error") {
+        box?.end("error");
+        throw chunk.error;
+      }
     }
+  } finally {
+    clearIdleTimers();
   }
   flushStep();
   if (toolErrorText && !fullResponse.trim()) return toolErrorText;

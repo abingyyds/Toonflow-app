@@ -13,6 +13,62 @@ type DeterministicAction =
   | "retry_stage1_supervision"
   | "continue_stage2_after_failed_supervision"
   | "revise_stage1_plan_after_failed_supervision";
+type StageConfig = {
+  key: Parameters<typeof u.Ai.Text>[0];
+  skillFile: string;
+  name: string;
+  description: string;
+};
+
+const MODEL_START_TIMEOUT_MS = 60000;
+const STREAM_IDLE_NOTICE_MS = 30000;
+const STREAM_IDLE_TIMEOUT_MS = 180000;
+const REMOTE_TOOL_TIMEOUT_MS = 120000;
+
+const STAGES = {
+  directorPlan: {
+    key: "productionAgent:directorPlanAgent",
+    skillFile: "production_execution_director_plan.md",
+    name: "导演规划",
+    description: "运行执行层Agent完成阶段1：导演规划（含衍生资产预划）",
+  },
+  deriveAssets: {
+    key: "productionAgent:deriveAssetsAgent",
+    skillFile: "production_execution_derive_assets.md",
+    name: "衍生资产",
+    description: "运行执行层Agent完成阶段2：衍生资产分析与写入",
+  },
+  generateAssets: {
+    key: "productionAgent:generateAssetsAgent",
+    skillFile: "production_execution_generate_assets.md",
+    name: "资产生成",
+    description: "运行执行层Agent完成阶段3：衍生资产图片生成",
+  },
+  storyboardTable: {
+    key: "productionAgent:storyboardTableAgent",
+    skillFile: "production_execution_storyboard_table.md",
+    name: "分镜表",
+    description: "运行执行层Agent完成阶段4：构建结构化分镜表",
+  },
+  storyboardPanel: {
+    key: "productionAgent:storyboardPanelAgent",
+    skillFile: "production_execution_storyboard_panel.md",
+    name: "分镜面板",
+    description: "运行执行层Agent完成阶段5：分镜面板写入",
+  },
+  storyboardGen: {
+    key: "productionAgent:storyboardGenAgent",
+    skillFile: "production_execution_storyboard_gen.md",
+    name: "分镜图",
+    description: "运行执行层Agent完成阶段6：分镜图生成",
+  },
+  supervision: {
+    key: "productionAgent:supervisionAgent",
+    skillFile: "production_agent_supervision.md",
+    name: "监督",
+    description: "运行监督层Agent审核当前阶段产出物",
+  },
+} satisfies Record<string, StageConfig>;
 
 function buildMemPrompt(mem: Awaited<ReturnType<Memory["get"]>>): string {
   let memoryContext = "";
@@ -38,6 +94,33 @@ export async function runDecisionAI(ctx: GlobalContext, text: string) {
   const memory = new Memory("productionAgent", ctx.isolationKey);
   try {
     await memory.add("user", text);
+    if (deterministicAction === "retry_stage1_supervision") {
+      const fullResponse = await runDeterministicStage(ctx, STAGES.supervision, {
+        actionText: "阶段1审核重试",
+        prompt: [
+          `用户原始回复：${text}`,
+          "用户选择 A：重新发起阶段1导演规划审核。",
+          "请审核【导演规划】当前产出物。审核维度：剧情覆盖、资产覆盖、衍生预划、节奏结构、视觉与声音方向。",
+          "请明确给出：审核是否通过、发现的问题、下一步建议。如果审核服务或工作台数据不可用，请说明具体卡住原因。",
+        ].join("\n"),
+        initialBox,
+      });
+      if (fullResponse.trim()) await memory.add("assistant:decision", fullResponse);
+      return fullResponse;
+    }
+    if (deterministicAction === "continue_stage2_after_failed_supervision") {
+      const fullResponse = await runDeterministicStage(ctx, STAGES.deriveAssets, {
+        actionText: "继续阶段2衍生资产分析",
+        prompt: [
+          `用户原始回复：${text}`,
+          "用户选择 B：跳过本次失败的阶段1审核，按当前导演规划继续进入阶段2衍生资产分析。",
+          "请读取当前生产工作区数据，基于导演规划分析并写入衍生资产。若无法继续，请说明缺少的数据或远端工具失败原因。",
+        ].join("\n"),
+        initialBox,
+      });
+      if (fullResponse.trim()) await memory.add("assistant:decision", fullResponse);
+      return fullResponse;
+    }
 
     const skill = path.join(u.getPath("skills"), "production_agent_decision.md");
     const prompt = await fs.promises.readFile(skill, "utf-8");
@@ -120,14 +203,20 @@ function detectDeterministicAction(messages: ChatMessagesData[], text: string): 
   const normalized = text.trim().replace(/\s+/g, " ");
   const choice = normalized.match(/^([ABC])(?:[.。．、\s]|$)/i)?.[1]?.toUpperCase();
   const latestAssistantText = getLatestAssistantText(messages);
+  const compactLatestAssistantText = latestAssistantText.replace(/\s+/g, "");
   const isFailedStage1Menu =
     latestAssistantText.includes("阶段1审核") &&
     latestAssistantText.includes("暂时失败") &&
     latestAssistantText.includes("A. 稍后重新发起阶段1审核") &&
     latestAssistantText.includes("B. 先根据当前导演规划继续进入阶段2衍生资产分析");
+  const isPendingRetryAck =
+    compactLatestAssistantText.includes("按A处理") &&
+    compactLatestAssistantText.includes("重新发起阶段1审核") &&
+    !compactLatestAssistantText.includes("审核是否通过");
 
-  if (!isFailedStage1Menu) return null;
+  if (!isFailedStage1Menu && !isPendingRetryAck) return null;
   if (choice === "A" || /重新发起阶段1审核|稍后重新发起阶段1审核|重新审核|再审核/.test(normalized)) return "retry_stage1_supervision";
+  if (isPendingRetryAck && /继续|开始|执行|处理/.test(normalized)) return "retry_stage1_supervision";
   if (choice === "B" || /继续进入阶段2|衍生资产分析/.test(normalized)) return "continue_stage2_after_failed_supervision";
   if (choice === "C" || /调整导演规划|调整规划|再次调整/.test(normalized)) return "revise_stage1_plan_after_failed_supervision";
   return null;
@@ -155,86 +244,92 @@ function collectContentText(content: AIMessageContent[]): string {
     .join("\n");
 }
 
+async function runDeterministicStage(
+  ctx: GlobalContext,
+  stage: StageConfig,
+  options: { actionText: string; prompt: string; initialBox: MessageHandle },
+) {
+  const box = options.initialBox;
+  box
+    .name("导演")
+    .clear()
+    .text(`已收到，正在执行：${options.actionText}。\n当前阶段：${stage.name}。\n处理中如果卡住，我会输出具体停在哪一步。`)
+    .end();
+  console.log("[productionAgent] deterministic stage start:", {
+    action: options.actionText,
+    stage: stage.name,
+    projectId: ctx.projectId,
+    isolationKey: ctx.isolationKey,
+  });
+
+  const fullResponse = await runStage(ctx, stage, options.prompt);
+  if (!fullResponse.trim()) {
+    const message = `${stage.name}没有返回内容。可能原因：模型未产生输出、远端工具没有回调，或上游服务资源不足。`;
+    ctx.kit.box().name(stage.name).text(message).end("error");
+    return message;
+  }
+  return fullResponse;
+}
+
+async function runStage(ctx: GlobalContext, stage: StageConfig, prompt: string) {
+  const statusBox = ctx.kit.box().name(stage.name).status("pending");
+  statusBox.text(`当前阶段：${stage.name}\n状态：正在加载阶段提示词并准备调用模型。`).end();
+  const systemPrompt = await fs.promises.readFile(path.join(u.getPath("skills"), stage.skillFile), "utf-8");
+  statusBox.clear().text(`当前阶段：${stage.name}\n状态：正在请求模型服务。`).end();
+  console.log("[productionAgent] stage model start:", { stage: stage.name, key: stage.key, projectId: ctx.projectId });
+
+  const startTimer = setTimeout(() => {
+    statusBox
+      .clear()
+      .text(`当前阶段：${stage.name}\n状态：模型服务仍未返回首包，可能在排队或上游资源不足。`)
+      .end("streaming");
+    console.warn("[productionAgent] stage model no first chunk:", { stage: stage.name, key: stage.key });
+  }, MODEL_START_TIMEOUT_MS);
+
+  try {
+    const { fullStream } = await u.Ai.Text(stage.key, ctx.thinkLevel).stream({
+      system: systemPrompt,
+      messages: [{ role: "user", content: prompt }],
+      abortSignal: ctx.abortSignal.signal,
+      tools: createProductionRemoteTools(ctx),
+    });
+    try {
+      return await consumeStream(ctx, fullStream, stage.name, statusBox, {
+        onFirstChunk: () => clearTimeout(startTimer),
+        idleNoticeMs: STREAM_IDLE_NOTICE_MS,
+        idleTimeoutMs: STREAM_IDLE_TIMEOUT_MS,
+      });
+    } finally {
+      clearTimeout(startTimer);
+    }
+  } catch (err) {
+    clearTimeout(startTimer);
+    throw err;
+  }
+}
+
 function createSubAgentTools(ctx: GlobalContext) {
   const promptInput = z.object({
     prompt: z.string().describe("交给子Agent的任务简约描述，100字以内"),
   });
 
   return {
-    run_sub_agent_director_plan: createStageTool(ctx, {
-      key: "productionAgent:directorPlanAgent",
-      skillFile: "production_execution_director_plan.md",
-      name: "导演规划",
-      description: "运行执行层Agent完成阶段1：导演规划（含衍生资产预划）",
-      inputSchema: promptInput,
-    }),
-    run_sub_agent_derive_assets: createStageTool(ctx, {
-      key: "productionAgent:deriveAssetsAgent",
-      skillFile: "production_execution_derive_assets.md",
-      name: "衍生资产",
-      description: "运行执行层Agent完成阶段2：衍生资产分析与写入",
-      inputSchema: promptInput,
-    }),
-    run_sub_agent_generate_assets: createStageTool(ctx, {
-      key: "productionAgent:generateAssetsAgent",
-      skillFile: "production_execution_generate_assets.md",
-      name: "资产生成",
-      description: "运行执行层Agent完成阶段3：衍生资产图片生成",
-      inputSchema: promptInput,
-    }),
-    run_sub_agent_storyboard_table: createStageTool(ctx, {
-      key: "productionAgent:storyboardTableAgent",
-      skillFile: "production_execution_storyboard_table.md",
-      name: "分镜表",
-      description: "运行执行层Agent完成阶段4：构建结构化分镜表",
-      inputSchema: promptInput,
-    }),
-    run_sub_agent_storyboard_panel: createStageTool(ctx, {
-      key: "productionAgent:storyboardPanelAgent",
-      skillFile: "production_execution_storyboard_panel.md",
-      name: "分镜面板",
-      description: "运行执行层Agent完成阶段5：分镜面板写入",
-      inputSchema: promptInput,
-    }),
-    run_sub_agent_storyboard_gen: createStageTool(ctx, {
-      key: "productionAgent:storyboardGenAgent",
-      skillFile: "production_execution_storyboard_gen.md",
-      name: "分镜图",
-      description: "运行执行层Agent完成阶段6：分镜图生成",
-      inputSchema: promptInput,
-    }),
-    run_sub_agent_supervision: createStageTool(ctx, {
-      key: "productionAgent:supervisionAgent",
-      skillFile: "production_agent_supervision.md",
-      name: "监督",
-      description: "运行监督层Agent审核当前阶段产出物",
-      inputSchema: promptInput,
-    }),
+    run_sub_agent_director_plan: createStageTool(ctx, STAGES.directorPlan, promptInput),
+    run_sub_agent_derive_assets: createStageTool(ctx, STAGES.deriveAssets, promptInput),
+    run_sub_agent_generate_assets: createStageTool(ctx, STAGES.generateAssets, promptInput),
+    run_sub_agent_storyboard_table: createStageTool(ctx, STAGES.storyboardTable, promptInput),
+    run_sub_agent_storyboard_panel: createStageTool(ctx, STAGES.storyboardPanel, promptInput),
+    run_sub_agent_storyboard_gen: createStageTool(ctx, STAGES.storyboardGen, promptInput),
+    run_sub_agent_supervision: createStageTool(ctx, STAGES.supervision, promptInput),
   };
 }
 
-function createStageTool(
-  ctx: GlobalContext,
-  config: {
-    key: Parameters<typeof u.Ai.Text>[0];
-    skillFile: string;
-    name: string;
-    description: string;
-    inputSchema: z.ZodType<{ prompt: string }>;
-  },
-) {
+function createStageTool(ctx: GlobalContext, config: StageConfig, inputSchema: z.ZodType<{ prompt: string }>) {
   return tool({
     description: config.description,
-    inputSchema: config.inputSchema,
+    inputSchema,
     execute: async ({ prompt }) => {
-      const systemPrompt = await fs.promises.readFile(path.join(u.getPath("skills"), config.skillFile), "utf-8");
-      const { fullStream } = await u.Ai.Text(config.key, ctx.thinkLevel).stream({
-        system: systemPrompt,
-        messages: [{ role: "user", content: prompt }],
-        abortSignal: ctx.abortSignal.signal,
-        tools: createProductionRemoteTools(ctx),
-      });
-      return consumeStream(ctx, fullStream, config.name);
+      return runStage(ctx, config, prompt);
     },
   });
 }
@@ -300,23 +395,45 @@ function pickFlowData(data: Record<string, any>, key: ProductionFlowDataKey) {
 
 function emitRemoteTool<T = any>(ctx: GlobalContext, event: string, payload: any): Promise<T> {
   return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error(`远端工具 ${event} 调用超时`)), 120000);
+    const statusBox = ctx.kit.box().name("工具").status("pending");
+    statusBox.text(`当前阶段：远端工具\n状态：正在调用 ${event}，等待工作台返回结果。`).end();
+    console.log("[productionAgent] remote tool start:", { event, payload, projectId: ctx.projectId });
+    const timer = setTimeout(() => {
+      const message = `远端工具 ${event} 调用超时。可能原因：前端工作台未注册该工具、页面已断开、浏览器任务卡住，或工具执行超过 ${Math.round(
+        REMOTE_TOOL_TIMEOUT_MS / 1000,
+      )} 秒。`;
+      statusBox.clear().text(message).end("error");
+      console.error("[productionAgent] remote tool timeout:", { event, projectId: ctx.projectId });
+      reject(new Error(message));
+    }, REMOTE_TOOL_TIMEOUT_MS);
     ctx.socket.emit(event, payload, (res: any) => {
       clearTimeout(timer);
+      console.log("[productionAgent] remote tool finish:", { event, state: res?.state, success: res?.success });
       if (res?.state === "error") {
-        reject(new Error(res.error || res.message || `${event} 调用失败`));
+        const message = res.error || res.message || `${event} 调用失败`;
+        statusBox.clear().text(`远端工具 ${event} 调用失败：${message}`).end("error");
+        reject(new Error(message));
         return;
       }
       if (res?.success === false) {
-        reject(new Error(res.message || `${event} 调用失败`));
+        const message = res.message || `${event} 调用失败`;
+        statusBox.clear().text(`远端工具 ${event} 调用失败：${message}`).end("error");
+        reject(new Error(message));
         return;
       }
+      statusBox.clear().text(`远端工具 ${event} 已返回结果。`).end();
       resolve((res?.result ?? res?.data ?? res?.message ?? res) as T);
     });
   });
 }
 
-async function consumeStream(ctx: GlobalContext, fullStream: AsyncIterable<any>, name: string, initialBox?: MessageHandle): Promise<string> {
+async function consumeStream(
+  ctx: GlobalContext,
+  fullStream: AsyncIterable<any>,
+  name: string,
+  initialBox?: MessageHandle,
+  options: { onFirstChunk?: () => void; idleNoticeMs?: number; idleTimeoutMs?: number } = {},
+): Promise<string> {
   let box: MessageHandle | null = initialBox ?? null;
   let shouldClearInitialBox = Boolean(initialBox);
   let decisionMsg: any = null;
@@ -324,6 +441,37 @@ async function consumeStream(ctx: GlobalContext, fullStream: AsyncIterable<any>,
   let thinkTime = 0;
   let fullResponse = "";
   let toolErrorText = "";
+  let receivedChunk = false;
+  let idleTimedOut = false;
+  let idleNoticeTimer: ReturnType<typeof setTimeout> | null = null;
+  let idleTimeoutTimer: ReturnType<typeof setTimeout> | null = null;
+
+  const clearIdleTimers = () => {
+    if (idleNoticeTimer) clearTimeout(idleNoticeTimer);
+    if (idleTimeoutTimer) clearTimeout(idleTimeoutTimer);
+    idleNoticeTimer = null;
+    idleTimeoutTimer = null;
+  };
+
+  const resetIdleTimers = () => {
+    clearIdleTimers();
+    const idleNoticeMs = options.idleNoticeMs ?? STREAM_IDLE_NOTICE_MS;
+    const idleTimeoutMs = options.idleTimeoutMs ?? STREAM_IDLE_TIMEOUT_MS;
+    idleNoticeTimer = setTimeout(() => {
+      const target = box ?? ctx.kit.box().name(name).status("streaming");
+      target.text(`\n当前阶段：${name}\n状态：模型流式输出暂时没有新内容，仍在等待上游返回。`).end("streaming");
+      console.warn("[productionAgent] stream idle notice:", { name });
+    }, idleNoticeMs);
+    idleTimeoutTimer = setTimeout(() => {
+      idleTimedOut = true;
+      const message = `当前阶段：${name}\n状态：等待模型继续输出超过 ${Math.round(idleTimeoutMs / 1000)} 秒，已自动停止。本次卡住大概率发生在模型服务流式输出或上游工具回调。`;
+      const target = box ?? ctx.kit.box().name(name).status("streaming");
+      target.text(`\n${message}`).end("error");
+      target.end("error");
+      console.error("[productionAgent] stream idle timeout:", { name });
+      ctx.abortSignal.abort();
+    }, idleTimeoutMs);
+  };
 
   // 容器可以早建：进流之前就显示一条 loading 占位消息
   const startBox = () => {
@@ -357,39 +505,49 @@ async function consumeStream(ctx: GlobalContext, fullStream: AsyncIterable<any>,
   };
 
   startBox(); // ← 关键：先把 loading 显示出来，不再等数据
+  resetIdleTimers();
 
-  for await (const chunk of fullStream) {
-    await new Promise<void>((resolve) => setTimeout(resolve, 1));
-    if (chunk.type === "start-step") {
-      if (!box) startBox(); // 下一步重新显示 loading
-    } else if (chunk.type === "reasoning-start") {
-      thinkTime = Date.now();
-      thinking = liveBox().thinking("思考中...");
-    } else if (chunk.type === "reasoning-delta") {
-      thinking?.append(chunk.text);
-    } else if (chunk.type === "reasoning-end") {
-      thinkTime = Date.now() - thinkTime;
-      thinking?.title(`思考完毕（${(thinkTime / 1000).toFixed(1)} 秒）`).end();
-      thinking = null;
-    } else if (chunk.type === "text-delta") {
-      if (!decisionMsg) decisionMsg = liveBox().text();
-      decisionMsg.append(chunk.text);
-      fullResponse += chunk.text;
-    } else if (chunk.type === "tool-error") {
-      const message = `工具调用失败：${u.error(chunk.error).message}`;
-      toolErrorText += `${message}\n`;
-      if (!decisionMsg) decisionMsg = liveBox().text();
-      decisionMsg.append(`\n${message}\n`);
-      fullResponse += `\n${message}\n`;
-    } else if (chunk.type === "abort") {
-      box?.end("stop");
-      throw new Error("请求已停止");
-    } else if (chunk.type === "finish-step") {
-      flushStep();
-    } else if (chunk.type === "error") {
-      box?.end("error");
-      throw chunk.error;
+  try {
+    for await (const chunk of fullStream) {
+      await new Promise<void>((resolve) => setTimeout(resolve, 1));
+      if (!receivedChunk) {
+        receivedChunk = true;
+        options.onFirstChunk?.();
+      }
+      resetIdleTimers();
+      if (chunk.type === "start-step") {
+        if (!box) startBox(); // 下一步重新显示 loading
+      } else if (chunk.type === "reasoning-start") {
+        thinkTime = Date.now();
+        thinking = liveBox().thinking("思考中...");
+      } else if (chunk.type === "reasoning-delta") {
+        thinking?.append(chunk.text);
+      } else if (chunk.type === "reasoning-end") {
+        thinkTime = Date.now() - thinkTime;
+        thinking?.title(`思考完毕（${(thinkTime / 1000).toFixed(1)} 秒）`).end();
+        thinking = null;
+      } else if (chunk.type === "text-delta") {
+        if (!decisionMsg) decisionMsg = liveBox().text();
+        decisionMsg.append(chunk.text);
+        fullResponse += chunk.text;
+      } else if (chunk.type === "tool-error") {
+        const message = `工具调用失败：${u.error(chunk.error).message}`;
+        toolErrorText += `${message}\n`;
+        if (!decisionMsg) decisionMsg = liveBox().text();
+        decisionMsg.append(`\n${message}\n`);
+        fullResponse += `\n${message}\n`;
+      } else if (chunk.type === "abort") {
+        box?.end("stop");
+        throw new Error(idleTimedOut ? `${name} 等待模型输出超时，已停止` : "请求已停止");
+      } else if (chunk.type === "finish-step") {
+        flushStep();
+      } else if (chunk.type === "error") {
+        box?.end("error");
+        throw chunk.error;
+      }
     }
+  } finally {
+    clearIdleTimers();
   }
   flushStep();
   if (toolErrorText && !fullResponse.trim()) return toolErrorText;
