@@ -55,6 +55,85 @@ function createThrottledMessageSync(socket: Socket, intervalMs = 120) {
   let latestMessages: ChatMessagesData[] | null = null;
   let timer: ReturnType<typeof setTimeout> | null = null;
   let lastEmitAt = 0;
+  let realtimeSnapshot = new Map<string, ChatMessagesData>();
+
+  const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value));
+  const messageContent = (message: ChatMessagesData): any[] => (Array.isArray((message as any).content) ? (message as any).content : []);
+
+  const ensureRealtimeIds = (messages: ChatMessagesData[]) => {
+    messages.forEach((message, messageIndex) => {
+      if (!(message as any).id) (message as any).id = `server_${Date.now()}_${messageIndex}`;
+      messageContent(message).forEach((content, contentIndex) => {
+        if (!content.id) content.id = `${(message as any).id}_${content.type}_${contentIndex}`;
+      });
+    });
+  };
+
+  const buildContentMap = (message?: ChatMessagesData) => {
+    const map = new Map<string, any>();
+    if (!message) return map;
+    messageContent(message).forEach((content) => {
+      if (content?.id) map.set(content.id, content);
+    });
+    return map;
+  };
+
+  const emitRealtimePatch = (messages: ChatMessagesData[]) => {
+    ensureRealtimeIds(messages);
+    const nextSnapshot = new Map<string, ChatMessagesData>();
+
+    for (const message of messages) {
+      const messageId = (message as any).id;
+      if (!messageId) continue;
+      const nextMessage = clone(message);
+      nextSnapshot.set(messageId, nextMessage);
+      const previousMessage = realtimeSnapshot.get(messageId);
+
+      if (!previousMessage) {
+        if (message.role === "assistant") socket.emit("message", nextMessage);
+        continue;
+      }
+      if (message.role !== "assistant") continue;
+
+      if (
+        previousMessage.status !== message.status ||
+        previousMessage.name !== message.name ||
+        JSON.stringify(previousMessage.ext ?? null) !== JSON.stringify(message.ext ?? null)
+      ) {
+        socket.emit("message:update", {
+          id: messageId,
+          status: message.status,
+          ext: message.ext,
+        });
+      }
+
+      const previousContents = buildContentMap(previousMessage);
+      for (const content of messageContent(message)) {
+        const contentId = content?.id;
+        if (!contentId) continue;
+        const previousContent = previousContents.get(contentId);
+        if (!previousContent) {
+          socket.emit("content:add", {
+            messageId,
+            content: clone(content),
+          });
+          continue;
+        }
+        if (JSON.stringify(previousContent) !== JSON.stringify(content)) {
+          socket.emit("content:update", {
+            messageId,
+            contentId,
+            type: content.type,
+            data: clone(content.data),
+            strategy: "merge",
+            status: content.status,
+          });
+        }
+      }
+    }
+
+    realtimeSnapshot = nextSnapshot;
+  };
 
   const emit = () => {
     if (!latestMessages) return;
@@ -63,7 +142,9 @@ function createThrottledMessageSync(socket: Socket, intervalMs = 120) {
       timer = null;
     }
     lastEmitAt = Date.now();
-    socket.emit("syncMessages", latestMessages);
+    const payload = clone(latestMessages);
+    socket.emit("syncMessages", payload);
+    emitRealtimePatch(latestMessages);
     latestMessages = null;
   };
 
@@ -79,6 +160,10 @@ function createThrottledMessageSync(socket: Socket, intervalMs = 120) {
     },
     flush() {
       emit();
+    },
+    reset(messages: ChatMessagesData[]) {
+      ensureRealtimeIds(messages);
+      realtimeSnapshot = new Map(messages.map((message) => [(message as any).id, clone(message)]));
     },
     cancel() {
       if (timer) clearTimeout(timer);
@@ -146,6 +231,7 @@ export default (nsp: Namespace) => {
     socket.on("syncMessages", (messages: ChatMessagesData[]) => {
       messageSync.cancel();
       globalContext.messages = Array.isArray(messages) ? messages : [];
+      messageSync.reset(globalContext.messages);
       console.log("[productionAgent] 已同步前端消息:", {
         socketId: socket.id,
         userId: authUser.id,

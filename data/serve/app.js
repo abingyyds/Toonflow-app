@@ -272032,6 +272032,72 @@ function createThrottledMessageSync(socket, intervalMs = 120) {
   let latestMessages = null;
   let timer = null;
   let lastEmitAt = 0;
+  let realtimeSnapshot = /* @__PURE__ */ new Map();
+  const clone3 = (value) => JSON.parse(JSON.stringify(value));
+  const messageContent = (message) => Array.isArray(message.content) ? message.content : [];
+  const ensureRealtimeIds = (messages) => {
+    messages.forEach((message, messageIndex) => {
+      if (!message.id) message.id = `server_${Date.now()}_${messageIndex}`;
+      messageContent(message).forEach((content, contentIndex) => {
+        if (!content.id) content.id = `${message.id}_${content.type}_${contentIndex}`;
+      });
+    });
+  };
+  const buildContentMap = (message) => {
+    const map3 = /* @__PURE__ */ new Map();
+    if (!message) return map3;
+    messageContent(message).forEach((content) => {
+      if (content?.id) map3.set(content.id, content);
+    });
+    return map3;
+  };
+  const emitRealtimePatch = (messages) => {
+    ensureRealtimeIds(messages);
+    const nextSnapshot = /* @__PURE__ */ new Map();
+    for (const message of messages) {
+      const messageId = message.id;
+      if (!messageId) continue;
+      const nextMessage = clone3(message);
+      nextSnapshot.set(messageId, nextMessage);
+      const previousMessage = realtimeSnapshot.get(messageId);
+      if (!previousMessage) {
+        if (message.role === "assistant") socket.emit("message", nextMessage);
+        continue;
+      }
+      if (message.role !== "assistant") continue;
+      if (previousMessage.status !== message.status || previousMessage.name !== message.name || JSON.stringify(previousMessage.ext ?? null) !== JSON.stringify(message.ext ?? null)) {
+        socket.emit("message:update", {
+          id: messageId,
+          status: message.status,
+          ext: message.ext
+        });
+      }
+      const previousContents = buildContentMap(previousMessage);
+      for (const content of messageContent(message)) {
+        const contentId = content?.id;
+        if (!contentId) continue;
+        const previousContent = previousContents.get(contentId);
+        if (!previousContent) {
+          socket.emit("content:add", {
+            messageId,
+            content: clone3(content)
+          });
+          continue;
+        }
+        if (JSON.stringify(previousContent) !== JSON.stringify(content)) {
+          socket.emit("content:update", {
+            messageId,
+            contentId,
+            type: content.type,
+            data: clone3(content.data),
+            strategy: "merge",
+            status: content.status
+          });
+        }
+      }
+    }
+    realtimeSnapshot = nextSnapshot;
+  };
   const emit = () => {
     if (!latestMessages) return;
     if (timer) {
@@ -272039,7 +272105,9 @@ function createThrottledMessageSync(socket, intervalMs = 120) {
       timer = null;
     }
     lastEmitAt = Date.now();
-    socket.emit("syncMessages", latestMessages);
+    const payload = clone3(latestMessages);
+    socket.emit("syncMessages", payload);
+    emitRealtimePatch(latestMessages);
     latestMessages = null;
   };
   return {
@@ -272054,6 +272122,10 @@ function createThrottledMessageSync(socket, intervalMs = 120) {
     },
     flush() {
       emit();
+    },
+    reset(messages) {
+      ensureRealtimeIds(messages);
+      realtimeSnapshot = new Map(messages.map((message) => [message.id, clone3(message)]));
     },
     cancel() {
       if (timer) clearTimeout(timer);
@@ -272114,6 +272186,7 @@ var productionAgent_default = (nsp) => {
     socket.on("syncMessages", (messages) => {
       messageSync.cancel();
       globalContext.messages = Array.isArray(messages) ? messages : [];
+      messageSync.reset(globalContext.messages);
       console.log("[productionAgent] \u5DF2\u540C\u6B65\u524D\u7AEF\u6D88\u606F:", {
         socketId: socket.id,
         userId: authUser.id,
