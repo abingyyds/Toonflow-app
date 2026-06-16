@@ -18,6 +18,7 @@ export default router.post(
       .db("o_agentWorkData")
       .where("projectId", String(projectId))
       .andWhere("episodesId", String(episodesId))
+      .andWhere("key", "productionAgent")
       .select("data")
       .first();
 

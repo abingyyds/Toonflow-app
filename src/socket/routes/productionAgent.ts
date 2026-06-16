@@ -208,6 +208,7 @@ export default (nsp: Namespace) => {
       kit: undefined as any,
       isolationKey,
       projectId: initialProjectId ?? 0,
+      episodesId: episodesId ?? 0,
       thinkLevel: 0,
       messages: [],
     };
@@ -261,6 +262,7 @@ export default (nsp: Namespace) => {
 
       const nextEpisodesId = parseEpisodesId(data?.episodesId ?? data?.scriptId);
       globalContext.projectId = nextProjectId;
+      globalContext.episodesId = nextEpisodesId ?? 0;
       globalContext.isolationKey = buildIsolationKey(authUser, nextProjectId, nextEpisodesId);
       console.log("[productionAgent] 上下文已更新:", {
         socketId: socket.id,

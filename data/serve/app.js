@@ -253099,7 +253099,7 @@ var init_getFlowData = __esm({
       }),
       async (req, res) => {
         const { projectId, episodesId } = req.body;
-        const sqlData = await utils_default.db("o_agentWorkData").where("projectId", String(projectId)).andWhere("episodesId", String(episodesId)).select("data").first();
+        const sqlData = await utils_default.db("o_agentWorkData").where("projectId", String(projectId)).andWhere("episodesId", String(episodesId)).andWhere("key", "productionAgent").select("data").first();
         const scriptData = await utils_default.db("o_script").where("projectId", projectId).where("id", episodesId).first();
         const scriptAssets = await utils_default.db("o_scriptAssets").where("scriptId", episodesId);
         const assetIds = scriptAssets.map((i) => i.assetId);
@@ -253315,7 +253315,7 @@ var init_saveFlowData = __esm({
           projectId,
           episodesId
         } = req.body;
-        const sqlData = await utils_default.db("o_agentWorkData").where("projectId", String(projectId)).andWhere("episodesId", String(episodesId)).first();
+        const sqlData = await utils_default.db("o_agentWorkData").where("projectId", String(projectId)).andWhere("episodesId", String(episodesId)).andWhere("key", "productionAgent").first();
         const filterDatas = data.storyboard.filter((i) => !i.id);
         if (data.storyboard && data.storyboard.length && !filterDatas.length) {
           try {
@@ -271115,6 +271115,43 @@ async function runDecisionAI(ctx, text2) {
   const memory = new memory_default("productionAgent", ctx.isolationKey);
   try {
     await memory.add("user", text2);
+    if (deterministicAction === "regenerate_stage1_director_plan") {
+      const planResponse = await runDeterministicStage(ctx, STAGES.directorPlan, {
+        actionText: "\u91CD\u65B0\u751F\u6210\u5E76\u540C\u6B65\u9636\u6BB51\u5BFC\u6F14\u89C4\u5212",
+        prompt: [
+          `\u7528\u6237\u539F\u59CB\u56DE\u590D\uFF1A${text2}`,
+          "\u7528\u6237\u9009\u62E9 A\uFF1A\u91CD\u65B0\u751F\u6210\u5B8C\u6574\u9636\u6BB51\u5BFC\u6F14\u89C4\u5212\uFF0C\u5E76\u4FDD\u5B58\u5230\u5DE5\u4F5C\u533A scriptPlan \u540E\u518D\u5BA1\u6838\u3002",
+          "\u8BF7\u91CD\u65B0\u751F\u6210\u5B8C\u6574\u4E03\u7EF4\u5EA6\u5BFC\u6F14\u89C4\u5212\uFF0C\u91C7\u7528\u201C\u4E25\u683C\u53EA\u5217\u591A\u955C\u5934\u590D\u7528\u7684\u8D44\u4EA7\u7EA7\u72B6\u6001\u201D\u4F5C\u4E3A\u884D\u751F\u9884\u5212\u6807\u51C6\u3002",
+          "\u5173\u952E\u8981\u6C42\uFF1A\u5FC5\u987B\u628A\u5B8C\u6574\u5BFC\u6F14\u89C4\u5212\u4E00\u6B21\u6027\u8F93\u51FA\u5728 <scriptPlan>...</scriptPlan> XML \u6807\u7B7E\u5185\uFF1B\u7981\u6B62\u53EA\u8F93\u51FA\u201C\u5DF2\u751F\u6210/\u5DF2\u4FDD\u5B58\u201D\u7684\u6458\u8981\u6216\u786E\u8BA4\u3002"
+        ].join("\n"),
+        initialBox
+      });
+      if (!await hasStoredScriptPlan(ctx)) {
+        const message = [
+          "\u9636\u6BB51\u6CA1\u6709\u4EA7\u751F\u53EF\u4FDD\u5B58\u7684\u5BFC\u6F14\u89C4\u5212\u5185\u5BB9\uFF0C\u5DF2\u505C\u6B62\u81EA\u52A8\u5BA1\u6838\uFF0C\u907F\u514D\u7EE7\u7EED\u5BA1\u6838\u7A7A\u7684 scriptPlan\u3002",
+          "\u5361\u4F4F\u4F4D\u7F6E\uFF1A\u5BFC\u6F14\u89C4\u5212\u6267\u884C\u5C42\u672A\u8F93\u51FA\u5B8C\u6574 <scriptPlan>...</scriptPlan>\uFF0C\u6216\u8F93\u51FA\u5185\u5BB9\u4E0D\u7B26\u5408 \u2460~\u2466 \u5BFC\u6F14\u89C4\u5212\u7ED3\u6784\u3002",
+          "\u8BF7\u68C0\u67E5 productionAgent:directorPlanAgent \u7684\u6A21\u578B\u914D\u7F6E\u548C\u8F93\u51FA\u80FD\u529B\u540E\u91CD\u8BD5\u3002"
+        ].join("\n");
+        ctx.kit.box().name("\u5BFC\u6F14\u89C4\u5212").text(message).end("error");
+        const fullResponse3 = [planResponse, message].filter((item) => item.trim()).join("\n\n");
+        if (fullResponse3.trim()) await memory.add("assistant:decision", fullResponse3);
+        return fullResponse3;
+      }
+      await sleep(800);
+      const reviewResponse = await runDeterministicStage(ctx, STAGES.supervision, {
+        actionText: "\u9636\u6BB51\u5BFC\u6F14\u89C4\u5212\u5BA1\u6838",
+        prompt: [
+          `\u7528\u6237\u539F\u59CB\u56DE\u590D\uFF1A${text2}`,
+          "\u9636\u6BB51\u5BFC\u6F14\u89C4\u5212\u5DF2\u91CD\u65B0\u751F\u6210\u5E76\u540C\u6B65\u5230\u5DE5\u4F5C\u533A scriptPlan\u3002",
+          "\u8BF7\u5BA1\u6838\u3010\u5BFC\u6F14\u89C4\u5212\u3011\u5F53\u524D\u4EA7\u51FA\u7269\u3002\u5BA1\u6838\u7EF4\u5EA6\uFF1A\u5267\u60C5\u8986\u76D6\u3001\u8D44\u4EA7\u8986\u76D6\u3001\u884D\u751F\u9884\u5212\u3001\u8282\u594F\u7ED3\u6784\u3001\u89C6\u89C9\u4E0E\u58F0\u97F3\u65B9\u5411\u3002",
+          "\u5982\u679C\u5BA1\u6838\u4ECD\u7136\u8BFB\u53D6\u4E0D\u5230 scriptPlan\uFF0C\u8BF7\u660E\u786E\u8BF4\u660E\u8BFB\u53D6\u5230\u7684\u5B57\u6BB5\u72B6\u6001\u548C\u5361\u4F4F\u4F4D\u7F6E\u3002"
+        ].join("\n"),
+        initialBox
+      });
+      const fullResponse2 = [planResponse, reviewResponse].filter((item) => item.trim()).join("\n\n");
+      if (fullResponse2.trim()) await memory.add("assistant:decision", fullResponse2);
+      return fullResponse2;
+    }
     if (deterministicAction === "retry_stage1_supervision") {
       const fullResponse2 = await runDeterministicStage(ctx, STAGES.supervision, {
         actionText: "\u9636\u6BB51\u5BA1\u6838\u91CD\u8BD5",
@@ -271193,6 +271230,13 @@ async function runDecisionAI(ctx, text2) {
   }
 }
 function buildDeterministicUserText(action, originalText) {
+  if (action === "regenerate_stage1_director_plan") {
+    return [
+      `\u7528\u6237\u539F\u59CB\u56DE\u590D\uFF1A${originalText}`,
+      "\u7528\u6237\u9009\u62E9\u4E86\u4E0A\u4E00\u6B21\u83DC\u5355\u4E2D\u7684 A\uFF1A\u91CD\u65B0\u751F\u6210\u5B8C\u6574\u9636\u6BB51\u5BFC\u6F14\u89C4\u5212\uFF0C\u5E76\u4FDD\u5B58\u5230\u6B63\u786E\u5B57\u6BB5\u540E\u518D\u5BA1\u6838\u3002",
+      "\u8BF7\u4E0D\u8981\u89E3\u91CA\u9009\u9879\uFF0C\u4E0D\u8981\u7B49\u5F85\uFF1B\u76F4\u63A5\u8C03\u7528\u5BFC\u6F14\u89C4\u5212\u6267\u884C\u5C42\u91CD\u65B0\u751F\u6210\u5B8C\u6574 <scriptPlan>\uFF0C\u786E\u8BA4\u5DF2\u540C\u6B65\u540E\u518D\u8C03\u7528\u76D1\u7763\u5C42\u5BA1\u6838\u9636\u6BB51\u3002"
+    ].join("\n");
+  }
   if (action === "retry_stage1_supervision") {
     return [
       `\u7528\u6237\u539F\u59CB\u56DE\u590D\uFF1A${originalText}`,
@@ -271221,7 +271265,13 @@ function detectDeterministicAction(messages, text2) {
   const compactLatestAssistantText = latestAssistantText.replace(/\s+/g, "");
   const isFailedStage1Menu = latestAssistantText.includes("\u9636\u6BB51\u5BA1\u6838") && latestAssistantText.includes("\u6682\u65F6\u5931\u8D25") && latestAssistantText.includes("A. \u7A0D\u540E\u91CD\u65B0\u53D1\u8D77\u9636\u6BB51\u5BA1\u6838") && latestAssistantText.includes("B. \u5148\u6839\u636E\u5F53\u524D\u5BFC\u6F14\u89C4\u5212\u7EE7\u7EED\u8FDB\u5165\u9636\u6BB52\u884D\u751F\u8D44\u4EA7\u5206\u6790");
   const isPendingRetryAck = compactLatestAssistantText.includes("\u6309A\u5904\u7406") && compactLatestAssistantText.includes("\u91CD\u65B0\u53D1\u8D77\u9636\u6BB51\u5BA1\u6838") && !compactLatestAssistantText.includes("\u5BA1\u6838\u662F\u5426\u901A\u8FC7");
-  if (!isFailedStage1Menu && !isPendingRetryAck) return null;
+  const isEmptyDirectorPlanMenu = /scriptPlan为空|plan\/scriptPlan为空|未读取到有效的阶段1导演规划|未读取到有效的导演规划|工作区未能读取到有效的导演规划|审核侧未读取到有效的导演规划数据/.test(
+    compactLatestAssistantText
+  ) && /重新生成完整(?:阶段1|七维度)?导演规划|保存到正确字段|补充\/同步缺失的导演规划文本|同步导演规划保存位置/.test(compactLatestAssistantText);
+  if (!isFailedStage1Menu && !isPendingRetryAck && !isEmptyDirectorPlanMenu) return null;
+  if (isEmptyDirectorPlanMenu && (choice2 === "A" || /重新生成完整(?:阶段1|七维度)?导演规划|保存到正确字段后审核|重新生成.*scriptPlan/.test(normalized))) {
+    return "regenerate_stage1_director_plan";
+  }
   if (choice2 === "A" || /重新发起阶段1审核|稍后重新发起阶段1审核|重新审核|再审核/.test(normalized)) return "retry_stage1_supervision";
   if (isPendingRetryAck && /继续|开始|执行|处理/.test(normalized)) return "retry_stage1_supervision";
   if (choice2 === "B" || /继续进入阶段2|衍生资产分析/.test(normalized)) return "continue_stage2_after_failed_supervision";
@@ -271232,6 +271282,7 @@ function getLatestAssistantText(messages) {
   for (let i = messages.length - 1; i >= 0; i -= 1) {
     const message = messages[i];
     if (message.role !== "assistant") continue;
+    if (message.ext?.hiddenFlowDataSync) continue;
     return collectContentText(message.content ?? []);
   }
   return "";
@@ -271285,11 +271336,15 @@ async function runStage(ctx, stage, prompt) {
       tools: createProductionRemoteTools(ctx)
     });
     try {
-      return await consumeStream2(ctx, fullStream, stage.name, statusBox, {
+      const fullResponse = await consumeStream2(ctx, fullStream, stage.name, statusBox, {
         onFirstChunk: () => clearTimeout(startTimer),
         idleNoticeMs: STREAM_IDLE_NOTICE_MS,
         idleTimeoutMs: STREAM_IDLE_TIMEOUT_MS
       });
+      if (stage === STAGES.directorPlan) {
+        await synchronizeDirectorPlanOutput(ctx, fullResponse);
+      }
+      return fullResponse;
     } finally {
       clearTimeout(startTimer);
     }
@@ -271330,7 +271385,8 @@ function createProductionRemoteTools(ctx) {
       }),
       execute: async ({ key }) => {
         const data = await emitRemoteTool(ctx, "getFlowData", {});
-        return pickFlowData(data, key);
+        const mergedData = await mergeStoredFlowData(ctx, data);
+        return pickFlowData(mergedData, key);
       }
     }),
     add_deriveAsset: tool({
@@ -271376,6 +271432,113 @@ function pickFlowData(data, key) {
   if (!key || key === "all") return data;
   const normalizedKey = key === "plan" ? "scriptPlan" : key;
   return data?.[normalizedKey];
+}
+function sleep(ms) {
+  return new Promise((resolve3) => setTimeout(resolve3, ms));
+}
+function extractXmlTagContent(text2, tag) {
+  const match = text2.match(new RegExp(`<${tag}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/${tag}>`, "i"));
+  return match?.[1]?.trim() ?? "";
+}
+function stripXmlTag(text2, tag) {
+  return text2.replace(new RegExp(`<${tag}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/${tag}>`, "gi"), "$1").trim();
+}
+function looksLikeDirectorPlan(text2) {
+  const normalized = text2.replace(/\s+/g, "");
+  return ["\u2460", "\u2461", "\u2462", "\u2463", "\u2464", "\u2465", "\u2466"].every((item) => normalized.includes(item)) && normalized.includes("\u884D\u751F\u8D44\u4EA7\u9884\u5212");
+}
+function getPersistableDirectorPlan(response) {
+  const xmlContent = extractXmlTagContent(response, "scriptPlan");
+  if (xmlContent) return xmlContent;
+  const stripped = stripXmlTag(response, "scriptPlan");
+  if (!looksLikeDirectorPlan(stripped)) return "";
+  return stripped;
+}
+function escapeScriptPlanForXml(value) {
+  return value.replace(/<\/scriptPlan>/gi, "<\\/scriptPlan>");
+}
+function parseStoredFlowData(raw) {
+  if (!raw) return {};
+  if (typeof raw !== "string") return typeof raw === "object" ? { ...raw } : {};
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+async function loadStoredFlowData(ctx) {
+  if (!ctx.projectId || !ctx.episodesId) return null;
+  return utils_default.db("o_agentWorkData").where("projectId", String(ctx.projectId)).andWhere("episodesId", String(ctx.episodesId)).andWhere("key", "productionAgent").first();
+}
+async function saveStoredFlowData(ctx, data) {
+  if (!ctx.projectId || !ctx.episodesId) return;
+  const existing = await loadStoredFlowData(ctx);
+  const now2 = Date.now();
+  if (!existing) {
+    await utils_default.db("o_agentWorkData").insert({
+      projectId: ctx.projectId,
+      episodesId: ctx.episodesId,
+      key: "productionAgent",
+      data: JSON.stringify(data),
+      createTime: now2,
+      updateTime: now2
+    });
+    return;
+  }
+  await utils_default.db("o_agentWorkData").where("id", existing.id).update({
+    data: JSON.stringify(data),
+    updateTime: now2
+  });
+}
+async function mergeStoredFlowData(ctx, remoteData) {
+  const merged = { ...remoteData ?? {} };
+  const stored = await loadStoredFlowData(ctx);
+  const storedData = parseStoredFlowData(stored?.data);
+  if (!String(merged.scriptPlan ?? "").trim() && String(storedData.scriptPlan ?? "").trim()) {
+    merged.scriptPlan = storedData.scriptPlan;
+  }
+  return merged;
+}
+async function hasStoredScriptPlan(ctx) {
+  const stored = await loadStoredFlowData(ctx);
+  const storedData = parseStoredFlowData(stored?.data);
+  return Boolean(String(storedData.scriptPlan ?? "").trim());
+}
+async function persistScriptPlan(ctx, scriptPlan) {
+  const stored = await loadStoredFlowData(ctx);
+  const storedData = parseStoredFlowData(stored?.data);
+  const scriptData = await utils_default.db("o_script").where("projectId", ctx.projectId).where("id", ctx.episodesId).select("content").first();
+  await saveStoredFlowData(ctx, {
+    ...storedData,
+    script: storedData.script ?? scriptData?.content ?? "",
+    assets: storedData.assets ?? [],
+    storyboardTable: storedData.storyboardTable ?? "",
+    storyboard: storedData.storyboard ?? [],
+    workbench: storedData.workbench ?? { videoList: [] },
+    scriptPlan
+  });
+}
+async function synchronizeDirectorPlanOutput(ctx, response) {
+  const scriptPlan = getPersistableDirectorPlan(response);
+  if (!scriptPlan) {
+    console.warn("[productionAgent] director plan response is not persistable:", {
+      projectId: ctx.projectId,
+      episodesId: ctx.episodesId,
+      responseLength: response.length
+    });
+    return;
+  }
+  await persistScriptPlan(ctx, scriptPlan);
+  ctx.kit.box("assistant", { ext: { hiddenFlowDataSync: true } }).name("\u5BFC\u6F14\u89C4\u5212\u540C\u6B65").text(`<scriptPlan>
+${escapeScriptPlanForXml(scriptPlan)}
+</scriptPlan>
+\u5BFC\u6F14\u89C4\u5212\u5DF2\u540C\u6B65\u5230\u5DE5\u4F5C\u533A scriptPlan\u3002`).end();
+  console.log("[productionAgent] scriptPlan synchronized:", {
+    projectId: ctx.projectId,
+    episodesId: ctx.episodesId,
+    length: scriptPlan.length
+  });
 }
 function emitRemoteTool(ctx, event, payload) {
   return new Promise((resolve3, reject) => {
@@ -272166,6 +272329,7 @@ var productionAgent_default = (nsp) => {
       kit: void 0,
       isolationKey,
       projectId: initialProjectId ?? 0,
+      episodesId: episodesId ?? 0,
       thinkLevel: 0,
       messages: []
     };
@@ -272214,6 +272378,7 @@ var productionAgent_default = (nsp) => {
       }
       const nextEpisodesId = parseEpisodesId(data?.episodesId ?? data?.scriptId);
       globalContext.projectId = nextProjectId;
+      globalContext.episodesId = nextEpisodesId ?? 0;
       globalContext.isolationKey = buildIsolationKey(authUser, nextProjectId, nextEpisodesId);
       console.log("[productionAgent] \u4E0A\u4E0B\u6587\u5DF2\u66F4\u65B0:", {
         socketId: socket.id,

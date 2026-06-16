@@ -10,6 +10,7 @@ import type { ChatMessagesData, AIMessageContent } from "@/socket/chatMessagesDa
 
 type ProductionFlowDataKey = "script" | "scriptPlan" | "plan" | "storyboardTable" | "assets" | "storyboard" | "workbench" | "all";
 type DeterministicAction =
+  | "regenerate_stage1_director_plan"
   | "retry_stage1_supervision"
   | "continue_stage2_after_failed_supervision"
   | "revise_stage1_plan_after_failed_supervision";
@@ -94,6 +95,43 @@ export async function runDecisionAI(ctx: GlobalContext, text: string) {
   const memory = new Memory("productionAgent", ctx.isolationKey);
   try {
     await memory.add("user", text);
+    if (deterministicAction === "regenerate_stage1_director_plan") {
+      const planResponse = await runDeterministicStage(ctx, STAGES.directorPlan, {
+        actionText: "重新生成并同步阶段1导演规划",
+        prompt: [
+          `用户原始回复：${text}`,
+          "用户选择 A：重新生成完整阶段1导演规划，并保存到工作区 scriptPlan 后再审核。",
+          "请重新生成完整七维度导演规划，采用“严格只列多镜头复用的资产级状态”作为衍生预划标准。",
+          "关键要求：必须把完整导演规划一次性输出在 <scriptPlan>...</scriptPlan> XML 标签内；禁止只输出“已生成/已保存”的摘要或确认。",
+        ].join("\n"),
+        initialBox,
+      });
+      if (!(await hasStoredScriptPlan(ctx))) {
+        const message = [
+          "阶段1没有产生可保存的导演规划内容，已停止自动审核，避免继续审核空的 scriptPlan。",
+          "卡住位置：导演规划执行层未输出完整 <scriptPlan>...</scriptPlan>，或输出内容不符合 ①~⑦ 导演规划结构。",
+          "请检查 productionAgent:directorPlanAgent 的模型配置和输出能力后重试。",
+        ].join("\n");
+        ctx.kit.box().name("导演规划").text(message).end("error");
+        const fullResponse = [planResponse, message].filter((item) => item.trim()).join("\n\n");
+        if (fullResponse.trim()) await memory.add("assistant:decision", fullResponse);
+        return fullResponse;
+      }
+      await sleep(800);
+      const reviewResponse = await runDeterministicStage(ctx, STAGES.supervision, {
+        actionText: "阶段1导演规划审核",
+        prompt: [
+          `用户原始回复：${text}`,
+          "阶段1导演规划已重新生成并同步到工作区 scriptPlan。",
+          "请审核【导演规划】当前产出物。审核维度：剧情覆盖、资产覆盖、衍生预划、节奏结构、视觉与声音方向。",
+          "如果审核仍然读取不到 scriptPlan，请明确说明读取到的字段状态和卡住位置。",
+        ].join("\n"),
+        initialBox,
+      });
+      const fullResponse = [planResponse, reviewResponse].filter((item) => item.trim()).join("\n\n");
+      if (fullResponse.trim()) await memory.add("assistant:decision", fullResponse);
+      return fullResponse;
+    }
     if (deterministicAction === "retry_stage1_supervision") {
       const fullResponse = await runDeterministicStage(ctx, STAGES.supervision, {
         actionText: "阶段1审核重试",
@@ -177,6 +215,13 @@ export async function runDecisionAI(ctx: GlobalContext, text: string) {
 }
 
 function buildDeterministicUserText(action: DeterministicAction, originalText: string): string {
+  if (action === "regenerate_stage1_director_plan") {
+    return [
+      `用户原始回复：${originalText}`,
+      "用户选择了上一次菜单中的 A：重新生成完整阶段1导演规划，并保存到正确字段后再审核。",
+      "请不要解释选项，不要等待；直接调用导演规划执行层重新生成完整 <scriptPlan>，确认已同步后再调用监督层审核阶段1。",
+    ].join("\n");
+  }
   if (action === "retry_stage1_supervision") {
     return [
       `用户原始回复：${originalText}`,
@@ -213,8 +258,19 @@ function detectDeterministicAction(messages: ChatMessagesData[], text: string): 
     compactLatestAssistantText.includes("按A处理") &&
     compactLatestAssistantText.includes("重新发起阶段1审核") &&
     !compactLatestAssistantText.includes("审核是否通过");
+  const isEmptyDirectorPlanMenu =
+    /scriptPlan为空|plan\/scriptPlan为空|未读取到有效的阶段1导演规划|未读取到有效的导演规划|工作区未能读取到有效的导演规划|审核侧未读取到有效的导演规划数据/.test(
+      compactLatestAssistantText,
+    ) &&
+    /重新生成完整(?:阶段1|七维度)?导演规划|保存到正确字段|补充\/同步缺失的导演规划文本|同步导演规划保存位置/.test(compactLatestAssistantText);
 
-  if (!isFailedStage1Menu && !isPendingRetryAck) return null;
+  if (!isFailedStage1Menu && !isPendingRetryAck && !isEmptyDirectorPlanMenu) return null;
+  if (
+    isEmptyDirectorPlanMenu &&
+    (choice === "A" || /重新生成完整(?:阶段1|七维度)?导演规划|保存到正确字段后审核|重新生成.*scriptPlan/.test(normalized))
+  ) {
+    return "regenerate_stage1_director_plan";
+  }
   if (choice === "A" || /重新发起阶段1审核|稍后重新发起阶段1审核|重新审核|再审核/.test(normalized)) return "retry_stage1_supervision";
   if (isPendingRetryAck && /继续|开始|执行|处理/.test(normalized)) return "retry_stage1_supervision";
   if (choice === "B" || /继续进入阶段2|衍生资产分析/.test(normalized)) return "continue_stage2_after_failed_supervision";
@@ -226,6 +282,7 @@ function getLatestAssistantText(messages: ChatMessagesData[]): string {
   for (let i = messages.length - 1; i >= 0; i -= 1) {
     const message = messages[i];
     if (message.role !== "assistant") continue;
+    if ((message as any).ext?.hiddenFlowDataSync) continue;
     return collectContentText(message.content ?? []);
   }
   return "";
@@ -294,11 +351,15 @@ async function runStage(ctx: GlobalContext, stage: StageConfig, prompt: string) 
       tools: createProductionRemoteTools(ctx),
     });
     try {
-      return await consumeStream(ctx, fullStream, stage.name, statusBox, {
+      const fullResponse = await consumeStream(ctx, fullStream, stage.name, statusBox, {
         onFirstChunk: () => clearTimeout(startTimer),
         idleNoticeMs: STREAM_IDLE_NOTICE_MS,
         idleTimeoutMs: STREAM_IDLE_TIMEOUT_MS,
       });
+      if (stage === STAGES.directorPlan) {
+        await synchronizeDirectorPlanOutput(ctx, fullResponse);
+      }
+      return fullResponse;
     } finally {
       clearTimeout(startTimer);
     }
@@ -343,7 +404,8 @@ function createProductionRemoteTools(ctx: GlobalContext) {
       }),
       execute: async ({ key }) => {
         const data = await emitRemoteTool<Record<string, any>>(ctx, "getFlowData", {});
-        return pickFlowData(data, key);
+        const mergedData = await mergeStoredFlowData(ctx, data);
+        return pickFlowData(mergedData, key);
       },
     }),
     add_deriveAsset: tool({
@@ -391,6 +453,139 @@ function pickFlowData(data: Record<string, any>, key: ProductionFlowDataKey) {
   if (!key || key === "all") return data;
   const normalizedKey = key === "plan" ? "scriptPlan" : key;
   return data?.[normalizedKey];
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function extractXmlTagContent(text: string, tag: string) {
+  const match = text.match(new RegExp(`<${tag}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/${tag}>`, "i"));
+  return match?.[1]?.trim() ?? "";
+}
+
+function stripXmlTag(text: string, tag: string) {
+  return text.replace(new RegExp(`<${tag}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/${tag}>`, "gi"), "$1").trim();
+}
+
+function looksLikeDirectorPlan(text: string) {
+  const normalized = text.replace(/\s+/g, "");
+  return ["①", "②", "③", "④", "⑤", "⑥", "⑦"].every((item) => normalized.includes(item)) && normalized.includes("衍生资产预划");
+}
+
+function getPersistableDirectorPlan(response: string) {
+  const xmlContent = extractXmlTagContent(response, "scriptPlan");
+  if (xmlContent) return xmlContent;
+
+  const stripped = stripXmlTag(response, "scriptPlan");
+  if (!looksLikeDirectorPlan(stripped)) return "";
+  return stripped;
+}
+
+function escapeScriptPlanForXml(value: string) {
+  return value.replace(/<\/scriptPlan>/gi, "<\\/scriptPlan>");
+}
+
+function parseStoredFlowData(raw: unknown): Record<string, any> {
+  if (!raw) return {};
+  if (typeof raw !== "string") return typeof raw === "object" ? { ...(raw as Record<string, any>) } : {};
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+async function loadStoredFlowData(ctx: GlobalContext) {
+  if (!ctx.projectId || !ctx.episodesId) return null;
+  return u
+    .db("o_agentWorkData")
+    .where("projectId", String(ctx.projectId))
+    .andWhere("episodesId", String(ctx.episodesId))
+    .andWhere("key", "productionAgent")
+    .first();
+}
+
+async function saveStoredFlowData(ctx: GlobalContext, data: Record<string, any>) {
+  if (!ctx.projectId || !ctx.episodesId) return;
+  const existing = await loadStoredFlowData(ctx);
+  const now = Date.now();
+  if (!existing) {
+    await u.db("o_agentWorkData").insert({
+      projectId: ctx.projectId,
+      episodesId: ctx.episodesId,
+      key: "productionAgent",
+      data: JSON.stringify(data),
+      createTime: now,
+      updateTime: now,
+    });
+    return;
+  }
+
+  await u
+    .db("o_agentWorkData")
+    .where("id", existing.id)
+    .update({
+      data: JSON.stringify(data),
+      updateTime: now,
+    });
+}
+
+async function mergeStoredFlowData(ctx: GlobalContext, remoteData: Record<string, any> | null | undefined) {
+  const merged = { ...(remoteData ?? {}) };
+  const stored = await loadStoredFlowData(ctx);
+  const storedData = parseStoredFlowData(stored?.data);
+  if (!String(merged.scriptPlan ?? "").trim() && String(storedData.scriptPlan ?? "").trim()) {
+    merged.scriptPlan = storedData.scriptPlan;
+  }
+  return merged;
+}
+
+async function hasStoredScriptPlan(ctx: GlobalContext) {
+  const stored = await loadStoredFlowData(ctx);
+  const storedData = parseStoredFlowData(stored?.data);
+  return Boolean(String(storedData.scriptPlan ?? "").trim());
+}
+
+async function persistScriptPlan(ctx: GlobalContext, scriptPlan: string) {
+  const stored = await loadStoredFlowData(ctx);
+  const storedData = parseStoredFlowData(stored?.data);
+  const scriptData = await u.db("o_script").where("projectId", ctx.projectId).where("id", ctx.episodesId).select("content").first();
+  await saveStoredFlowData(ctx, {
+    ...storedData,
+    script: storedData.script ?? scriptData?.content ?? "",
+    assets: storedData.assets ?? [],
+    storyboardTable: storedData.storyboardTable ?? "",
+    storyboard: storedData.storyboard ?? [],
+    workbench: storedData.workbench ?? { videoList: [] },
+    scriptPlan,
+  });
+}
+
+async function synchronizeDirectorPlanOutput(ctx: GlobalContext, response: string) {
+  const scriptPlan = getPersistableDirectorPlan(response);
+  if (!scriptPlan) {
+    console.warn("[productionAgent] director plan response is not persistable:", {
+      projectId: ctx.projectId,
+      episodesId: ctx.episodesId,
+      responseLength: response.length,
+    });
+    return;
+  }
+
+  await persistScriptPlan(ctx, scriptPlan);
+
+  ctx.kit
+    .box("assistant", { ext: { hiddenFlowDataSync: true } })
+    .name("导演规划同步")
+    .text(`<scriptPlan>\n${escapeScriptPlanForXml(scriptPlan)}\n</scriptPlan>\n导演规划已同步到工作区 scriptPlan。`)
+    .end();
+  console.log("[productionAgent] scriptPlan synchronized:", {
+    projectId: ctx.projectId,
+    episodesId: ctx.episodesId,
+    length: scriptPlan.length,
+  });
 }
 
 function emitRemoteTool<T = any>(ctx: GlobalContext, event: string, payload: any): Promise<T> {

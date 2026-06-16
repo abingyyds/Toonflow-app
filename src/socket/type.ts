@@ -16,6 +16,7 @@ export interface GlobalContext {
   kit: ChatKit;
   isolationKey: string;
   projectId: number;
+  episodesId: number;
   thinkLevel: 0 | 1 | 2 | 3;
   messages: ChatMessagesData[];
 }
