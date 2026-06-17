@@ -4,6 +4,7 @@ import axios from "axios";
 import { transform } from "sucrase";
 import u from "@/utils";
 import { getEffectiveAgentDeploy, getEffectiveVendorConfig, getUserSetting } from "@/utils/userConfig";
+import { toInternalModelId, toInternalVendorId } from "@/utils/vendorVisibility";
 
 type AiType =
   | "scriptAgent"
@@ -144,7 +145,8 @@ async function getVendorTemplateFn(
 ): Promise<(think?: boolean, thinkLevel?: 0 | 1 | 2 | 3) => any>;
 async function getVendorTemplateFn(fnName: Exclude<FnName, "textRequest">, modelName: `${string}:${string}`): Promise<(input: any) => any>;
 async function getVendorTemplateFn(fnName: FnName, modelName: `${string}:${string}`): Promise<any> {
-  const [id, name] = modelName.split(/:(.+)/);
+  const [rawId, name] = toInternalModelId(modelName).split(/:(.+)/);
+  const id = toInternalVendorId(rawId);
   if (id === "subrouter") {
     const { ensureSubrouterVendor } = await import("@/utils/subrouter");
     await ensureSubrouterVendor();

@@ -4,6 +4,7 @@ import u from "@/utils";
 import { z } from "zod";
 import { validateFields } from "@/middleware/middleware";
 import { getEffectiveAgentDeploy } from "@/utils/userConfig";
+import { toInternalVendorId } from "@/utils/vendorVisibility";
 const router = express.Router();
 
 export default router.post(
@@ -19,7 +20,7 @@ export default router.post(
     const [id, modelName] = data.modelName.split(/:(.+)/);
     if (!id || !modelName) return res.status(200).send(success(null));
 
-    const models = await u.vendor.getModelList(id);
+    const models = await u.vendor.getModelList(toInternalVendorId(id));
     const model = models.find((m) => m.modelName === modelName);
     if (!model) return res.status(200).send(success(null));
     res.status(200).send(success(model));

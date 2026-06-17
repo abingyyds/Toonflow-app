@@ -20,7 +20,7 @@ function parseModels(value: unknown) {
 export default router.post(
   "/",
   validateFields({
-    provider: z.enum(["subrouterai", "sub2api"]).optional(),
+    provider: z.string().optional(),
     baseUrl: z.string().optional(),
     refresh: z.boolean().optional(),
   }),

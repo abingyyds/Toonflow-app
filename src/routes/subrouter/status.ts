@@ -1,7 +1,7 @@
 import express from "express";
 import { success } from "@/lib/responseFormat";
 import { getCurrentUser, getCurrentUserId } from "@/utils/requestContext";
-import { getStoredSubrouterAccount } from "@/utils/subrouter";
+import { getStoredSubrouterAccount, toPublicSubrouterAccount } from "@/utils/subrouter";
 
 const router = express.Router();
 
@@ -36,20 +36,7 @@ export default router.post("/", async (req, res) => {
     success({
       user,
       connected: Boolean(account),
-      account: account
-        ? {
-            provider: account.provider,
-            baseUrl: account.baseUrl,
-            username: account.username,
-            email: account.email,
-            displayName: account.displayName,
-            distributorId: account.distributorId,
-            distributorSlug: account.distributorSlug,
-            distributorName: account.distributorName,
-            apiKeyReady: Boolean(account.apiKey),
-            updatedTime: (account as any).updatedTime,
-          }
-        : null,
+      account: toPublicSubrouterAccount(account),
       modelCount: models.length,
       modelStats: countModelsByType(models),
     }),

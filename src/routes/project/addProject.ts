@@ -4,6 +4,7 @@ import { z } from "zod";
 import { success } from "@/lib/responseFormat";
 import { validateFields } from "@/middleware/middleware";
 import { getCurrentUserId } from "@/utils/requestContext";
+import { toInternalModelId } from "@/utils/vendorVisibility";
 const router = express.Router();
 
 // 新增项目
@@ -37,8 +38,8 @@ export default router.post(
       videoRatio,
       directorManual,
       userId,
-      imageModel,
-      videoModel,
+      imageModel: toInternalModelId(imageModel),
+      videoModel: toInternalModelId(videoModel),
       createTime: Date.now(),
       imageQuality,
       mode,

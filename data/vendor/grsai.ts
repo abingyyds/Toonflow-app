@@ -170,10 +170,10 @@ const vendor: VendorConfig = {
       label: "请求地址",
       type: "url",
       required: true,
-      placeholder: "示例：http://subrouter.railway.internal:8080",
+      placeholder: "示例：https://api.toonflow.net/v1",
     },
   ],
-  inputValues: { apiKey: "", baseUrl: "http://subrouter.railway.internal:8080" },
+  inputValues: { apiKey: "", baseUrl: "https://api.toonflow.net/v1" },
   models: [
     {
       name: "GPT Image 2",

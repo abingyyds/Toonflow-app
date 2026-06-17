@@ -682,7 +682,7 @@ export default async (knex: Knex, forceInit: boolean = false): Promise<void> => 
         table.unique(["userId", "vendorId"]);
       },
     },
-    // 内置智能路由账户绑定表
+    // 模型账号绑定表
     {
       name: "o_subrouterAccount",
       builder: (table) => {

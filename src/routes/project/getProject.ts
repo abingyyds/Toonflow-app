@@ -2,6 +2,7 @@ import express from "express";
 import u from "@/utils";
 import { success } from "@/lib/responseFormat";
 import { getCurrentUserId } from "@/utils/requestContext";
+import { toPublicModelId } from "@/utils/vendorVisibility";
 const router = express.Router();
 
 // 获取项目
@@ -10,5 +11,13 @@ export default router.post("/", async (req, res) => {
   const query = u.db("o_project").select("*");
   if (userId) query.where("userId", userId);
   const data = await query;
-  res.status(200).send(success(data));
+  res.status(200).send(
+    success(
+      data.map((item) => ({
+        ...item,
+        imageModel: toPublicModelId(item.imageModel),
+        videoModel: toPublicModelId(item.videoModel),
+      })),
+    ),
+  );
 });

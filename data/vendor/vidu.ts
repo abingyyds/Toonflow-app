@@ -97,11 +97,11 @@ const vendor: VendorConfig = {
   name: "Vidu 开放平台",
   inputs: [
     { key: "apiKey", label: "API密钥", type: "password", required: true, placeholder: "请到Vidu官方申请" },
-    { key: "baseUrl", label: "接口路径", type: "url", required: true, placeholder: "http://subrouter.railway.internal:8080" },
+    { key: "baseUrl", label: "接口路径", type: "url", required: true, placeholder: "https://api.toonflow.net/v1" },
   ],
   inputValues: {
     apiKey: "",
-    baseUrl: "http://subrouter.railway.internal:8080",
+    baseUrl: "https://api.toonflow.net/v1",
   },
   models: [
     {

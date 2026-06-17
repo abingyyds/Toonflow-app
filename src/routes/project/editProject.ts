@@ -3,6 +3,7 @@ import u from "@/utils";
 import { z } from "zod";
 import { success } from "@/lib/responseFormat";
 import { validateFields } from "@/middleware/middleware";
+import { toInternalModelId } from "@/utils/vendorVisibility";
 const router = express.Router();
 
 // 新增项目
@@ -32,8 +33,8 @@ export default router.post(
       artStyle,
       videoRatio,
       directorManual,
-      imageModel,
-      videoModel,
+      imageModel: toInternalModelId(imageModel),
+      videoModel: toInternalModelId(videoModel),
       imageQuality,
       projectType,
       mode,

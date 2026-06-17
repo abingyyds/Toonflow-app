@@ -7,6 +7,7 @@ import { getCurrentUserId } from "@/utils/requestContext";
 import { getModelPromptFullPath, isUserModelPromptPath, upsertUserModelPrompt } from "@/utils/userConfig";
 import fs from "fs/promises";
 import pathUtil from "path";
+import { toInternalVendorId } from "@/utils/vendorVisibility";
 const router = express.Router();
 
 export default router.post(
@@ -19,6 +20,7 @@ export default router.post(
   }),
   async (req, res) => {
     const { vendorId, model, path, fileName } = req.body;
+    const internalVendorId = toInternalVendorId(vendorId);
     const userId = getCurrentUserId();
     const normalizedPath = pathUtil.normalize(path).replace(/\\/g, "/");
     if (normalizedPath.startsWith("../") || pathUtil.isAbsolute(normalizedPath)) {
@@ -34,13 +36,13 @@ export default router.post(
     }
 
     if (userId) {
-      await upsertUserModelPrompt(userId, vendorId, model, { fileName, path: normalizedPath });
+      await upsertUserModelPrompt(userId, internalVendorId, model, { fileName, path: normalizedPath });
     } else {
-      const data = await u.db("o_modelPrompt").where("model", model).andWhere("vendorId", vendorId).select("*").first();
+      const data = await u.db("o_modelPrompt").where("model", model).andWhere("vendorId", internalVendorId).select("*").first();
       if (data) {
-        await u.db("o_modelPrompt").where("model", model).andWhere("vendorId", vendorId).update({ fileName, path: normalizedPath });
+        await u.db("o_modelPrompt").where("model", model).andWhere("vendorId", internalVendorId).update({ fileName, path: normalizedPath });
       } else {
-        await u.db("o_modelPrompt").insert({ vendorId, model, path: normalizedPath, fileName });
+        await u.db("o_modelPrompt").insert({ vendorId: internalVendorId, model, path: normalizedPath, fileName });
       }
     }
     res.status(200).send(success("绑定成功"));

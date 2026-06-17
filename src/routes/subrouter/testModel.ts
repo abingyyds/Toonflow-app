@@ -34,7 +34,7 @@ export default router.post(
     if (!userId) return res.status(401).send({ message: "未提供token" });
 
     const account = await getStoredSubrouterAccount(userId);
-    if (!account) return res.status(400).send(error("未绑定内置智能路由账户"));
+    if (!account) return res.status(400).send(error("未绑定模型账号"));
 
     const modelName = String(req.body.modelName).includes(":") ? String(req.body.modelName).split(/:(.+)/)[1] : String(req.body.modelName);
     const model = parseModels(account.models).find((item) => item.modelName === modelName);

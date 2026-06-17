@@ -4,7 +4,7 @@ import jwt from "jsonwebtoken";
 import { success, error } from "@/lib/responseFormat";
 import { validateFields } from "@/middleware/middleware";
 import { z } from "zod";
-import { formatSubrouterError, loginAndPrepareSubrouter, loginWithDefaultSubrouterProviders } from "@/utils/subrouter";
+import { formatSubrouterError, loginAndPrepareSubrouter, loginWithDefaultSubrouterProviders, SubrouterProvider, toPublicSubrouterAccount } from "@/utils/subrouter";
 const router = express.Router();
 
 export function setToken(payload: string | object, expiresIn: string | number, secret: string): string {
@@ -20,38 +20,30 @@ export default router.post(
   validateFields({
     username: z.string(),
     password: z.string(),
-    provider: z.enum(["subrouterai", "sub2api"]).optional(),
+    provider: z.string().optional(),
     baseUrl: z.string().optional(),
   }),
   async (req, res) => {
     const { username, password, provider, baseUrl } = req.body;
 
     if (provider && baseUrl) {
+      const loginProvider = normalizeLoginProvider(provider);
+      if (!loginProvider) return res.status(400).send(error("模型账号登录方式不可用"));
       try {
-        const result = await loginAndPrepareSubrouter({ provider, baseUrl, username, password });
+        const result = await loginAndPrepareSubrouter({ provider: loginProvider, baseUrl, username, password });
         return res.status(200).send(
           success(
             {
               token: result.token,
               name: result.toonflowUser.name,
               id: result.toonflowUser.id,
-              account: {
-                provider: result.account.provider,
-                baseUrl: result.account.baseUrl,
-                username: result.account.username,
-                email: result.account.email,
-                displayName: result.account.displayName,
-                distributorId: result.account.distributorId,
-                distributorSlug: result.account.distributorSlug,
-                distributorName: result.account.distributorName,
-                apiKeyReady: Boolean(result.account.apiKey),
-              },
+              account: toPublicSubrouterAccount(result.account),
               models: result.models,
               modelsSource: result.modelsSource,
               defaultTextModel: result.defaultTextModel,
               notice: result.notice,
             },
-            "内置智能路由登录成功",
+            "模型账号登录成功",
           ),
         );
       } catch (err) {
@@ -85,23 +77,13 @@ export default router.post(
               token: result.token,
               name: result.toonflowUser.name,
               id: result.toonflowUser.id,
-              account: {
-                provider: result.account.provider,
-                baseUrl: result.account.baseUrl,
-                username: result.account.username,
-                email: result.account.email,
-                displayName: result.account.displayName,
-                distributorId: result.account.distributorId,
-                distributorSlug: result.account.distributorSlug,
-                distributorName: result.account.distributorName,
-                apiKeyReady: Boolean(result.account.apiKey),
-              },
+              account: toPublicSubrouterAccount(result.account),
               models: result.models,
               modelsSource: result.modelsSource,
               defaultTextModel: result.defaultTextModel,
               notice: result.notice,
             },
-            "内置智能路由登录成功",
+            "模型账号登录成功",
           ),
         );
       }
@@ -112,3 +94,7 @@ export default router.post(
     return res.status(400).send(error("用户名或密码错误"));
   },
 );
+
+function normalizeLoginProvider(value: unknown): SubrouterProvider | undefined {
+  return value === "subrouterai" || value === "sub2api" ? value : undefined;
+}

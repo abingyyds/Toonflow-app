@@ -2,6 +2,7 @@ import express from "express";
 import u from "@/utils";
 import { success } from "@/lib/responseFormat";
 import { getEffectiveEnabledVendors, getEffectiveModelPromptList } from "@/utils/userConfig";
+import { toPublicVendorId } from "@/utils/vendorVisibility";
 const router = express.Router();
 
 export default router.post("/", async (req, res) => {
@@ -24,7 +25,7 @@ export default router.post("/", async (req, res) => {
           ...(promptMap.get(m.modelName) ? { ...promptMap.get(m.modelName) } : {}),
         }));
       return {
-        id: item.id,
+        id: toPublicVendorId(item.id),
         name: vendor.name,
         promptList: filteredModels,
       };

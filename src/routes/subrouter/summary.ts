@@ -2,7 +2,8 @@ import express from "express";
 import { success } from "@/lib/responseFormat";
 import { getCurrentUser, getCurrentUserId } from "@/utils/requestContext";
 import { getUserSetting, getEffectiveAgentDeployList, AgentDeployRow } from "@/utils/userConfig";
-import { getStoredSubrouterAccount } from "@/utils/subrouter";
+import { getStoredSubrouterAccount, toPublicSubrouterAccount } from "@/utils/subrouter";
+import { INTERNAL_ROUTER_VENDOR_ID, toPublicModelId, toPublicVendorId } from "@/utils/vendorVisibility";
 
 const router = express.Router();
 
@@ -54,23 +55,24 @@ function summarizeAgents(rows: AgentDeployRow[], models: StoredModel[]) {
     .map((row) => {
       const key = row.key || row.agentKey || "";
       const parsed = splitModelName(row.modelName);
+      const effectiveVendorId = row.vendorId || parsed.vendorId;
       return {
         key,
         name: row.name || key,
         desc: row.desc || "",
         model: row.model || parsed.model,
-        modelName: row.modelName || "",
-        vendorId: row.vendorId || parsed.vendorId,
-        usingSubrouter: (row.vendorId || parsed.vendorId) === "subrouter",
-        available: (row.vendorId || parsed.vendorId) === "subrouter" ? modelNames.has(row.model || parsed.model) : null,
+        modelName: toPublicModelId(row.modelName || ""),
+        vendorId: toPublicVendorId(effectiveVendorId),
+        usingModelService: effectiveVendorId === INTERNAL_ROUTER_VENDOR_ID,
+        available: effectiveVendorId === INTERNAL_ROUTER_VENDOR_ID ? modelNames.has(row.model || parsed.model) : null,
       };
     });
 }
 
 function pickSelectedTextModel(agents: ReturnType<typeof summarizeAgents>) {
-  const selected = agents.find((agent) => agent.key === "scriptAgent" && agent.usingSubrouter && agent.model);
+  const selected = agents.find((agent) => agent.key === "scriptAgent" && agent.usingModelService && agent.model);
   if (selected) return selected.model;
-  return agents.find((agent) => agent.usingSubrouter && agent.model)?.model || "";
+  return agents.find((agent) => agent.usingModelService && agent.model)?.model || "";
 }
 
 export default router.post("/", async (req, res) => {
@@ -84,10 +86,10 @@ export default router.post("/", async (req, res) => {
   const agents = summarizeAgents(await getEffectiveAgentDeployList(userId), models);
   const selectedTextModel = pickSelectedTextModel(agents);
   const diagnostics = [
-    !account ? "未绑定内置智能路由账户" : "",
+    !account ? "未绑定模型账号" : "",
     account && !account.apiKey ? "自动 API Key 未生成" : "",
     account && models.length === 0 ? "当前账号没有可用模型，请刷新或检查订阅/分站上架" : "",
-    account && modelStats.text === 0 ? "未发现文本模型，Agent 暂不能使用内置智能路由" : "",
+    account && modelStats.text === 0 ? "未发现文本模型，Agent 暂不能使用模型服务" : "",
     account && modelStats.text > 0 && !selectedTextModel ? "尚未为当前用户选择 Agent 文本模型" : "",
   ].filter(Boolean);
 
@@ -95,20 +97,7 @@ export default router.post("/", async (req, res) => {
     success({
       user,
       connected: Boolean(account),
-      account: account
-        ? {
-            provider: account.provider,
-            baseUrl: account.baseUrl,
-            username: account.username,
-            email: account.email,
-            displayName: account.displayName,
-            distributorId: account.distributorId,
-            distributorSlug: account.distributorSlug,
-            distributorName: account.distributorName,
-            apiKeyReady: Boolean(account.apiKey),
-            updatedTime: (account as any).updatedTime,
-          }
-        : null,
+      account: toPublicSubrouterAccount(account),
       models,
       modelStats,
       selectedTextModel,

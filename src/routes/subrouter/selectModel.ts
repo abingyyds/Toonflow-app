@@ -4,6 +4,7 @@ import { success, error } from "@/lib/responseFormat";
 import { validateFields } from "@/middleware/middleware";
 import { getCurrentUserId } from "@/utils/requestContext";
 import { formatSubrouterError, selectSubrouterModel } from "@/utils/subrouter";
+import { toPublicModelId } from "@/utils/vendorVisibility";
 
 const router = express.Router();
 
@@ -19,7 +20,7 @@ export default router.post(
     try {
       const targets = req.body.targets || [];
       await selectSubrouterModel(userId, req.body.modelName, targets);
-      res.status(200).send(success({ modelName: req.body.modelName, targets }, "模型已设置到当前用户"));
+      res.status(200).send(success({ modelName: toPublicModelId(req.body.modelName), targets }, "模型已设置到当前用户"));
     } catch (err) {
       res.status(400).send(error(formatSubrouterError(err)));
     }

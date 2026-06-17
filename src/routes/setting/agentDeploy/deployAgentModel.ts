@@ -5,6 +5,7 @@ import { z } from "zod";
 import { validateFields } from "@/middleware/middleware";
 import { getCurrentUserId } from "@/utils/requestContext";
 import { upsertUserAgentDeploy } from "@/utils/userConfig";
+import { toInternalModelId, toInternalVendorId } from "@/utils/vendorVisibility";
 const router = express.Router();
 
 export default router.post(
@@ -21,6 +22,8 @@ export default router.post(
   }),
   async (req, res) => {
     const { id, name, model, modelName, vendorId, desc, temperature, maxOutputTokens } = req.body;
+    const internalModelName = toInternalModelId(modelName);
+    const internalVendorId = vendorId ? toInternalVendorId(vendorId) : vendorId;
     const userId = getCurrentUserId();
     if (userId) {
       const base = await u.db("o_agentDeploy").where({ id }).first();
@@ -31,14 +34,14 @@ export default router.post(
         agentKey: base.key,
         name,
         model,
-        modelName,
-        vendorId,
+        modelName: internalModelName,
+        vendorId: internalVendorId,
         desc,
         temperature,
         maxOutputTokens,
       });
     } else {
-      await u.db("o_agentDeploy").where({ id }).update({ id, name, model, modelName, vendorId, desc, temperature, maxOutputTokens });
+      await u.db("o_agentDeploy").where({ id }).update({ id, name, model, modelName: internalModelName, vendorId: internalVendorId, desc, temperature, maxOutputTokens });
     }
     res.status(200).send(success("配置成功"));
   },

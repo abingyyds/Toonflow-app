@@ -4,6 +4,7 @@ import { z } from "zod";
 import { success } from "@/lib/responseFormat";
 import { validateFields } from "@/middleware/middleware";
 import { getEffectiveEnabledVendors } from "@/utils/userConfig";
+import { toPublicVendorId } from "@/utils/vendorVisibility";
 const router = express.Router();
 
 export default router.post(
@@ -27,7 +28,7 @@ export default router.post(
             ? models.filter((item: { type: string }) => item.type !== "video")
             : models.filter((item: { type: string }) => item.type === type);
         return filtered.map((item: { name: string; modelName: string; type: string }) => ({
-          id: data.id,
+          id: toPublicVendorId(data.id),
           label: item.name,
           value: item.modelName,
           type: item.type,

@@ -21,7 +21,7 @@ import { normalizeAuthUser, runWithUser } from "@/utils/requestContext";
 
 const app = express();
 const server = http.createServer(app);
-const WEB_CACHE_VERSION = "v10";
+const WEB_CACHE_VERSION = "v11";
 const WEB_MAIN_SCRIPT_PREFIX = "toonflow-inline-main";
 const WEB_STYLESHEET_PREFIX = "toonflow-inline-style";
 const LONG_CACHE_SECONDS = 60 * 60 * 24 * 365;
@@ -43,6 +43,7 @@ function getWebApiBaseUrlPatch() {
       infiniteCanvas: true,
       login: true,
       modelSelect: true,
+      "model-service": true,
       novel: true,
       other: true,
       production: true,
@@ -50,7 +51,6 @@ function getWebApiBaseUrlPatch() {
       script: true,
       scriptAgent: true,
       setting: true,
-      subrouter: true,
       task: true,
       test: true
     };
@@ -224,11 +224,11 @@ function getWebApiBaseUrlPatch() {
 </script>`;
 }
 
-function getSubrouterSettingsPatch() {
+function getModelServiceSettingsPatch() {
   return `<script>
 (function () {
-  if (window.__TOONFLOW_SUBROUTER_SETTINGS__) return;
-  window.__TOONFLOW_SUBROUTER_SETTINGS__ = true;
+  if (window.__TOONFLOW_MODEL_SERVICE_SETTINGS__) return;
+  window.__TOONFLOW_MODEL_SERVICE_SETTINGS__ = true;
 
   var TARGET_LABELS = {
     scriptAgent: "剧本 Agent",
@@ -378,7 +378,7 @@ function getSubrouterSettingsPatch() {
     state.loading = true;
     state.error = "";
     render();
-    return post("/subrouter/summary", {})
+    return post("/model-service/summary", {})
       .then(function (data) {
         state.summary = data;
         if (!state.selectedModel && data && data.selectedTextModel) state.selectedModel = data.selectedTextModel;
@@ -397,7 +397,7 @@ function getSubrouterSettingsPatch() {
     state.refreshing = true;
     state.error = "";
     render();
-    return post("/subrouter/models", { refresh: true })
+    return post("/model-service/models", { refresh: true })
       .then(function () {
         setToast("模型列表已刷新");
         return loadSummary();
@@ -424,7 +424,7 @@ function getSubrouterSettingsPatch() {
     state.saving = true;
     state.error = "";
     render();
-    return post("/subrouter/selectModel", { modelName: state.selectedModel, targets: targets })
+    return post("/model-service/selectModel", { modelName: state.selectedModel, targets: targets })
       .then(function () {
         setToast("模型已保存到当前用户");
         return loadSummary();
@@ -447,7 +447,7 @@ function getSubrouterSettingsPatch() {
     state.testResult = null;
     state.error = "";
     render();
-    return post("/subrouter/testModel", { modelName: state.selectedModel })
+    return post("/model-service/testModel", { modelName: state.selectedModel })
       .then(function (data) {
         state.testResult = data || {};
         setToast("模型测试通过");
@@ -462,56 +462,56 @@ function getSubrouterSettingsPatch() {
   }
 
   function installStyle() {
-    if (document.getElementById("toonflow-subrouter-style")) return;
+    if (document.getElementById("toonflow-model-service-style")) return;
     var style = document.createElement("style");
-    style.id = "toonflow-subrouter-style";
+    style.id = "toonflow-model-service-style";
     style.textContent = [
-      ".tf-subrouter-entry{position:fixed;right:18px;top:76px;z-index:9998;height:40px;padding:0 14px;border:1px solid rgba(17,24,39,.16);border-radius:8px;background:#111827;color:#fff;box-shadow:0 10px 28px rgba(15,23,42,.18);display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;cursor:pointer;letter-spacing:0}",
-      ".tf-subrouter-entry:hover{background:#0f172a}",
-      ".tf-subrouter-dot{width:8px;height:8px;border-radius:50%;background:#9ca3af;box-shadow:0 0 0 3px rgba(156,163,175,.18);flex:0 0 auto}",
-      ".tf-subrouter-dot.is-on{background:#10b981;box-shadow:0 0 0 3px rgba(16,185,129,.18)}",
-      ".tf-subrouter-backdrop{position:fixed;inset:0;z-index:10000;background:rgba(15,23,42,.32);display:flex;justify-content:flex-end}",
-      ".tf-subrouter-backdrop[hidden]{display:none}",
-      ".tf-subrouter-panel{width:min(760px,100vw);height:100vh;background:#f8fafc;color:#111827;box-shadow:-18px 0 36px rgba(15,23,42,.22);display:flex;flex-direction:column;border-left:1px solid rgba(15,23,42,.08)}",
-      ".tf-subrouter-head{height:64px;padding:0 20px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between;background:#fff;flex:0 0 auto}",
-      ".tf-subrouter-title{font-size:18px;font-weight:700;letter-spacing:0}",
-      ".tf-subrouter-close{width:34px;height:34px;border:1px solid #d1d5db;border-radius:8px;background:#fff;color:#374151;cursor:pointer;font-size:22px;line-height:28px}",
-      ".tf-subrouter-body{padding:18px 20px 28px;overflow:auto;display:flex;flex-direction:column;gap:14px}",
-      ".tf-subrouter-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}",
-      ".tf-subrouter-card{background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:14px;min-width:0}",
-      ".tf-subrouter-card h3{margin:0 0 12px;font-size:15px;font-weight:700;color:#111827;letter-spacing:0}",
-      ".tf-subrouter-kv{display:grid;grid-template-columns:92px minmax(0,1fr);gap:8px 10px;font-size:13px;line-height:1.55}",
-      ".tf-subrouter-kv span:nth-child(odd){color:#6b7280}",
-      ".tf-subrouter-kv span:nth-child(even){overflow:hidden;text-overflow:ellipsis;white-space:nowrap}",
-      ".tf-subrouter-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}",
-      ".tf-subrouter-stat{border:1px solid #e5e7eb;border-radius:8px;padding:10px;background:#f9fafb}",
-      ".tf-subrouter-stat b{display:block;font-size:20px;line-height:1.1}",
-      ".tf-subrouter-stat span{font-size:12px;color:#6b7280}",
-      ".tf-subrouter-alert{border:1px solid #f59e0b;background:#fffbeb;color:#92400e;border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.5}",
-      ".tf-subrouter-error{border-color:#fecaca;background:#fef2f2;color:#991b1b}",
-      ".tf-subrouter-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}",
-      ".tf-subrouter-btn{height:34px;padding:0 12px;border-radius:8px;border:1px solid #d1d5db;background:#fff;color:#111827;cursor:pointer;font-size:13px;font-weight:600}",
-      ".tf-subrouter-btn.primary{border-color:#0f766e;background:#0f766e;color:#fff}",
-      ".tf-subrouter-btn:disabled{opacity:.55;cursor:not-allowed}",
-      ".tf-subrouter-control{display:flex;flex-direction:column;gap:6px;min-width:0}",
-      ".tf-subrouter-control label{font-size:12px;color:#6b7280}",
-      ".tf-subrouter-select,.tf-subrouter-input{height:36px;border:1px solid #d1d5db;border-radius:8px;background:#fff;color:#111827;padding:0 10px;font-size:13px;min-width:0}",
-      ".tf-subrouter-targets{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}",
-      ".tf-subrouter-check{display:flex;align-items:center;gap:6px;font-size:13px;color:#374151}",
-      ".tf-subrouter-tabs{display:flex;gap:6px;flex-wrap:wrap}",
-      ".tf-subrouter-tab{height:30px;padding:0 10px;border:1px solid #d1d5db;border-radius:8px;background:#fff;color:#374151;font-size:13px;cursor:pointer}",
-      ".tf-subrouter-tab.is-active{background:#ecfdf5;border-color:#10b981;color:#065f46}",
-      ".tf-subrouter-model-list{display:grid;grid-template-columns:1fr 1fr;gap:8px;max-height:310px;overflow:auto;padding-right:2px}",
-      ".tf-subrouter-model{border:1px solid #e5e7eb;border-radius:8px;background:#fff;padding:10px;display:flex;flex-direction:column;gap:6px;min-width:0}",
-      ".tf-subrouter-model strong{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}",
-      ".tf-subrouter-model small{font-size:12px;color:#6b7280}",
-      ".tf-subrouter-pill{display:inline-flex;align-items:center;width:max-content;height:22px;padding:0 8px;border-radius:999px;background:#eef2ff;color:#3730a3;font-size:12px}",
-      ".tf-subrouter-agent{width:100%;border-collapse:collapse;font-size:13px}",
-      ".tf-subrouter-agent th,.tf-subrouter-agent td{padding:8px;border-bottom:1px solid #e5e7eb;text-align:left;vertical-align:top}",
-      ".tf-subrouter-agent th{color:#6b7280;font-weight:600;background:#f9fafb}",
-      ".tf-subrouter-muted{color:#6b7280;font-size:13px;line-height:1.5}",
-      ".tf-subrouter-toast{position:fixed;right:24px;top:130px;z-index:10002;background:#111827;color:#fff;border-radius:8px;padding:10px 12px;font-size:13px;box-shadow:0 10px 28px rgba(15,23,42,.2)}",
-      "@media (max-width:720px){.tf-subrouter-entry{right:12px;top:auto;bottom:18px}.tf-subrouter-panel{width:100vw}.tf-subrouter-body{padding:14px}.tf-subrouter-row{grid-template-columns:1fr}.tf-subrouter-model-list{grid-template-columns:1fr}.tf-subrouter-stats{grid-template-columns:repeat(2,1fr)}}"
+      ".tf-model-service-entry{position:fixed;right:18px;top:76px;z-index:9998;height:40px;padding:0 14px;border:1px solid rgba(17,24,39,.16);border-radius:8px;background:#111827;color:#fff;box-shadow:0 10px 28px rgba(15,23,42,.18);display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;cursor:pointer;letter-spacing:0}",
+      ".tf-model-service-entry:hover{background:#0f172a}",
+      ".tf-model-service-dot{width:8px;height:8px;border-radius:50%;background:#9ca3af;box-shadow:0 0 0 3px rgba(156,163,175,.18);flex:0 0 auto}",
+      ".tf-model-service-dot.is-on{background:#10b981;box-shadow:0 0 0 3px rgba(16,185,129,.18)}",
+      ".tf-model-service-backdrop{position:fixed;inset:0;z-index:10000;background:rgba(15,23,42,.32);display:flex;justify-content:flex-end}",
+      ".tf-model-service-backdrop[hidden]{display:none}",
+      ".tf-model-service-panel{width:min(760px,100vw);height:100vh;background:#f8fafc;color:#111827;box-shadow:-18px 0 36px rgba(15,23,42,.22);display:flex;flex-direction:column;border-left:1px solid rgba(15,23,42,.08)}",
+      ".tf-model-service-head{height:64px;padding:0 20px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between;background:#fff;flex:0 0 auto}",
+      ".tf-model-service-title{font-size:18px;font-weight:700;letter-spacing:0}",
+      ".tf-model-service-close{width:34px;height:34px;border:1px solid #d1d5db;border-radius:8px;background:#fff;color:#374151;cursor:pointer;font-size:22px;line-height:28px}",
+      ".tf-model-service-body{padding:18px 20px 28px;overflow:auto;display:flex;flex-direction:column;gap:14px}",
+      ".tf-model-service-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}",
+      ".tf-model-service-card{background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:14px;min-width:0}",
+      ".tf-model-service-card h3{margin:0 0 12px;font-size:15px;font-weight:700;color:#111827;letter-spacing:0}",
+      ".tf-model-service-kv{display:grid;grid-template-columns:92px minmax(0,1fr);gap:8px 10px;font-size:13px;line-height:1.55}",
+      ".tf-model-service-kv span:nth-child(odd){color:#6b7280}",
+      ".tf-model-service-kv span:nth-child(even){overflow:hidden;text-overflow:ellipsis;white-space:nowrap}",
+      ".tf-model-service-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}",
+      ".tf-model-service-stat{border:1px solid #e5e7eb;border-radius:8px;padding:10px;background:#f9fafb}",
+      ".tf-model-service-stat b{display:block;font-size:20px;line-height:1.1}",
+      ".tf-model-service-stat span{font-size:12px;color:#6b7280}",
+      ".tf-model-service-alert{border:1px solid #f59e0b;background:#fffbeb;color:#92400e;border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.5}",
+      ".tf-model-service-error{border-color:#fecaca;background:#fef2f2;color:#991b1b}",
+      ".tf-model-service-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}",
+      ".tf-model-service-btn{height:34px;padding:0 12px;border-radius:8px;border:1px solid #d1d5db;background:#fff;color:#111827;cursor:pointer;font-size:13px;font-weight:600}",
+      ".tf-model-service-btn.primary{border-color:#0f766e;background:#0f766e;color:#fff}",
+      ".tf-model-service-btn:disabled{opacity:.55;cursor:not-allowed}",
+      ".tf-model-service-control{display:flex;flex-direction:column;gap:6px;min-width:0}",
+      ".tf-model-service-control label{font-size:12px;color:#6b7280}",
+      ".tf-model-service-select,.tf-model-service-input{height:36px;border:1px solid #d1d5db;border-radius:8px;background:#fff;color:#111827;padding:0 10px;font-size:13px;min-width:0}",
+      ".tf-model-service-targets{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}",
+      ".tf-model-service-check{display:flex;align-items:center;gap:6px;font-size:13px;color:#374151}",
+      ".tf-model-service-tabs{display:flex;gap:6px;flex-wrap:wrap}",
+      ".tf-model-service-tab{height:30px;padding:0 10px;border:1px solid #d1d5db;border-radius:8px;background:#fff;color:#374151;font-size:13px;cursor:pointer}",
+      ".tf-model-service-tab.is-active{background:#ecfdf5;border-color:#10b981;color:#065f46}",
+      ".tf-model-service-model-list{display:grid;grid-template-columns:1fr 1fr;gap:8px;max-height:310px;overflow:auto;padding-right:2px}",
+      ".tf-model-service-model{border:1px solid #e5e7eb;border-radius:8px;background:#fff;padding:10px;display:flex;flex-direction:column;gap:6px;min-width:0}",
+      ".tf-model-service-model strong{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}",
+      ".tf-model-service-model small{font-size:12px;color:#6b7280}",
+      ".tf-model-service-pill{display:inline-flex;align-items:center;width:max-content;height:22px;padding:0 8px;border-radius:999px;background:#eef2ff;color:#3730a3;font-size:12px}",
+      ".tf-model-service-agent{width:100%;border-collapse:collapse;font-size:13px}",
+      ".tf-model-service-agent th,.tf-model-service-agent td{padding:8px;border-bottom:1px solid #e5e7eb;text-align:left;vertical-align:top}",
+      ".tf-model-service-agent th{color:#6b7280;font-weight:600;background:#f9fafb}",
+      ".tf-model-service-muted{color:#6b7280;font-size:13px;line-height:1.5}",
+      ".tf-model-service-toast{position:fixed;right:24px;top:130px;z-index:10002;background:#111827;color:#fff;border-radius:8px;padding:10px 12px;font-size:13px;box-shadow:0 10px 28px rgba(15,23,42,.2)}",
+      "@media (max-width:720px){.tf-model-service-entry{right:12px;top:auto;bottom:18px}.tf-model-service-panel{width:100vw}.tf-model-service-body{padding:14px}.tf-model-service-row{grid-template-columns:1fr}.tf-model-service-model-list{grid-template-columns:1fr}.tf-model-service-stats{grid-template-columns:repeat(2,1fr)}}"
     ].join("\\n");
     document.head.appendChild(style);
   }
@@ -519,13 +519,12 @@ function getSubrouterSettingsPatch() {
   function accountHtml(summary) {
     var account = summary && summary.account;
     if (!account) {
-      return '<div class="tf-subrouter-muted">当前用户未绑定内置智能路由账号。</div>';
+      return '<div class="tf-model-service-muted">当前用户未绑定模型账号。</div>';
     }
     return [
-      '<div class="tf-subrouter-kv">',
+      '<div class="tf-model-service-kv">',
       '<span>账号</span><span>' + escapeHtml(account.displayName || account.username || account.email || "-") + '</span>',
-      '<span>服务</span><span>' + escapeHtml(account.provider || "-") + '</span>',
-      '<span>分站</span><span>' + escapeHtml(account.distributorName || account.distributorSlug || "-") + '</span>',
+      '<span>分站</span><span>' + escapeHtml(account.distributorName || "-") + '</span>',
       '<span>Key</span><span>' + (account.apiKeyReady ? "已生成" : "未生成") + '</span>',
       '<span>更新时间</span><span>' + escapeHtml(formatTime(account.updatedTime)) + '</span>',
       '</div>'
@@ -535,7 +534,7 @@ function getSubrouterSettingsPatch() {
   function statsHtml(summary) {
     var stats = summary && summary.modelStats || {};
     return ["text", "image", "video", "other"].map(function (type) {
-      return '<div class="tf-subrouter-stat"><b>' + Number(stats[type] || 0) + '</b><span>' + TYPE_LABELS[type] + '</span></div>';
+      return '<div class="tf-model-service-stat"><b>' + Number(stats[type] || 0) + '</b><span>' + TYPE_LABELS[type] + '</span></div>';
     }).join("");
   }
 
@@ -547,12 +546,12 @@ function getSubrouterSettingsPatch() {
       var name = model.modelName || model.name || "";
       return '<option value="' + escapeHtml(name) + '"' + (name === state.selectedModel ? " selected" : "") + '>' + escapeHtml(name) + '</option>';
     }));
-    return '<select class="tf-subrouter-select" data-action="select-model">' + options.join("") + '</select>';
+    return '<select class="tf-model-service-select" data-action="select-model">' + options.join("") + '</select>';
   }
 
   function targetsHtml() {
-    return '<div class="tf-subrouter-targets">' + Object.keys(TARGET_LABELS).map(function (key) {
-      return '<label class="tf-subrouter-check"><input type="checkbox" data-target="' + key + '"' + (state.targets[key] ? " checked" : "") + '> ' + TARGET_LABELS[key] + '</label>';
+    return '<div class="tf-model-service-targets">' + Object.keys(TARGET_LABELS).map(function (key) {
+      return '<label class="tf-model-service-check"><input type="checkbox" data-target="' + key + '"' + (state.targets[key] ? " checked" : "") + '> ' + TARGET_LABELS[key] + '</label>';
     }).join("") + '</div>';
   }
 
@@ -566,33 +565,33 @@ function getSubrouterSettingsPatch() {
       return (filter === "all" || type === filter) && (!search || name.toLowerCase().indexOf(search) >= 0);
     }).slice(0, 180);
     return [
-      '<div class="tf-subrouter-card">',
+      '<div class="tf-model-service-card">',
       '<h3>模型列表</h3>',
-      '<div class="tf-subrouter-actions" style="justify-content:space-between;margin-bottom:10px">',
-      '<div class="tf-subrouter-tabs">',
+      '<div class="tf-model-service-actions" style="justify-content:space-between;margin-bottom:10px">',
+      '<div class="tf-model-service-tabs">',
       ["text", "image", "video", "all"].map(function (type) {
         var label = type === "all" ? "全部" : TYPE_LABELS[type];
-        return '<button class="tf-subrouter-tab ' + (filter === type ? "is-active" : "") + '" data-filter="' + type + '">' + label + '</button>';
+        return '<button class="tf-model-service-tab ' + (filter === type ? "is-active" : "") + '" data-filter="' + type + '">' + label + '</button>';
       }).join(""),
       '</div>',
-      '<input class="tf-subrouter-input" data-action="search" placeholder="搜索模型" value="' + escapeHtml(state.search) + '" style="width:210px">',
+      '<input class="tf-model-service-input" data-action="search" placeholder="搜索模型" value="' + escapeHtml(state.search) + '" style="width:210px">',
       '</div>',
       filtered.length
-        ? '<div class="tf-subrouter-model-list">' + filtered.map(function (model) {
+        ? '<div class="tf-model-service-model-list">' + filtered.map(function (model) {
             var type = model.type || "other";
             var name = model.modelName || model.name || "";
-            return '<div class="tf-subrouter-model"><strong title="' + escapeHtml(name) + '">' + escapeHtml(name) + '</strong><div><span class="tf-subrouter-pill">' + escapeHtml(TYPE_LABELS[type] || type) + '</span></div><small>' + (model.think ? "支持思考" : "可用") + '</small></div>';
+            return '<div class="tf-model-service-model"><strong title="' + escapeHtml(name) + '">' + escapeHtml(name) + '</strong><div><span class="tf-model-service-pill">' + escapeHtml(TYPE_LABELS[type] || type) + '</span></div><small>' + (model.think ? "支持思考" : "可用") + '</small></div>';
           }).join("") + '</div>'
-        : '<div class="tf-subrouter-muted">没有匹配的模型。</div>',
+        : '<div class="tf-model-service-muted">没有匹配的模型。</div>',
       '</div>'
     ].join("");
   }
 
   function agentsHtml(summary) {
     var agents = summary && Array.isArray(summary.agents) ? summary.agents : [];
-    if (!agents.length) return '<div class="tf-subrouter-muted">暂无 Agent 配置。</div>';
-    return '<table class="tf-subrouter-agent"><thead><tr><th>目标</th><th>当前模型</th><th>状态</th></tr></thead><tbody>' + agents.map(function (agent) {
-      var status = agent.usingSubrouter ? (agent.available === false ? "模型不存在" : "内置智能路由") : (agent.modelName ? "其他供应商" : "未配置");
+    if (!agents.length) return '<div class="tf-model-service-muted">暂无 Agent 配置。</div>';
+    return '<table class="tf-model-service-agent"><thead><tr><th>目标</th><th>当前模型</th><th>状态</th></tr></thead><tbody>' + agents.map(function (agent) {
+      var status = agent.usingModelService ? (agent.available === false ? "模型不存在" : "模型服务") : (agent.modelName ? "其他供应商" : "未配置");
       return '<tr><td>' + escapeHtml(agent.name || TARGET_LABELS[agent.key] || agent.key) + '</td><td>' + escapeHtml(agent.model || "-") + '</td><td>' + escapeHtml(status) + '</td></tr>';
     }).join("") + '</tbody></table>';
   }
@@ -602,53 +601,53 @@ function getSubrouterSettingsPatch() {
     var summary = state.summary;
     var models = summary && Array.isArray(summary.models) ? summary.models : [];
     if (!token) {
-      return '<div class="tf-subrouter-card"><h3>账号与模型</h3><div class="tf-subrouter-alert tf-subrouter-error">未找到登录令牌，请重新登录后再打开设置。</div></div>';
+      return '<div class="tf-model-service-card"><h3>账号与模型</h3><div class="tf-model-service-alert tf-model-service-error">未找到登录令牌，请重新登录后再打开设置。</div></div>';
     }
     var diagnostics = summary && Array.isArray(summary.diagnostics) ? summary.diagnostics : [];
     return [
-      state.error ? '<div class="tf-subrouter-alert tf-subrouter-error">' + escapeHtml(state.error) + '</div>' : '',
-      diagnostics.length ? '<div class="tf-subrouter-alert">' + diagnostics.map(escapeHtml).join('<br>') + '</div>' : '',
-      '<div class="tf-subrouter-row">',
-      '<div class="tf-subrouter-card"><h3>当前账号</h3>' + accountHtml(summary) + '</div>',
-      '<div class="tf-subrouter-card"><h3>可用模型</h3><div class="tf-subrouter-stats">' + statsHtml(summary) + '</div></div>',
+      state.error ? '<div class="tf-model-service-alert tf-model-service-error">' + escapeHtml(state.error) + '</div>' : '',
+      diagnostics.length ? '<div class="tf-model-service-alert">' + diagnostics.map(escapeHtml).join('<br>') + '</div>' : '',
+      '<div class="tf-model-service-row">',
+      '<div class="tf-model-service-card"><h3>当前账号</h3>' + accountHtml(summary) + '</div>',
+      '<div class="tf-model-service-card"><h3>可用模型</h3><div class="tf-model-service-stats">' + statsHtml(summary) + '</div></div>',
       '</div>',
-      '<div class="tf-subrouter-card">',
+      '<div class="tf-model-service-card">',
       '<h3>Agent 文本模型</h3>',
-      '<div class="tf-subrouter-row">',
-      '<div class="tf-subrouter-control"><label>文本模型</label>' + modelSelectHtml(models, summary && summary.selectedTextModel) + '</div>',
-      '<div class="tf-subrouter-control"><label>操作</label><div class="tf-subrouter-actions">',
-      '<button class="tf-subrouter-btn primary" data-action="save" ' + (state.saving ? "disabled" : "") + '>' + (state.saving ? "保存中" : "保存选择") + '</button>',
-      '<button class="tf-subrouter-btn" data-action="test" ' + (state.testing ? "disabled" : "") + '>' + (state.testing ? "测试中" : "测试模型") + '</button>',
-      '<button class="tf-subrouter-btn" data-action="refresh" ' + (state.refreshing ? "disabled" : "") + '>' + (state.refreshing ? "刷新中" : "刷新模型") + '</button>',
+      '<div class="tf-model-service-row">',
+      '<div class="tf-model-service-control"><label>文本模型</label>' + modelSelectHtml(models, summary && summary.selectedTextModel) + '</div>',
+      '<div class="tf-model-service-control"><label>操作</label><div class="tf-model-service-actions">',
+      '<button class="tf-model-service-btn primary" data-action="save" ' + (state.saving ? "disabled" : "") + '>' + (state.saving ? "保存中" : "保存选择") + '</button>',
+      '<button class="tf-model-service-btn" data-action="test" ' + (state.testing ? "disabled" : "") + '>' + (state.testing ? "测试中" : "测试模型") + '</button>',
+      '<button class="tf-model-service-btn" data-action="refresh" ' + (state.refreshing ? "disabled" : "") + '>' + (state.refreshing ? "刷新中" : "刷新模型") + '</button>',
       '</div></div>',
       '</div>',
       targetsHtml(),
-      state.testResult ? '<div class="tf-subrouter-alert ' + (state.testResult.available === false ? "tf-subrouter-error" : "") + '" style="margin-top:10px">' + escapeHtml(state.testResult.available === false ? (state.testResult.message || "模型测试失败") : ("模型可用，耗时 " + (state.testResult.latencyMs || 0) + "ms")) + '</div>' : '',
+      state.testResult ? '<div class="tf-model-service-alert ' + (state.testResult.available === false ? "tf-model-service-error" : "") + '" style="margin-top:10px">' + escapeHtml(state.testResult.available === false ? (state.testResult.message || "模型测试失败") : ("模型可用，耗时 " + (state.testResult.latencyMs || 0) + "ms")) + '</div>' : '',
       '</div>',
-      '<div class="tf-subrouter-card"><h3>当前 Agent 配置</h3>' + agentsHtml(summary) + '</div>',
+      '<div class="tf-model-service-card"><h3>当前 Agent 配置</h3>' + agentsHtml(summary) + '</div>',
       modelsHtml(summary),
-      state.loading && !summary ? '<div class="tf-subrouter-card"><div class="tf-subrouter-muted">加载中...</div></div>' : ''
+      state.loading && !summary ? '<div class="tf-model-service-card"><div class="tf-model-service-muted">加载中...</div></div>' : ''
     ].join("");
   }
 
   function render() {
-    var root = document.getElementById("toonflow-subrouter-root");
+    var root = document.getElementById("toonflow-model-service-root");
     if (!root) return;
     var connected = state.summary && state.summary.connected;
     root.innerHTML = [
-      '<button class="tf-subrouter-entry" data-action="open" type="button"><span class="tf-subrouter-dot ' + (connected ? "is-on" : "") + '"></span><span>模型设置</span></button>',
-      '<div class="tf-subrouter-backdrop" ' + (state.open ? "" : "hidden") + ' data-action="backdrop">',
-      '<section class="tf-subrouter-panel" role="dialog" aria-modal="true" aria-label="账号与模型设置">',
-      '<header class="tf-subrouter-head"><div class="tf-subrouter-title">账号与模型设置</div><button class="tf-subrouter-close" data-action="close" type="button">×</button></header>',
-      '<main class="tf-subrouter-body">' + bodyHtml() + '</main>',
+      '<button class="tf-model-service-entry" data-action="open" type="button"><span class="tf-model-service-dot ' + (connected ? "is-on" : "") + '"></span><span>模型设置</span></button>',
+      '<div class="tf-model-service-backdrop" ' + (state.open ? "" : "hidden") + ' data-action="backdrop">',
+      '<section class="tf-model-service-panel" role="dialog" aria-modal="true" aria-label="账号与模型设置">',
+      '<header class="tf-model-service-head"><div class="tf-model-service-title">账号与模型设置</div><button class="tf-model-service-close" data-action="close" type="button">×</button></header>',
+      '<main class="tf-model-service-body">' + bodyHtml() + '</main>',
       '</section></div>',
-      state.toast ? '<div class="tf-subrouter-toast">' + escapeHtml(state.toast) + '</div>' : ''
+      state.toast ? '<div class="tf-model-service-toast">' + escapeHtml(state.toast) + '</div>' : ''
     ].join("");
     refreshEntryVisibility();
   }
 
   function refreshEntryVisibility() {
-    var button = document.querySelector(".tf-subrouter-entry");
+    var button = document.querySelector(".tf-model-service-entry");
     if (!button) return;
     var onLoginPage = !!document.querySelector(".loginPage");
     button.style.display = !findToken() && onLoginPage ? "none" : "flex";
@@ -710,9 +709,9 @@ function getSubrouterSettingsPatch() {
 
   function install() {
     installStyle();
-    if (document.getElementById("toonflow-subrouter-root")) return;
+    if (document.getElementById("toonflow-model-service-root")) return;
     var root = document.createElement("div");
-    root.id = "toonflow-subrouter-root";
+    root.id = "toonflow-model-service-root";
     document.body.appendChild(root);
     installEvents(root);
     render();
@@ -756,7 +755,7 @@ function prepareWebAssets(webDir: string) {
 
   let html = fs.readFileSync(indexPath, "utf8");
   const hasPatchedApiBaseUrl = html.includes("window.__TOONFLOW_API_BASE_URL__");
-  const hasSubrouterSettingsPatch = html.includes("window.__TOONFLOW_SUBROUTER_SETTINGS__");
+  const hasModelServiceSettingsPatch = html.includes("window.__TOONFLOW_MODEL_SERVICE_SETTINGS__");
   html = patchLegacyApiBaseUrls(html);
 
   if (!hasPatchedApiBaseUrl && !html.includes("(location.origin + \"/api\")")) {
@@ -764,8 +763,8 @@ function prepareWebAssets(webDir: string) {
   } else if (!hasPatchedApiBaseUrl) {
     html = html.replace("<script type=\"module\"", `${getWebApiBaseUrlPatch()}\n    <script type="module"`);
   }
-  if (!hasSubrouterSettingsPatch) {
-    html = html.replace("<script type=\"module\"", `${getSubrouterSettingsPatch()}\n    <script type="module"`);
+  if (!hasModelServiceSettingsPatch) {
+    html = html.replace("<script type=\"module\"", `${getModelServiceSettingsPatch()}\n    <script type="module"`);
   }
 
   const inlineModuleScript = /<script type="module" crossorigin>([\s\S]*?)<\/script>/;
@@ -1281,7 +1280,7 @@ export default async function startServe(randomPort: Boolean = false) {
     const token = rawToken.replace("Bearer ", "");
     // 白名单路径
     const apiPath = req.path.startsWith("/api/") ? req.path : `/api${req.path}`;
-    if (apiPath === "/api/login/login" || apiPath === "/api/subrouter/login") return next();
+    if (apiPath === "/api/login/login" || apiPath === "/api/model-service/login") return next();
 
     if (!token) return res.status(401).send({ message: "未提供token" });
     try {

@@ -82580,7 +82580,7 @@ A medium tracking shot follows the woman from behind as she ascends and approach
             table.unique(["userId", "vendorId"]);
           }
         },
-        // 内置智能路由账户绑定表
+        // 模型账号绑定表
         {
           name: "o_subrouterAccount",
           builder: (table) => {
@@ -106402,16 +106402,17 @@ var vendor_default;
 var init_vendor = __esm({
   "src/lib/vendor.json"() {
     vendor_default = {
-      "atlascloud.ts": '/**\n * Toonflow AI\u4F9B\u5E94\u5546\u6A21\u677F - AtlasCloud MASS\n * @version 0.8\n *\n * \u8BF4\u660E\uFF1A\n * 1) \u6587\u672C\u63A5\u53E3\u4F7F\u7528 OpenAI \u517C\u5BB9\u57FA\u5730\u5740\uFF1Ahttp://subrouter.railway.internal:8080\n * 2) \u56FE\u7247/\u89C6\u9891\u4F7F\u7528 Atlas Cloud \u5A92\u4F53\u63A5\u53E3\uFF1Ahttp://subrouter.railway.internal:8080\n * 3) \u56FE\u7247/\u89C6\u9891\u4E3A\u5F02\u6B65\u4EFB\u52A1\uFF1A\u63D0\u4EA4\u540E\u8F6E\u8BE2 /api/v1/model/prediction/{id}\n */\n\n// ============================================================\n// \u7C7B\u578B\u5B9A\u4E49\n// ============================================================\n\ntype VideoMode =\n  | "singleImage"\n  | "startEndRequired"\n  | "endFrameOptional"\n  | "startFrameOptional"\n  | "text"\n  | (`videoReference:${number}` | `imageReference:${number}` | `audioReference:${number}`)[];\n\ninterface TextModel {\n  name: string;\n  modelName: string;\n  type: "text";\n  think: boolean;\n}\n\ninterface ImageModel {\n  name: string;\n  modelName: string;\n  type: "image";\n  mode: ("text" | "singleImage" | "multiReference")[];\n  associationSkills?: string;\n}\n\ninterface VideoModel {\n  name: string;\n  modelName: string;\n  type: "video";\n  mode: VideoMode[];\n  associationSkills?: string;\n  audio: "optional" | false | true;\n  durationResolutionMap: { duration: number[]; resolution: string[] }[];\n}\n\ninterface TTSModel {\n  name: string;\n  modelName: string;\n  type: "tts";\n  voices: { title: string; voice: string }[];\n}\n\ninterface VendorConfig {\n  id: string;\n  version: string;\n  name: string;\n  author: string;\n  description?: string;\n  icon?: string;\n  inputs: { key: string; label: string; type: "text" | "password" | "url"; required: boolean; placeholder?: string; disabled?: boolean }[];\n  inputValues: Record<string, string>;\n  models: (TextModel | ImageModel | VideoModel | TTSModel)[];\n}\n\ntype ReferenceList =\n  | { type: "image"; sourceType: "base64"; base64: string }\n  | { type: "audio"; sourceType: "base64"; base64: string }\n  | { type: "video"; sourceType: "base64"; base64: string };\n\ninterface ImageConfig {\n  prompt: string;\n  referenceList?: Extract<ReferenceList, { type: "image" }>[];\n  size: "1K" | "2K" | "4K";\n  aspectRatio: `${number}:${number}`;\n}\n\ninterface VideoConfig {\n  duration: number;\n  resolution: string;\n  aspectRatio: "16:9" | "9:16";\n  prompt: string;\n  referenceList?: ReferenceList[];\n  audio?: boolean;\n  mode: VideoMode[];\n}\n\ninterface TTSConfig {\n  text: string;\n  voice: string;\n  speechRate: number;\n  pitchRate: number;\n  volume: number;\n  referenceList?: Extract<ReferenceList, { type: "audio" }>[];\n}\n\ninterface PollResult {\n  completed: boolean;\n  data?: string;\n  error?: string;\n}\n\ntype AtlasVideoModelKind =\n  | "seedanceTextToVideo"\n  | "seedanceReferenceToVideo"\n  | "seedanceImageToVideo"\n  | "wanReferenceToVideo"\n  | "generic";\n\n// ============================================================\n// \u5168\u5C40\u58F0\u660E\n// ============================================================\n\ndeclare const axios: any;\ndeclare const logger: (msg: string) => void;\ndeclare const urlToBase64: (url: string) => Promise<string>;\ndeclare const pollTask: (fn: () => Promise<PollResult>, interval?: number, timeout?: number) => Promise<PollResult>;\ndeclare const createOpenAICompatible: any;\ndeclare const exports: {\n  vendor: VendorConfig;\n  textRequest: (m: TextModel, t: boolean, tl: 0 | 1 | 2 | 3) => any;\n  imageRequest: (c: ImageConfig, m: ImageModel) => Promise<string>;\n  videoRequest: (c: VideoConfig, m: VideoModel) => Promise<string>;\n  ttsRequest: (c: TTSConfig, m: TTSModel) => Promise<string>;\n  checkForUpdates?: () => Promise<{ hasUpdate: boolean; latestVersion: string; notice: string }>;\n  updateVendor?: () => Promise<string>;\n};\n\n// ============================================================\n// \u4F9B\u5E94\u5546\u914D\u7F6E\n// ============================================================\n\nconst vendor: VendorConfig = {\n  id: "atlascloud",\n  version: "1.0",\n  author: "AtlasCloud",\n  name: "AtlasCloud MASS",\n  description: "AtlasCloud \u5168\u6A21\u6001\u5E73\u53F0\u63A5\u5165 Toonflow\u3002\u9ED8\u8BA4\u6309\u5B98\u65B9\u6587\u6863\u586B\u5199\u6587\u672C\u3001\u56FE\u7247\u3001\u89C6\u9891\u4E0E\u4EFB\u52A1\u8F6E\u8BE2\u8DEF\u5F84\u3002",\n  inputs: [\n    { key: "apiKey", label: "API\u5BC6\u94A5", type: "password", required: true, placeholder: "AtlasCloud API Key" },\n    { key: "chatBaseUrl", label: "\u6587\u672C\u57FA\u5730\u5740", type: "url", required: true, placeholder: "http://subrouter.railway.internal:8080", disabled: true },\n    { key: "mediaBaseUrl", label: "\u5A92\u4F53\u57FA\u5730\u5740", type: "url", required: true, placeholder: "http://subrouter.railway.internal:8080", disabled: true },\n  ],\n  inputValues: {\n    apiKey: "",\n    chatBaseUrl: "http://subrouter.railway.internal:8080",\n    mediaBaseUrl: "http://subrouter.railway.internal:8080",\n  },\n  models: [\n    { name: "DeepSeek V4 Pro", modelName: "deepseek-ai/deepseek-v4-pro", type: "text", think: false },\n    { name: "DeepSeek V4 Flash", modelName: "deepseek-ai/deepseek-v4-flash", type: "text", think: false },\n    { name: "Kimi K2.6", modelName: "moonshotai/kimi-k2.6", type: "text", think: false },\n    { name: "GLM 5.1", modelName: "zai-org/glm-5.1", type: "text", think: false },\n    { name: "MiniMax M2.7", modelName: "minimaxai/minimax-m2.7", type: "text", think: false },\n    { name: "GPT Image 2", modelName: "openai/gpt-image-2/text-to-image", type: "image", mode: ["text", "singleImage"] },\n    { name: "Nano Banana Pro", modelName: "google/nano-banana-pro/text-to-image", type: "image", mode: ["text", "singleImage", "multiReference"] },\n    { name: "Nano Banana 2", modelName: "google/nano-banana-2/text-to-image", type: "image", mode: ["text", "singleImage", "multiReference"] },\n    { name: "Seedream v5", modelName: "bytedance/seedream-v5.0-lite/sequential", type: "image", mode: ["text"] },\n    { name: "Qwen Image 2 Pro", modelName: "qwen/qwen-image-2.0-pro/text-to-image", type: "image", mode: ["text"] },\n    {\n      name: "Seedance 2.0 Audio-Visual",\n      modelName: "bytedance/seedance-2.0/text-to-video",\n      type: "video",\n      mode: ["text", "startFrameOptional", ["imageReference:9", "videoReference:3", "audioReference:3"]],\n      audio: "optional",\n      durationResolutionMap: [{ duration: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], resolution: ["480p", "720p"] }],\n    },\n    {\n      name: "Seedance 2.0 Reference-to-Video",\n      modelName: "bytedance/seedance-2.0/reference-to-video",\n      type: "video",\n      mode: ["singleImage"],\n      audio: "optional",\n      durationResolutionMap: [{ duration: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], resolution: ["480p", "720p", "1080p"] }],\n    },\n    {\n      name: "Seedance 2.0 Multi-Image-to-Video",\n      modelName: "bytedance/seedance-2.0/image-to-video",\n      type: "video",\n      mode: ["startFrameOptional", ["imageReference:4"]],\n      audio: "optional",\n      durationResolutionMap: [{ duration: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], resolution: ["480p", "720p", "1080p"] }],\n    },\n    {\n      name: "Seedance 2.0 Fast Audio-Visual",\n      modelName: "bytedance/seedance-2.0-fast/text-to-video",\n      type: "video",\n      mode: ["text", "startFrameOptional", ["imageReference:9", "videoReference:3", "audioReference:3"]],\n      audio: "optional",\n      durationResolutionMap: [{ duration: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], resolution: ["480p", "720p"] }],\n    },\n    {\n      name: "Seedance 2.0 Fast Reference-to-Video",\n      modelName: "bytedance/seedance-2.0-fast/reference-to-video",\n      type: "video",\n      mode: ["singleImage"],\n      audio: "optional",\n      durationResolutionMap: [{ duration: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], resolution: ["480p", "720p"] }],\n    },\n    {\n      name: "Wan-2.7 Reference-to-video",\n      modelName: "alibaba/wan-2.7/reference-to-video",\n      type: "video",\n      mode: ["singleImage"],\n      audio: "optional",\n      durationResolutionMap: [{ duration: [2, 3, 4, 5, 6, 7, 8, 9, 10], resolution: ["720p", "1080p"] }],\n    },\n  ],\n};\n\n// ============================================================\n// \u8F85\u52A9\u5DE5\u5177\n// ============================================================\n\nconst getChatBaseUrl = () => vendor.inputValues.chatBaseUrl.replace(/\\/+$/, "");\n\nconst getMediaBaseUrl = () => vendor.inputValues.mediaBaseUrl.replace(/\\/+$/, "");\n\nconst joinUrl = (base: string, path: string) => `${base}${path.startsWith("/") ? "" : "/"}${path}`;\n\nconst getHeaders = () => {\n  if (!vendor.inputValues.apiKey) throw new Error("\u7F3A\u5C11 API Key");\n  return {\n    "Content-Type": "application/json",\n    Authorization: `Bearer ${vendor.inputValues.apiKey.replace(/^Bearer\\s+/i, "")}`,\n  };\n};\n\nconst readByPath = (obj: any, path: string): any => {\n  if (!obj || !path) return undefined;\n  const normalizedPath = path.replace(/\\[(\\d+)\\]/g, ".$1");\n  return normalizedPath.split(".").reduce((acc, key) => (acc == null ? undefined : acc[key]), obj);\n};\n\nconst pickFirstPath = (obj: any, paths: string[]): any => {\n  for (const path of paths) {\n    const value = readByPath(obj, path);\n    if (value !== undefined && value !== null && value !== "") return value;\n  }\n  return undefined;\n};\n\nconst extractTaskId = (data: any): string | undefined => {\n  return pickFirstPath(data, ["id", "taskId", "task_id", "data.id", "data.taskId", "data.task_id"]);\n};\n\nconst extractUrl = (data: any): string | undefined => {\n  return (\n    (Array.isArray(readByPath(data, "data.outputs")) ? readByPath(data, "data.outputs")[0] : undefined) ||\n    (Array.isArray(readByPath(data, "outputs")) ? readByPath(data, "outputs")[0] : undefined) ||\n    readByPath(data, "url") ||\n    readByPath(data, "video_url") ||\n    readByPath(data, "image_url") ||\n    readByPath(data, "data.url") ||\n    readByPath(data, "data.video_url") ||\n    readByPath(data, "data.image_url") ||\n    readByPath(data, "data.output.url") ||\n    readByPath(data, "data.output.video_url") ||\n    readByPath(data, "output.url")\n  );\n};\n\nconst extractB64 = (data: any): string | undefined => {\n  return pickFirstPath(data, ["b64_json", "data.b64_json", "data.0.b64_json", "data[0].b64_json"]);\n};\n\nconst extractStatus = (data: any): string => {\n  const statusRaw = pickFirstPath(data, ["status", "data.status", "data.state", "state"]);\n  return String(statusRaw || "").toLowerCase();\n};\n\nconst extractError = (data: any): string | undefined => {\n  return pickFirstPath(data, ["error.message", "message", "msg", "data.error.message", "data.message"]);\n};\n\nconst isDnsOrNetworkError = (err: any): boolean => {\n  const msg = String(err?.message || err || "");\n  return /ENOTFOUND|EAI_AGAIN|ECONNRESET|ETIMEDOUT|timeout/i.test(msg);\n};\n\nconst withNetworkRetry = async <T>(fn: () => Promise<T>, maxRetry = 3, waitMs = 1500): Promise<T> => {\n  let lastErr: any;\n  for (let i = 0; i < maxRetry; i += 1) {\n    try {\n      return await fn();\n    } catch (err) {\n      lastErr = err;\n      if (!isDnsOrNetworkError(err) || i === maxRetry - 1) throw err;\n      await new Promise((resolve) => setTimeout(resolve, waitMs * (i + 1)));\n    }\n  }\n  throw lastErr;\n};\n\nconst resolveAtlasImageModelName = (modelName: string, hasImageRefs: boolean): string => {\n  if (!hasImageRefs) return modelName;\n\n  switch (modelName) {\n    case "google/nano-banana-pro/text-to-image":\n      return "google/nano-banana-pro/edit";\n    case "google/nano-banana-2/text-to-image":\n      return "google/nano-banana-2/edit";\n    default:\n      return modelName;\n  }\n};\n\nconst resolveAtlasVideoModelKind = (modelName: string): AtlasVideoModelKind => {\n  if (modelName === "alibaba/wan-2.7/reference-to-video") return "wanReferenceToVideo";\n  if (/^bytedance\\/seedance-2\\.0(?:-fast)?\\/reference-to-video$/.test(modelName)) return "seedanceReferenceToVideo";\n  if (/^bytedance\\/seedance-2\\.0(?:-fast)?\\/image-to-video$/.test(modelName)) return "seedanceImageToVideo";\n  if (/^bytedance\\/seedance-2\\.0(?:-fast)?\\/text-to-video$/.test(modelName)) return "seedanceTextToVideo";\n  return "generic";\n};\n\nconst clampNumber = (value: unknown, min: number, max: number, fallback: number): number => {\n  const num = Number(value);\n  if (!Number.isFinite(num)) return fallback;\n  return Math.max(min, Math.min(max, num));\n};\n\nconst normalizeResolution = (value: unknown, allowed: string[], fallback: string): string => {\n  const lower = String(value || "").toLowerCase();\n  const matched = allowed.find((item) => item.toLowerCase() === lower);\n  if (matched) return matched;\n  if (/1080/.test(lower)) return allowed.find((item) => /1080/i.test(item)) || fallback;\n  if (/720/.test(lower)) return allowed.find((item) => /720/i.test(item)) || fallback;\n  if (/480/.test(lower)) return allowed.find((item) => /480/i.test(item)) || fallback;\n  return fallback;\n};\n\nconst getReferenceLimit = (\n  modes: VideoMode[],\n  prefix: "imageReference" | "videoReference" | "audioReference",\n): number | undefined => {\n  for (const mode of modes) {\n    if (!Array.isArray(mode)) continue;\n    for (const entry of mode) {\n      if (!entry.startsWith(`${prefix}:`)) continue;\n      const limit = Number(entry.split(":")[1]);\n      if (Number.isFinite(limit) && limit > 0) return limit;\n    }\n  }\n  return undefined;\n};\n\nconst limitReferences = (refs: string[], maxCount?: number): string[] => {\n  if (!maxCount || maxCount < 1) return refs;\n  return refs.slice(0, maxCount);\n};\n\nconst summarizeRefCount = (usedCount: number, rawCount: number): string => {\n  return usedCount === rawCount ? String(usedCount) : `${usedCount}/${rawCount}`;\n};\n\nconst buildAtlasVideoPayload = (config: VideoConfig, model: VideoModel) => {\n  const rawImageRefs = (config.referenceList || []).filter((r) => r.type === "image").map((r) => r.base64).filter(Boolean);\n  const rawVideoRefs = (config.referenceList || []).filter((r) => r.type === "video").map((r) => r.base64).filter(Boolean);\n  const rawAudioRefs = (config.referenceList || []).filter((r) => r.type === "audio").map((r) => r.base64).filter(Boolean);\n\n  const imageRefs = limitReferences(rawImageRefs, getReferenceLimit(model.mode, "imageReference"));\n  const videoRefs = limitReferences(rawVideoRefs, getReferenceLimit(model.mode, "videoReference"));\n  const audioRefs = limitReferences(rawAudioRefs, getReferenceLimit(model.mode, "audioReference"));\n  const kind = resolveAtlasVideoModelKind(model.modelName);\n  const ratio = config.aspectRatio || "16:9";\n  const shouldGenerateAudio = model.audio === true || (model.audio === "optional" && config.audio !== false);\n  const body: any = {\n    model: model.modelName,\n    prompt: config.prompt || "",\n  };\n\n  if (kind === "wanReferenceToVideo") {\n    if (imageRefs.length < 1) {\n      throw new Error(`${model.name} \u9700\u8981\u81F3\u5C11 1 \u5F20\u53C2\u8003\u56FE`);\n    }\n    body.images = [imageRefs[0]];\n    body.ratio = ratio;\n    body.duration = clampNumber(config.duration, 2, 10, 5);\n    body.resolution = normalizeResolution(config.resolution, ["720P", "1080P"], "720P");\n    body.prompt_extend = false;\n    body.seed = -1;\n  } else if (kind === "seedanceReferenceToVideo") {\n    if (imageRefs.length < 1) {\n      throw new Error(`${model.name} \u9700\u8981\u81F3\u5C11 1 \u5F20\u53C2\u8003\u56FE`);\n    }\n    if (shouldGenerateAudio) body.generate_audio = true;\n    body.images = [imageRefs[0]];\n    body.ratio = ratio;\n    body.duration = clampNumber(config.duration, 4, 15, 5);\n    body.resolution = normalizeResolution(config.resolution, ["480p", "720p", "1080p"], "720p");\n    body.watermark = false;\n  } else if (kind === "seedanceImageToVideo") {\n    if (imageRefs.length < 1) {\n      throw new Error(`${model.name} \u9700\u8981\u81F3\u5C11 1 \u5F20\u53C2\u8003\u56FE`);\n    }\n    if (shouldGenerateAudio) body.generate_audio = true;\n    body.images = imageRefs;\n    body.ratio = ratio;\n    body.duration = clampNumber(config.duration, 4, 15, 5);\n    body.resolution = normalizeResolution(config.resolution, ["480p", "720p", "1080p"], "720p");\n    body.watermark = false;\n  } else {\n    if (shouldGenerateAudio) body.generate_audio = true;\n    if (imageRefs.length > 0) body.reference_images = imageRefs;\n    if (videoRefs.length > 0) body.reference_videos = videoRefs;\n    if (audioRefs.length > 0) body.reference_audios = audioRefs;\n    body.ratio = ratio;\n    body.duration = clampNumber(config.duration, 4, 15, 5);\n    body.resolution = normalizeResolution(config.resolution, ["480p", "720p"], "720p");\n    body.watermark = false;\n  }\n\n  return {\n    body,\n    summary: `kind=${kind} imageRefs=${summarizeRefCount(imageRefs.length, rawImageRefs.length)} videoRefs=${summarizeRefCount(videoRefs.length, rawVideoRefs.length)} audioRefs=${summarizeRefCount(audioRefs.length, rawAudioRefs.length)} resolution=${body.resolution} duration=${body.duration}${shouldGenerateAudio ? " audio=on" : " audio=off"}`,\n  };\n};\n\n// ============================================================\n// \u9002\u914D\u5668\u51FD\u6570\n// ============================================================\n\nconst textRequest = (model: TextModel, think: boolean, thinkLevel: 0 | 1 | 2 | 3) => {\n  if (!vendor.inputValues.apiKey) throw new Error("\u7F3A\u5C11 API Key");\n  const apiKey = vendor.inputValues.apiKey.replace(/^Bearer\\s+/i, "");\n  const effortMap: Record<number, string> = { 0: "minimal", 1: "low", 2: "medium", 3: "high" };\n\n  return createOpenAICompatible({\n    name: "atlascloud",\n    baseURL: getChatBaseUrl(),\n    apiKey,\n    fetch: async (url: string, options?: RequestInit) => {\n      const rawBody = JSON.parse((options?.body as string) ?? "{}");\n      const body = think\n        ? {\n          ...rawBody,\n          thinking: { type: "enabled" },\n          reasoning_effort: effortMap[thinkLevel],\n        }\n        : rawBody;\n      return await fetch(url, { ...options, body: JSON.stringify(body) });\n    },\n  }).chatModel(model.modelName);\n};\n\nconst imageRequest = async (config: ImageConfig, model: ImageModel): Promise<string> => {\n  const headers = getHeaders();\n  const url = joinUrl(getMediaBaseUrl(), "/model/generateImage");\n  const sizeToResolution: Record<ImageConfig["size"], string> = {\n    "1K": "1k",\n    "2K": "2k",\n    "4K": "4k",\n  };\n  const imageRefs = (config.referenceList || []).map((ref) => ref.base64).filter(Boolean);\n  const resolvedModelName = resolveAtlasImageModelName(model.modelName, imageRefs.length > 0);\n  const isNanoModel = /^google\\/nano-banana-(pro|2)\\//.test(resolvedModelName);\n  const supportsImageConditioning = /^(openai\\/gpt-image-2\\/text-to-image|google\\/nano-banana-(pro|2)\\/edit)$/.test(resolvedModelName);\n\n  const body: any = {\n    model: resolvedModelName,\n    prompt: config.prompt || "",\n  };\n  if (supportsImageConditioning && imageRefs.length > 0) {\n    body.images = imageRefs;\n  }\n  if (isNanoModel) {\n    body.aspect_ratio = config.aspectRatio || "16:9";\n    body.resolution = sizeToResolution[config.size || "1K"] || "1k";\n  }\n\n  logger(`[AtlasCloud \u56FE\u7247] \u63D0\u4EA4\u4EFB\u52A1: ${model.modelName} -> ${resolvedModelName}, refs=${imageRefs.length}`);\n  const submitResp = await axios.post(url, body, { headers });\n  const submitData = submitResp.data;\n\n  // \u540C\u6B65\u8FD4\u56DE\uFF08\u76F4\u63A5\u62FF\u56FE\uFF09\n  const syncB64 = extractB64(submitData);\n  if (syncB64) return syncB64;\n  const syncUrl = extractUrl(submitData);\n  if (syncUrl) return await urlToBase64(syncUrl);\n\n  // \u5F02\u6B65\u8FD4\u56DE\uFF08\u62FF taskId \u518D\u8F6E\u8BE2\uFF09\n  const taskId = extractTaskId(submitData);\n  if (!taskId) {\n    throw new Error(`\u56FE\u7247\u4EFB\u52A1\u63D0\u4EA4\u5931\u8D25\uFF1A\u672A\u83B7\u53D6\u5230\u4EFB\u52A1ID\u3002\u539F\u59CB\u54CD\u5E94\uFF1A${JSON.stringify(submitData).slice(0, 500)}`);\n  }\n\n  const pollResult = await pollTask(\n    async (): Promise<PollResult> => {\n      const resultUrl = joinUrl(getMediaBaseUrl(), `/model/prediction/${taskId}`);\n      const resultResp = await axios.get(resultUrl, { headers });\n      const data = resultResp.data;\n      const status = extractStatus(data);\n\n      if (["succeeded", "success", "done", "completed"].includes(status)) {\n        const b64 = extractB64(data);\n        if (b64) return { completed: true, data: b64 };\n        const mediaUrl = extractUrl(data);\n        if (mediaUrl) return { completed: true, data: mediaUrl };\n        return { completed: true, error: "\u4EFB\u52A1\u6210\u529F\u4F46\u672A\u8FD4\u56DE\u7ED3\u679C\u5730\u5740" };\n      }\n      if (["failed", "error", "cancelled", "canceled", "expired"].includes(status)) {\n        return { completed: true, error: extractError(data) || "\u56FE\u7247\u751F\u6210\u5931\u8D25" };\n      }\n      return { completed: false };\n    },\n    3000,\n    600000,\n  );\n\n  if (pollResult.error) throw new Error(pollResult.error);\n  if (!pollResult.data) throw new Error("\u56FE\u7247\u751F\u6210\u5931\u8D25\uFF1A\u8F6E\u8BE2\u672A\u8FD4\u56DE\u6570\u636E");\n  if (pollResult.data.startsWith("data:")) return pollResult.data;\n  if (pollResult.data.startsWith("http")) return await urlToBase64(pollResult.data);\n  return pollResult.data;\n};\n\nconst videoRequest = async (config: VideoConfig, model: VideoModel): Promise<string> => {\n  const headers = getHeaders();\n  const url = joinUrl(getMediaBaseUrl(), "/model/generateVideo");\n  const { body, summary } = buildAtlasVideoPayload(config, model);\n\n  logger(`[AtlasCloud \u89C6\u9891] \u63D0\u4EA4\u4EFB\u52A1: ${model.modelName}, ${summary}`);\n  const submitResp: any = await withNetworkRetry<any>(() => axios.post(url, body, { headers }), 3, 1500);\n  const submitData = submitResp.data;\n\n  const taskId = extractTaskId(submitData);\n  if (!taskId) {\n    const syncUrl = extractUrl(submitData);\n    if (syncUrl) return await urlToBase64(syncUrl);\n    throw new Error(`\u89C6\u9891\u4EFB\u52A1\u63D0\u4EA4\u5931\u8D25\uFF1A\u672A\u83B7\u53D6\u5230\u4EFB\u52A1ID\u3002\u539F\u59CB\u54CD\u5E94\uFF1A${JSON.stringify(submitData).slice(0, 500)}`);\n  }\n\n  const pollResult = await pollTask(\n    async (): Promise<PollResult> => {\n      const resultUrl = joinUrl(getMediaBaseUrl(), `/model/prediction/${taskId}`);\n      const resultResp: any = await withNetworkRetry<any>(() => axios.get(resultUrl, { headers }), 3, 1200);\n      const data = resultResp.data;\n      const status = extractStatus(data);\n\n      if (["succeeded", "success", "done", "completed"].includes(status)) {\n        const mediaUrl = extractUrl(data);\n        if (mediaUrl) return { completed: true, data: mediaUrl };\n        return { completed: true, error: "\u4EFB\u52A1\u6210\u529F\u4F46\u672A\u8FD4\u56DE\u89C6\u9891\u5730\u5740" };\n      }\n      if (["failed", "error", "cancelled", "canceled", "expired"].includes(status)) {\n        return { completed: true, error: extractError(data) || "\u89C6\u9891\u751F\u6210\u5931\u8D25" };\n      }\n      return { completed: false };\n    },\n    5000,\n    1800000,\n  );\n\n  if (pollResult.error) throw new Error(pollResult.error);\n  if (!pollResult.data) throw new Error("\u89C6\u9891\u751F\u6210\u5931\u8D25\uFF1A\u8F6E\u8BE2\u672A\u8FD4\u56DE\u6570\u636E");\n  return await urlToBase64(pollResult.data);\n};\n\nconst ttsRequest = async (_config: TTSConfig, _model: TTSModel): Promise<string> => {\n  // AtlasCloud \u5F53\u524D\u7248\u672C\u5148\u4E0D\u63A5 TTS\u3002\n  return "";\n};\n\nconst checkForUpdates = async (): Promise<{ hasUpdate: boolean; latestVersion: string; notice: string }> => {\n  return {\n    hasUpdate: false,\n    latestVersion: vendor.version,\n    notice: "AtlasCloud MASS \u521D\u7A3F\u3002",\n  };\n};\n\nconst updateVendor = async (): Promise<string> => {\n  return "";\n};\n\n// ============================================================\n// \u5BFC\u51FA\n// ============================================================\n\nexports.vendor = vendor;\nexports.textRequest = textRequest;\nexports.imageRequest = imageRequest;\nexports.videoRequest = videoRequest;\nexports.ttsRequest = ttsRequest;\nexports.checkForUpdates = checkForUpdates;\nexports.updateVendor = updateVendor;\n\nexport { };\n',
-      "deepseek.ts": '/**\n * Toonflow AI\u4F9B\u5E94\u5546\u6A21\u677F - DeepSeek\n * @version 2.0\n */\n\n// ============================================================\n// \u7C7B\u578B\u5B9A\u4E49\n// ============================================================\n\ntype VideoMode =\n  | "singleImage"\n  | "startEndRequired"\n  | "endFrameOptional"\n  | "startFrameOptional"\n  | "text"\n  | (`videoReference:${number}` | `imageReference:${number}` | `audioReference:${number}`)[];\n\ninterface TextModel {\n  name: string;\n  modelName: string;\n  type: "text";\n  think: boolean;\n}\n\ninterface ImageModel {\n  name: string;\n  modelName: string;\n  type: "image";\n  mode: ("text" | "singleImage" | "multiReference")[];\n  associationSkills?: string;\n}\n\ninterface VideoModel {\n  name: string;\n  modelName: string;\n  type: "video";\n  mode: VideoMode[];\n  associationSkills?: string;\n  audio: "optional" | false | true;\n  durationResolutionMap: { duration: number[]; resolution: string[] }[];\n}\n\ninterface TTSModel {\n  name: string;\n  modelName: string;\n  type: "tts";\n  voices: { title: string; voice: string }[];\n}\n\ninterface VendorConfig {\n  id: string;\n  version: string;\n  name: string;\n  author: string;\n  description?: string;\n  icon?: string;\n  inputs: { key: string; label: string; type: "text" | "password" | "url"; required: boolean; placeholder?: string }[];\n  inputValues: Record<string, string>;\n  models: (TextModel | ImageModel | VideoModel | TTSModel)[];\n}\n\ninterface ImageConfig {\n  prompt: string;\n  imageBase64: string[];\n  size: "1K" | "2K" | "4K";\n  aspectRatio: `${number}:${number}`;\n}\n\ninterface VideoConfig {\n  duration: number;\n  resolution: string;\n  aspectRatio: "16:9" | "9:16";\n  prompt: string;\n  imageBase64?: string[];\n  audio?: boolean;\n  mode: VideoMode[];\n}\n\ninterface TTSConfig {\n  text: string;\n  voice: string;\n  speechRate: number;\n  pitchRate: number;\n  volume: number;\n}\n\ninterface PollResult {\n  completed: boolean;\n  data?: string;\n  error?: string;\n}\n\n// ============================================================\n// \u5168\u5C40\u58F0\u660E\n// ============================================================\n\ndeclare const axios: any;\ndeclare const logger: (msg: string) => void;\ndeclare const jsonwebtoken: any;\ndeclare const zipImage: (base64: string, size: number) => Promise<string>;\ndeclare const zipImageResolution: (base64: string, w: number, h: number) => Promise<string>;\ndeclare const mergeImages: (base64Arr: string[], maxSize?: string) => Promise<string>;\ndeclare const urlToBase64: (url: string) => Promise<string>;\ndeclare const pollTask: (fn: () => Promise<PollResult>, interval?: number, timeout?: number) => Promise<PollResult>;\ndeclare const createOpenAI: any;\ndeclare const createDeepSeek: any;\ndeclare const createZhipu: any;\ndeclare const createQwen: any;\ndeclare const createAnthropic: any;\ndeclare const createOpenAICompatible: any;\ndeclare const createXai: any;\ndeclare const createMinimax: any;\ndeclare const createGoogleGenerativeAI: any;\ndeclare const exports: {\n  vendor: VendorConfig;\n  textRequest: (m: TextModel, t: boolean, tl: 0 | 1 | 2 | 3) => any;\n  imageRequest: (c: ImageConfig, m: ImageModel) => Promise<string>;\n  videoRequest: (c: VideoConfig, m: VideoModel) => Promise<string>;\n  ttsRequest: (c: TTSConfig, m: TTSModel) => Promise<string>;\n  checkForUpdates?: () => Promise<{ hasUpdate: boolean; latestVersion: string; notice: string }>;\n  updateVendor?: () => Promise<string>;\n};\n\n// ============================================================\n// \u4F9B\u5E94\u5546\u914D\u7F6E\n// ============================================================\n\nconst vendor: VendorConfig = {\n  id: "deepseek",\n  version: "2.0",\n  author: "Toonflow",\n  name: "DeepSeek",\n  description:\n    "DeepSeek \u5B98\u65B9\u63A5\u53E3\u9002\u914D\uFF0C\u652F\u6301 V4 \u7CFB\u5217\u6A21\u578B\u4E0E\u601D\u8003\u6A21\u5F0F\uFF08\u601D\u7EF4\u94FE\u8F93\u51FA\uFF09\u3002\\n\\n[\u524D\u5F80\u5E73\u53F0](https://platform.deepseek.com/)",\n  icon: "",\n  inputs: [\n    { key: "apiKey", label: "API\u5BC6\u94A5", type: "password", required: true },\n    { key: "baseUrl", label: "\u8BF7\u6C42\u5730\u5740", type: "url", required: true, placeholder: "\u793A\u4F8B\uFF1Ahttp://subrouter.railway.internal:8080" },\n  ],\n  inputValues: {\n    apiKey: "",\n    baseUrl: "http://subrouter.railway.internal:8080",\n  },\n  models: [\n    { name: "DeepSeek V4 Pro", modelName: "deepseek-v4-pro", type: "text", think: true },\n    { name: "DeepSeek V4 Flash", modelName: "deepseek-v4-flash", type: "text", think: true },\n  ],\n};\n\n// ============================================================\n// \u9002\u914D\u5668\u51FD\u6570\n// ============================================================\n\nconst textRequest = (model: TextModel, think: boolean, thinkLevel: 0 | 1 | 2 | 3) => {\n  if (!vendor.inputValues.apiKey) throw new Error("\u7F3A\u5C11API Key");\n  const apiKey = vendor.inputValues.apiKey.replace(/^Bearer\\s+/i, "");\n\n  // DeepSeek \u601D\u8003\u5F3A\u5EA6\u4EC5\u652F\u6301 high / max\uFF08low\u3001medium \u4F1A\u88AB\u6620\u5C04\u4E3A high\uFF0Cxhigh \u4F1A\u88AB\u6620\u5C04\u4E3A max\uFF09\n  // thinkLevel: 0/1/2 \u2192 high, 3 \u2192 max\n  const effortMap: Record<0 | 1 | 2 | 3, "high" | "max"> = {\n    0: "high",\n    1: "high",\n    2: "high",\n    3: "max",\n  };\n\n  const enableThinking = model.think && think;\n  const extraBody: Record<string, any> = {\n    thinking: { type: enableThinking ? "enabled" : "disabled" },\n  };\n  if (enableThinking) {\n    extraBody.reasoning_effort = effortMap[thinkLevel];\n  }\n\n  return createDeepSeek({\n    baseURL: vendor.inputValues.baseUrl,\n    apiKey,\n    extraBody,\n  }).chat(model.modelName);\n};\n\nconst imageRequest = async (config: ImageConfig, model: ImageModel): Promise<string> => {\n  return "";\n};\n\nconst videoRequest = async (config: VideoConfig, model: VideoModel): Promise<string> => {\n  return "";\n};\n\nconst ttsRequest = async (config: TTSConfig, model: TTSModel): Promise<string> => {\n  return "";\n};\n\nconst checkForUpdates = async (): Promise<{ hasUpdate: boolean; latestVersion: string; notice: string }> => {\n  return { hasUpdate: false, latestVersion: "2.0", notice: "" };\n};\n\nconst updateVendor = async (): Promise<string> => {\n  return "";\n};\n\n// ============================================================\n// \u5BFC\u51FA\n// ============================================================\n\nexports.vendor = vendor;\nexports.textRequest = textRequest;\nexports.imageRequest = imageRequest;\nexports.videoRequest = videoRequest;\nexports.ttsRequest = ttsRequest;\nexports.checkForUpdates = checkForUpdates;\nexports.updateVendor = updateVendor;\n\nexport { };',
-      "grsai.ts": '/**\n * Toonflow AI\u4F9B\u5E94\u5546\u6A21\u677F\n * @version 2.0\n */\n\n// ============================================================\n// \u7C7B\u578B\u5B9A\u4E49\n// ============================================================\n\ntype VideoMode =\n  | "singleImage" //\u5355\u56FE\u53C2\u8003\n  | "startEndRequired" //\u9996\u5C3E\u5E27\uFF08\u4E24\u5F20\u90FD\u5F97\u6709\uFF09\n  | "endFrameOptional" //\u9996\u5C3E\u5E27\uFF08\u5C3E\u5E27\u53EF\u9009\uFF09\n  | "startFrameOptional" //\u9996\u5C3E\u5E27\uFF08\u9996\u5E27\u53EF\u9009\uFF09\n  | "text" //\u6587\u672C\n  | (\n      | `videoReference:${number}`\n      | `imageReference:${number}`\n      | `audioReference:${number}`\n    )[]; //\u591A\u53C2\u8003\uFF08\u6570\u5B57\u4EE3\u8868\u9650\u5236\u6570\u91CF\uFF09\n\ninterface TextModel {\n  name: string;\n  modelName: string;\n  type: "text";\n  think: boolean;\n}\n\ninterface ImageModel {\n  name: string;\n  modelName: string;\n  type: "image";\n  mode: ("text" | "singleImage" | "multiReference")[];\n  associationSkills?: string;\n}\n\ninterface VideoModel {\n  name: string;\n  modelName: string;\n  type: "video";\n  mode: VideoMode[];\n  associationSkills?: string;\n  audio: "optional" | false | true;\n  durationResolutionMap: { duration: number[]; resolution: string[] }[];\n}\n\ninterface TTSModel {\n  name: string;\n  modelName: string;\n  type: "tts";\n  voices: { title: string; voice: string }[];\n}\n\ninterface VendorConfig {\n  id: string; //\u552F\u4E00ID\uFF0C\u4F5C\u4E3A\u6587\u4EF6\u540D\u5B58\u50A8\u7528\u6237\u78C1\u76D8\u4E0A\uFF0C\u7981\u6B62\u7B26\u53F7\n  version: string; //\u7248\u672C\u53F7\uFF0C\u683C\u5F0F\u4E3Ax.y\uFF0C\u9700\u9075\u5B88\u8BED\u4E49\u5316\u7248\u672C\u63A7\u5236\n  name: string; //\u4F9B\u5E94\u5546\u540D\u79F0\n  author: string; //\u4F5C\u8005\n  description?: string; //\u63CF\u8FF0\uFF0C\u652F\u6301Markdown\u683C\u5F0F\n  icon?: string; //\u56FE\u6807\uFF0C\u4EC5\u652F\u6301Base64\u683C\u5F0F\uFF0C\u5EFA\u8BAE\u5C3A\u5BF8\u4E3A128x128\u50CF\u7D20\n  inputs: {\n    key: string;\n    label: string;\n    type: "text" | "password" | "url";\n    required: boolean;\n    placeholder?: string;\n  }[];\n  inputValues: Record<string, string>;\n  models: (TextModel | ImageModel | VideoModel | TTSModel)[];\n}\n\ntype ReferenceList =\n  | { type: "image"; sourceType: "base64"; base64: string }\n  | { type: "audio"; sourceType: "base64"; base64: string }\n  | { type: "video"; sourceType: "base64"; base64: string };\n\ninterface ImageConfig {\n  prompt: string;\n  referenceList?: Extract<ReferenceList, { type: "image" }>[];\n  size: "1K" | "2K" | "4K";\n  aspectRatio: `${number}:${number}`;\n}\n\ninterface VideoConfig {\n  duration: number;\n  resolution: string;\n  aspectRatio: "16:9" | "9:16";\n  prompt: string;\n  referenceList?: ReferenceList[];\n  audio?: boolean;\n  mode: VideoMode[];\n}\n\ninterface TTSConfig {\n  text: string;\n  voice: string;\n  speechRate: number;\n  pitchRate: number;\n  volume: number;\n  referenceList?: Extract<ReferenceList, { type: "audio" }>[];\n}\n\ninterface PollResult {\n  completed: boolean;\n  data?: string;\n  error?: string;\n}\n\n// ============================================================\n// \u5168\u5C40\u58F0\u660E\n// ============================================================\n\ndeclare const axios: any; // HTTP\u8BF7\u6C42\u5E93\ndeclare const logger: (msg: string) => void; // \u65E5\u5FD7\u51FD\u6570\ndeclare const jsonwebtoken: any; // JWT\u5904\u7406\u5E93\ndeclare const zipImage: (base64: string, size: number) => Promise<string>; // \u56FE\u7247\u538B\u7F29\u51FD\u6570\uFF0C\u8FD4\u56DE\u6709\u5934base64\u5B57\u7B26\u4E32\ndeclare const zipImageResolution: (\n  base64: string,\n  w: number,\n  h: number,\n) => Promise<string>; // \u56FE\u7247\u5206\u8FA8\u7387\u8C03\u6574\u51FD\u6570\uFF0C\u8FD4\u56DE\u6709\u5934base64\u5B57\u7B26\u4E32\ndeclare const mergeImages: (\n  base64Arr: string[],\n  maxSize?: string,\n) => Promise<string>; // \u56FE\u7247\u5408\u6210\u51FD\u6570\uFF0C\u8FD4\u56DE\u6709\u5934base64\u5B57\u7B26\u4E32\ndeclare const urlToBase64: (url: string) => Promise<string>; // URL\u8F6CBase64\u51FD\u6570\uFF0C\u8FD4\u56DE\u6709\u5934base64\u5B57\u7B26\u4E32\ndeclare const pollTask: (\n  fn: () => Promise<PollResult>,\n  interval?: number,\n  timeout?: number,\n) => Promise<PollResult>; // \u8F6E\u8BE2\u51FD\u6570\uFF0Cfn\u4E3A\u5F02\u6B65\u51FD\u6570\uFF0Cinterval\u4E3A\u8F6E\u8BE2\u95F4\u9694\uFF0Ctimeout\u4E3A\u8D85\u65F6\u65F6\u95F4\uFF0C\u8FD4\u56DEfn\u7684\u7ED3\u679C\ndeclare const createOpenAI: any;\ndeclare const createDeepSeek: any;\ndeclare const createZhipu: any;\ndeclare const createQwen: any;\ndeclare const createAnthropic: any;\ndeclare const createOpenAICompatible: any;\ndeclare const createXai: any;\ndeclare const createMinimax: any;\ndeclare const createGoogleGenerativeAI: any;\ndeclare const exports: {\n  vendor: VendorConfig;\n  textRequest: (m: TextModel, t: boolean, tl: 0 | 1 | 2 | 3) => any; //\u6587\u672C\u6A21\u578B\n  imageRequest: (c: ImageConfig, m: ImageModel) => Promise<string>; //\u56FE\u7247\u6A21\u578B\uFF0C\u8FD4\u56DE\u6709\u5934base64\u5B57\u7B26\u4E32\n  videoRequest: (c: VideoConfig, m: VideoModel) => Promise<string>; //\u89C6\u9891\u6A21\u578B\uFF0C\u8FD4\u56DE\u6709\u5934base64\u5B57\u7B26\u4E32\n  ttsRequest: (c: TTSConfig, m: TTSModel) => Promise<string>; //\uFF08\u6682\u672A\u5F00\u653E\uFF09\u8BED\u97F3\u6A21\u578B\uFF0C\u8FD4\u56DE\u6709\u5934base64\u5B57\u7B26\u4E32\n  checkForUpdates?: () => Promise<{\n    hasUpdate: boolean;\n    latestVersion: string;\n    notice: string;\n  }>; //\u68C0\u67E5\u66F4\u65B0\u51FD\u6570\uFF0C\u8FD4\u56DE\u662F\u5426\u6709\u66F4\u65B0\u548C\u6700\u65B0\u7248\u672C\u53F7\u548C\u66F4\u516C\u544A\uFF08\u652F\u6301Markdown\u683C\u5F0F\uFF09\n  updateVendor?: () => Promise<string>; //\u66F4\u65B0\u51FD\u6570\uFF0C\u8FD4\u56DE\u6700\u65B0\u7684\u4EE3\u7801\u6587\u672C\n};\n\n// ============================================================\n// \u4F9B\u5E94\u5546\u914D\u7F6E\n// ============================================================\n\nconst vendor: VendorConfig = {\n  id: "grsai",\n  version: "2.1",\n  author: "Toonflow",\n  name: "Grsai",\n  description:\n    "Grsai AI\u5E73\u53F0\u9002\u914D\uFF0C\u652F\u6301\u6587\u751F\u56FE\u3001\u56FE\u751F\u56FE\u3001\u6587\u751F\u89C6\u9891\u3001Gemini\u517C\u5BB9\u6587\u672C\u6A21\u578B \\n [\u524D\u5F80\u4E2D\u8F6C\u5E73\u53F0](https://tf.grsai.ai/zh)",\n  inputs: [\n    { key: "apiKey", label: "API\u5BC6\u94A5", type: "password", required: true },\n    {\n      key: "baseUrl",\n      label: "\u8BF7\u6C42\u5730\u5740",\n      type: "url",\n      required: true,\n      placeholder: "\u793A\u4F8B\uFF1Ahttp://subrouter.railway.internal:8080",\n    },\n  ],\n  inputValues: { apiKey: "", baseUrl: "http://subrouter.railway.internal:8080" },\n  models: [\n    {\n      name: "GPT Image 2",\n      modelName: "gpt-image-2",\n      type: "image",\n      mode: ["text", "singleImage", "multiReference"],\n    },\n    {\n      name: "Nano Banana Fast",\n      modelName: "nano-banana-fast",\n      type: "image",\n      mode: ["text", "singleImage", "multiReference"],\n    },\n    {\n      name: "Nano Banana 2",\n      modelName: "nano-banana-2",\n      type: "image",\n      mode: ["text", "singleImage", "multiReference"],\n    },\n    {\n      name: "Nano Banana Pro",\n      modelName: "nano-banana-pro",\n      type: "image",\n      mode: ["text", "singleImage", "multiReference"],\n    },\n  ],\n};\n\n// ============================================================\n// \u8F85\u52A9\u5DE5\u5177\n// ============================================================\n\nconst getHeaders = () => {\n  const apiKey = vendor.inputValues.apiKey.replace(/^Bearer\\s+/i, "");\n  return {\n    "Content-Type": "application/json",\n    Authorization: `Bearer ${apiKey}`,\n  };\n};\n\n// ============================================================\n// \u9002\u914D\u5668\u51FD\u6570\n// ============================================================\n\nconst textRequest = (\n  model: TextModel,\n  think: boolean,\n  thinkLevel: 0 | 1 | 2 | 3,\n) => {\n  if (!vendor.inputValues.apiKey) throw new Error("\u7F3A\u5C11API Key");\n  const apiKey = vendor.inputValues.apiKey.replace(/^Bearer\\s+/i, "");\n  return createGoogleGenerativeAI({\n    baseURL: `${vendor.inputValues.baseUrl}/v1beta`,\n    apiKey,\n  }).chat(model.modelName);\n};\n\nconst imageRequest = async (\n  config: ImageConfig,\n  model: ImageModel,\n): Promise<string> => {\n  if (!vendor.inputValues.apiKey) throw new Error("\u7F3A\u5C11API Key");\n  const baseUrl = vendor.inputValues.baseUrl;\n  const headers = getHeaders();\n\n  // \u6784\u9020\u8BF7\u6C42\u53C2\u6570\n  const requestBody: any = {\n    model: model.modelName,\n    prompt: config.prompt,\n    aspectRatio: config.aspectRatio,\n    webHook: "-1",\n    shutProgress: true,\n  };\n\n  // \u8865\u5145\u6A21\u578B\u4E13\u5C5E\u53C2\u6570\n  if (model.modelName.startsWith("nano-banana")) {\n    requestBody.imageSize = config.size;\n  } else {\n    requestBody.size = config.aspectRatio;\n    requestBody.variants = 1;\n  }\n\n  // \u5904\u7406\u53C2\u8003\u56FE\n  if (config.referenceList && config.referenceList.length > 0) {\n    requestBody.urls = config.referenceList.map((img) => img.base64);\n  }\n\n  // \u9009\u62E9\u63A5\u53E3\u8DEF\u5F84\n  const apiPath = model.modelName.startsWith("nano-banana")\n    ? "/v1/draw/nano-banana"\n    : "/v1/draw/completions";\n\n  logger(`\u5F00\u59CB\u63D0\u4EA4\u56FE\u7247\u751F\u6210\u4EFB\u52A1\uFF0C\u6A21\u578B\uFF1A${model.modelName}`);\n  const submitResp = await axios.post(`${baseUrl}${apiPath}`, requestBody, {\n    headers,\n  });\n  if (submitResp.data.code !== 0)\n    throw new Error(`\u4EFB\u52A1\u63D0\u4EA4\u5931\u8D25\uFF1A${submitResp.data.msg}`);\n\n  const taskId = submitResp.data.data.id;\n  logger(`\u56FE\u7247\u4EFB\u52A1\u63D0\u4EA4\u6210\u529F\uFF0C\u4EFB\u52A1ID\uFF1A${taskId}`);\n\n  // \u8F6E\u8BE2\u7ED3\u679C\n  const pollResult = await pollTask(\n    async () => {\n      const resp = await axios.post(\n        `${baseUrl}/v1/draw/result`,\n        { id: taskId },\n        { headers },\n      );\n      if (resp.data.code !== 0)\n        return { completed: true, error: resp.data.msg };\n\n      const taskData = resp.data.data;\n      if (taskData.status === "failed")\n        return {\n          completed: true,\n          error: taskData.failure_reason || taskData.error,\n        };\n      if (taskData.status === "succeeded") {\n        const imgUrl = taskData.results?.[0]?.url || taskData.url;\n        return { completed: true, data: imgUrl };\n      }\n      logger(`\u56FE\u7247\u4EFB\u52A1\u751F\u6210\u4E2D\uFF0C\u8FDB\u5EA6\uFF1A${taskData.progress}%`);\n      return { completed: false };\n    },\n    3000,\n    600000,\n  );\n\n  if (pollResult.error) throw new Error(pollResult.error);\n  logger(`\u56FE\u7247\u751F\u6210\u5B8C\u6210\uFF0C\u5F00\u59CB\u8F6C\u6362Base64`);\n  return await urlToBase64(pollResult.data!);\n};\n\nconst videoRequest = async (\n  config: VideoConfig,\n  model: VideoModel,\n): Promise<string> => {\n  if (!vendor.inputValues.apiKey) throw new Error("\u7F3A\u5C11API Key");\n  const baseUrl = vendor.inputValues.baseUrl;\n  const headers = getHeaders();\n\n  // \u6784\u9020\u8BF7\u6C42\u53C2\u6570\n  const requestBody: any = {\n    model: model.modelName,\n    prompt: config.prompt,\n    aspectRatio: config.aspectRatio,\n    webHook: "-1",\n    shutProgress: true,\n  };\n\n  // \u5904\u7406\u53C2\u8003\u8D44\u6E90\n  if (config.referenceList && config.referenceList.length > 0) {\n    const imageRefs = config.referenceList.filter(\n      (item) => item.type === "image",\n    ) as Extract<ReferenceList, { type: "image" }>[];\n    if (config.mode.includes("endFrameOptional") && imageRefs.length >= 1) {\n      requestBody.firstFrameUrl = imageRefs[0].base64;\n      if (imageRefs.length >= 2) requestBody.lastFrameUrl = imageRefs[1].base64;\n    } else if (\n      config.mode.some(\n        (m) => Array.isArray(m) && m.includes("imageReference:3"),\n      )\n    ) {\n      requestBody.urls = imageRefs.map((img) => img.base64);\n    }\n  }\n\n  logger(`\u5F00\u59CB\u63D0\u4EA4\u89C6\u9891\u751F\u6210\u4EFB\u52A1\uFF0C\u6A21\u578B\uFF1A${model.modelName}`);\n  const submitResp = await axios.post(`${baseUrl}/v1/video/veo`, requestBody, {\n    headers,\n  });\n  if (submitResp.data.code !== 0)\n    throw new Error(`\u4EFB\u52A1\u63D0\u4EA4\u5931\u8D25\uFF1A${submitResp.data.msg}`);\n\n  const taskId = submitResp.data.data.id;\n  logger(`\u89C6\u9891\u4EFB\u52A1\u63D0\u4EA4\u6210\u529F\uFF0C\u4EFB\u52A1ID\uFF1A${taskId}`);\n\n  // \u8F6E\u8BE2\u7ED3\u679C\n  const pollResult = await pollTask(\n    async () => {\n      const resp = await axios.post(\n        `${baseUrl}/v1/draw/result`,\n        { id: taskId },\n        { headers },\n      );\n      if (resp.data.code !== 0)\n        return { completed: true, error: resp.data.msg };\n\n      const taskData = resp.data.data;\n      if (taskData.status === "failed")\n        return {\n          completed: true,\n          error: taskData.failure_reason || taskData.error,\n        };\n      if (taskData.status === "succeeded") {\n        return { completed: true, data: taskData.url };\n      }\n      logger(`\u89C6\u9891\u4EFB\u52A1\u751F\u6210\u4E2D\uFF0C\u8FDB\u5EA6\uFF1A${taskData.progress}%`);\n      return { completed: false };\n    },\n    5000,\n    1800000,\n  );\n\n  if (pollResult.error) throw new Error(pollResult.error);\n  logger(`\u89C6\u9891\u751F\u6210\u5B8C\u6210\uFF0C\u5F00\u59CB\u8F6C\u6362Base64`);\n  return await urlToBase64(pollResult.data!);\n};\n\nconst ttsRequest = async (\n  config: TTSConfig,\n  model: TTSModel,\n): Promise<string> => {\n  return "";\n};\n\nconst checkForUpdates = async (): Promise<{\n  hasUpdate: boolean;\n  latestVersion: string;\n  notice: string;\n}> => {\n  return {\n    hasUpdate: false,\n    latestVersion: "1.0",\n    notice: "## \u65B0\u7248\u672C\u66F4\u65B0\u516C\u544A",\n  };\n};\n\nconst updateVendor = async (): Promise<string> => {\n  return "";\n};\n\n// ============================================================\n// \u5BFC\u51FA\n// ============================================================\n\nexports.vendor = vendor;\nexports.textRequest = textRequest;\nexports.imageRequest = imageRequest;\nexports.videoRequest = videoRequest;\nexports.ttsRequest = ttsRequest;\nexports.checkForUpdates = checkForUpdates;\nexports.updateVendor = updateVendor;\n\n// \u8FD9\u884C\u4EE3\u7801\u7528\u4E8E\u786E\u4FDD\u5F53\u524D\u6587\u4EF6\u88AB\u8BC6\u522B\u4E3A\u6A21\u5757\uFF0C\u907F\u514D\u5168\u5C40\u53D8\u91CF\u51B2\u7A81\nexport {};\n',
-      "klingai.ts": '/**\n * Toonflow AI\u4F9B\u5E94\u5546\u6A21\u677F - \u53EF\u7075AI\n * @version 2.0\n */\n\n// ============================================================\n// \u7C7B\u578B\u5B9A\u4E49\n// ============================================================\n\ntype VideoMode =\n  | "singleImage"\n  | "startEndRequired"\n  | "endFrameOptional"\n  | "startFrameOptional"\n  | "text"\n  | (`videoReference:${number}` | `imageReference:${number}` | `audioReference:${number}`)[];\n\ninterface TextModel {\n  name: string;\n  modelName: string;\n  type: "text";\n  think: boolean;\n}\n\ninterface ImageModel {\n  name: string;\n  modelName: string;\n  type: "image";\n  mode: ("text" | "singleImage" | "multiReference")[];\n  associationSkills?: string;\n}\n\ninterface VideoModel {\n  name: string;\n  modelName: string;\n  type: "video";\n  mode: VideoMode[];\n  associationSkills?: string;\n  audio: "optional" | false | true;\n  durationResolutionMap: { duration: number[]; resolution: string[] }[];\n}\n\ninterface TTSModel {\n  name: string;\n  modelName: string;\n  type: "tts";\n  voices: { title: string; voice: string }[];\n}\n\ninterface VendorConfig {\n  id: string;\n  version: string;\n  name: string;\n  author: string;\n  description?: string;\n  icon?: string;\n  inputs: { key: string; label: string; type: "text" | "password" | "url"; required: boolean; placeholder?: string }[];\n  inputValues: Record<string, string>;\n  models: (TextModel | ImageModel | VideoModel | TTSModel)[];\n}\n\ntype ReferenceList =\n  | { type: "image"; sourceType: "base64"; base64: string }\n  | { type: "audio"; sourceType: "base64"; base64: string }\n  | { type: "video"; sourceType: "base64"; base64: string };\n\ninterface ImageConfig {\n  prompt: string;\n  referenceList?: Extract<ReferenceList, { type: "image" }>[];\n  size: "1K" | "2K" | "4K";\n  aspectRatio: `${number}:${number}`;\n}\n\ninterface VideoConfig {\n  duration: number;\n  resolution: string;\n  aspectRatio: "16:9" | "9:16";\n  prompt: string;\n  referenceList?: ReferenceList[];\n  audio?: boolean;\n  mode: VideoMode[];\n}\n\ninterface TTSConfig {\n  text: string;\n  voice: string;\n  speechRate: number;\n  pitchRate: number;\n  volume: number;\n  referenceList?: Extract<ReferenceList, { type: "audio" }>[];\n}\n\ninterface PollResult {\n  completed: boolean;\n  data?: string;\n  error?: string;\n}\n\n// ============================================================\n// \u5168\u5C40\u58F0\u660E\n// ============================================================\n\ndeclare const axios: any;\ndeclare const logger: (msg: string) => void;\ndeclare const jsonwebtoken: any;\ndeclare const zipImage: (base64: string, size: number) => Promise<string>;\ndeclare const zipImageResolution: (base64: string, w: number, h: number) => Promise<string>;\ndeclare const mergeImages: (base64Arr: string[], maxSize?: string) => Promise<string>;\ndeclare const urlToBase64: (url: string) => Promise<string>;\ndeclare const pollTask: (fn: () => Promise<PollResult>, interval?: number, timeout?: number) => Promise<PollResult>;\ndeclare const createOpenAI: any;\ndeclare const createDeepSeek: any;\ndeclare const createZhipu: any;\ndeclare const createQwen: any;\ndeclare const createAnthropic: any;\ndeclare const createOpenAICompatible: any;\ndeclare const createXai: any;\ndeclare const createMinimax: any;\ndeclare const createGoogleGenerativeAI: any;\ndeclare const exports: {\n  vendor: VendorConfig;\n  textRequest: (m: TextModel, t: boolean, tl: 0 | 1 | 2 | 3) => any;\n  imageRequest: (c: ImageConfig, m: ImageModel) => Promise<string>;\n  videoRequest: (c: VideoConfig, m: VideoModel) => Promise<string>;\n  ttsRequest: (c: TTSConfig, m: TTSModel) => Promise<string>;\n  checkForUpdates?: () => Promise<{ hasUpdate: boolean; latestVersion: string; notice: string }>;\n  updateVendor?: () => Promise<string>;\n};\n\n// ============================================================\n// \u4F9B\u5E94\u5546\u914D\u7F6E\n// ============================================================\n\nconst vendor: VendorConfig = {\n  id: "klingai",\n  version: "2.0",\n  author: "Toonflow",\n  name: "\u53EF\u7075AI",\n  description:\n    "\u53EF\u7075AI\u89C6\u9891\u751F\u6210\\n\\n\u652F\u6301\u53EF\u7075\u5168\u7CFB\u5217\u89C6\u9891\u6A21\u578B\uFF0C\u5305\u62EC kling-video-o1\u3001kling-v3-omni\u3001kling-v3\u3001kling-v2-6\u3001kling-v2-5-turbo\u3001kling-v2-1\u3001kling-v2-master\u3001kling-v1-6\u3001kling-v1-5\u3001kling-v1 \u7B49\u3002\\n\\n\u9700\u8981\u5728[\u53EF\u7075AI\u5F00\u653E\u5E73\u53F0](https://klingai.com)\\n\\n\u83B7\u53D6 Access Key \u548C Secret Key\u3002",\n  inputs: [\n    { key: "accessKey", label: "Access Key", type: "password", required: true, placeholder: "\u8BF7\u8F93\u5165\u53EF\u7075AI\u7684Access Key" },\n    { key: "secretKey", label: "Secret Key", type: "password", required: true, placeholder: "\u8BF7\u8F93\u5165\u53EF\u7075AI\u7684Secret Key" },\n    { key: "baseUrl", label: "\u8BF7\u6C42\u5730\u5740", type: "url", required: true, placeholder: "\u9ED8\u8BA4\uFF1Ahttp://subrouter.railway.internal:8080" },\n  ],\n  inputValues: { accessKey: "", secretKey: "", baseUrl: "http://subrouter.railway.internal:8080" },\n  models: [\n    // kling-video-o1 (Omni)\n    {\n      name: "kling-video-o1 \u6807\u51C6",\n      modelName: "kling-video-o1:std",\n      type: "video",\n      mode: ["text", "singleImage", "startEndRequired", ["imageReference:7", "videoReference:1"]],\n      audio: false,\n      durationResolutionMap: [{ duration: [5, 10], resolution: ["720p"] }],\n    },\n    {\n      name: "kling-video-o1 \u4E13\u5BB6",\n      modelName: "kling-video-o1:pro",\n      type: "video",\n      mode: ["text", "singleImage", "startEndRequired", ["imageReference:7", "videoReference:1"]],\n      audio: false,\n      durationResolutionMap: [{ duration: [5, 10], resolution: ["720p"] }],\n    },\n    // kling-v3-omni (Omni)\n    {\n      name: "kling-v3-omni \u6807\u51C6",\n      modelName: "kling-v3-omni:std",\n      type: "video",\n      mode: ["text", "singleImage", "startEndRequired", ["imageReference:7", "videoReference:1"]],\n      audio: false,\n      durationResolutionMap: [{ duration: [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], resolution: ["720p"] }],\n    },\n    {\n      name: "kling-v3-omni \u4E13\u5BB6",\n      modelName: "kling-v3-omni:pro",\n      type: "video",\n      mode: ["text", "singleImage", "startEndRequired", ["imageReference:7", "videoReference:1"]],\n      audio: false,\n      durationResolutionMap: [{ duration: [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], resolution: ["720p"] }],\n    },\n    // kling-v3\n    {\n      name: "kling-v3 \u6807\u51C6",\n      modelName: "kling-v3:std",\n      type: "video",\n      mode: ["text", "singleImage", "startEndRequired"],\n      audio: false,\n      durationResolutionMap: [{ duration: [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], resolution: ["720p"] }],\n    },\n    {\n      name: "kling-v3 \u4E13\u5BB6",\n      modelName: "kling-v3:pro",\n      type: "video",\n      mode: ["text", "singleImage", "startEndRequired"],\n      audio: false,\n      durationResolutionMap: [{ duration: [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], resolution: ["720p"] }],\n    },\n    // kling-v2-6\n    {\n      name: "kling-v2-6 \u6807\u51C6",\n      modelName: "kling-v2-6:std",\n      type: "video",\n      mode: ["text", "singleImage"],\n      audio: false,\n      durationResolutionMap: [{ duration: [5, 10], resolution: ["720p"] }],\n    },\n    {\n      name: "kling-v2-6 \u4E13\u5BB6",\n      modelName: "kling-v2-6:pro",\n      type: "video",\n      mode: ["text", "singleImage", "startEndRequired"],\n      audio: "optional",\n      durationResolutionMap: [{ duration: [5, 10], resolution: ["1080p"] }],\n    },\n    // kling-v2-5-turbo\n    {\n      name: "kling-v2-5-turbo \u6807\u51C6",\n      modelName: "kling-v2-5-turbo:std",\n      type: "video",\n      mode: ["text", "singleImage"],\n      audio: false,\n      durationResolutionMap: [{ duration: [5, 10], resolution: ["1080p"] }],\n    },\n    {\n      name: "kling-v2-5-turbo \u4E13\u5BB6",\n      modelName: "kling-v2-5-turbo:pro",\n      type: "video",\n      mode: ["text", "singleImage", "startEndRequired"],\n      audio: false,\n      durationResolutionMap: [{ duration: [5, 10], resolution: ["1080p"] }],\n    },\n    // kling-v2-1\n    {\n      name: "kling-v2-1 \u6807\u51C6",\n      modelName: "kling-v2-1:std",\n      type: "video",\n      mode: ["singleImage"],\n      audio: false,\n      durationResolutionMap: [{ duration: [5, 10], resolution: ["720p"] }],\n    },\n    {\n      name: "kling-v2-1 \u4E13\u5BB6",\n      modelName: "kling-v2-1:pro",\n      type: "video",\n      mode: ["singleImage", "startEndRequired"],\n      audio: false,\n      durationResolutionMap: [{ duration: [5, 10], resolution: ["1080p"] }],\n    },\n    // kling-v2-1-master\n    {\n      name: "kling-v2-1 Master",\n      modelName: "kling-v2-1-master:pro",\n      type: "video",\n      mode: ["text", "singleImage"],\n      audio: false,\n      durationResolutionMap: [{ duration: [5, 10], resolution: ["1080p"] }],\n    },\n    // kling-v2-master\n    {\n      name: "kling-v2 Master",\n      modelName: "kling-v2-master:pro",\n      type: "video",\n      mode: ["text", "singleImage"],\n      audio: false,\n      durationResolutionMap: [{ duration: [5, 10], resolution: ["720p"] }],\n    },\n    // kling-v1-6\n    {\n      name: "kling-v1-6 \u6807\u51C6",\n      modelName: "kling-v1-6:std",\n      type: "video",\n      mode: ["text", "singleImage", ["imageReference:4"]],\n      audio: false,\n      durationResolutionMap: [{ duration: [5, 10], resolution: ["720p"] }],\n    },\n    {\n      name: "kling-v1-6 \u4E13\u5BB6",\n      modelName: "kling-v1-6:pro",\n      type: "video",\n      mode: ["text", "singleImage", "endFrameOptional", ["imageReference:4"]],\n      audio: false,\n      durationResolutionMap: [{ duration: [5, 10], resolution: ["1080p"] }],\n    },\n    // kling-v1-5\n    {\n      name: "kling-v1-5 \u6807\u51C6",\n      modelName: "kling-v1-5:std",\n      type: "video",\n      mode: ["singleImage"],\n      audio: false,\n      durationResolutionMap: [{ duration: [5, 10], resolution: ["720p"] }],\n    },\n    {\n      name: "kling-v1-5 \u4E13\u5BB6",\n      modelName: "kling-v1-5:pro",\n      type: "video",\n      mode: ["singleImage", "endFrameOptional"],\n      audio: false,\n      durationResolutionMap: [{ duration: [5, 10], resolution: ["1080p"] }],\n    },\n    // kling-v1\n    {\n      name: "kling-v1 \u6807\u51C6",\n      modelName: "kling-v1:std",\n      type: "video",\n      mode: ["text", "singleImage", "startEndRequired"],\n      audio: false,\n      durationResolutionMap: [{ duration: [5, 10], resolution: ["720p"] }],\n    },\n    {\n      name: "kling-v1 \u4E13\u5BB6",\n      modelName: "kling-v1:pro",\n      type: "video",\n      mode: ["text", "singleImage", "startEndRequired"],\n      audio: false,\n      durationResolutionMap: [{ duration: [5, 10], resolution: ["720p"] }],\n    },\n  ],\n};\n\n// ============================================================\n// \u8F85\u52A9\u5DE5\u5177\n// ============================================================\n\n/**\n * \u751F\u6210\u53EF\u7075AI\u7684JWT\u9274\u6743Token\n */\nconst generateAuthToken = (): string => {\n  const now = Math.floor(Date.now() / 1000);\n  const payload = {\n    iss: vendor.inputValues.accessKey,\n    exp: now + 1800,\n    nbf: now - 5,\n  };\n  return jsonwebtoken.sign(payload, vendor.inputValues.secretKey, {\n    algorithm: "HS256",\n    header: { alg: "HS256", typ: "JWT" },\n  });\n};\n\n/**\n * \u83B7\u53D6\u57FA\u7840\u8BF7\u6C42\u5730\u5740\n */\nconst getBaseUrl = (): string => {\n  return vendor.inputValues.baseUrl || "http://subrouter.railway.internal:8080";\n};\n\n/**\n * \u4ECE ReferenceList \u6761\u76EE\u4E2D\u63D0\u53D6\u53EF\u7528\u7684\u6570\u636E\u5B57\u7B26\u4E32\n * \u5BF9\u4E8E url \u7C7B\u578B\u8FD4\u56DE url\uFF0C\u5BF9\u4E8E base64 \u7C7B\u578B\u8FD4\u56DE\u7EAF base64\uFF08\u53BB\u6389 data: \u524D\u7F00\uFF09\n */\nconst extractRawBase64 = (ref: ReferenceList): string => {\n  return ref.base64.replace(/^data:[^;]+;base64,/, "");\n};\n\n/**\n * \u4ECE ReferenceList \u6761\u76EE\u4E2D\u63D0\u53D6\u5E26\u5934\u7684 base64 \u6216 url\n * \u7528\u4E8E omni-video \u63A5\u53E3\uFF0C\u8BE5\u63A5\u53E3\u7684 image_url \u652F\u6301\u5E26\u524D\u7F00\u7684 base64 \u548C url\n */\nconst extractImageUrl = (ref: ReferenceList): string => {\n  return ref.base64.startsWith("data:") ? ref.base64 : `data:image/jpeg;base64,${ref.base64}`;\n};\n\n/**\n * \u63D0\u4EA4\u4EFB\u52A1\u5E76\u8F6E\u8BE2\u83B7\u53D6\u7ED3\u679C\u7684\u901A\u7528\u51FD\u6570\n */\nconst submitAndPoll = async (submitUrl: string, queryUrlBase: string, requestBody: any): Promise<string> => {\n  const token = generateAuthToken();\n\n  logger(`\u5F00\u59CB\u63D0\u4EA4\u53EF\u7075AI\u89C6\u9891\u751F\u6210\u4EFB\u52A1: ${submitUrl}`);\n  logger(\n    `\u8BF7\u6C42\u53C2\u6570: ${JSON.stringify({\n      ...requestBody,\n      image: requestBody.image ? "[BASE64]" : undefined,\n      image_tail: requestBody.image_tail ? "[BASE64]" : undefined,\n      image_list: requestBody.image_list ? "[IMAGES]" : undefined,\n    })}`,\n  );\n\n  const submitResp = await axios.post(submitUrl, requestBody, {\n    headers: {\n      "Content-Type": "application/json",\n      Authorization: `Bearer ${token}`,\n    },\n  });\n\n  if (submitResp.data.code !== 0) {\n    throw new Error(`\u63D0\u4EA4\u4EFB\u52A1\u5931\u8D25: ${submitResp.data.message || JSON.stringify(submitResp.data)}`);\n  }\n\n  const taskId = submitResp.data.data.task_id;\n  logger(`\u4EFB\u52A1\u5DF2\u63D0\u4EA4\uFF0C\u4EFB\u52A1ID: ${taskId}`);\n\n  const result = await pollTask(\n    async () => {\n      const freshToken = generateAuthToken();\n      const queryResp = await axios.get(`${queryUrlBase}/${taskId}`, {\n        headers: {\n          Authorization: `Bearer ${freshToken}`,\n        },\n      });\n\n      if (queryResp.data.code !== 0) {\n        return { completed: true, error: `\u67E5\u8BE2\u4EFB\u52A1\u5931\u8D25: ${queryResp.data.message}` };\n      }\n\n      const taskData = queryResp.data.data;\n      const status = taskData.task_status;\n      logger(`\u8F6E\u8BE2\u4E2D... \u4EFB\u52A1\u72B6\u6001: ${status}`);\n\n      if (status === "succeed") {\n        const videoUrl = taskData.task_result?.videos?.[0]?.url;\n        if (!videoUrl) {\n          return { completed: true, error: "\u4EFB\u52A1\u5B8C\u6210\u4F46\u672A\u83B7\u53D6\u5230\u89C6\u9891URL" };\n        }\n        return { completed: true, data: videoUrl };\n      }\n\n      if (status === "failed") {\n        return { completed: true, error: `\u89C6\u9891\u751F\u6210\u5931\u8D25: ${taskData.task_status_msg || "\u672A\u77E5\u9519\u8BEF"}` };\n      }\n\n      return { completed: false };\n    },\n    5000,\n    600000,\n  );\n\n  if (result.error) throw new Error(result.error);\n  logger(`\u89C6\u9891\u751F\u6210\u5B8C\u6210\uFF0C\u6B63\u5728\u8F6C\u6362\u4E3ABase64...`);\n  return await urlToBase64(result.data!);\n};\n\n// ============================================================\n// \u9002\u914D\u5668\u51FD\u6570\n// ============================================================\n\nconst textRequest = (model: TextModel, think: boolean, thinkLevel: 0 | 1 | 2 | 3) => {\n  throw new Error("\u53EF\u7075AI\u4E0D\u652F\u6301\u6587\u672C\u6A21\u578B");\n};\n\nconst imageRequest = async (config: ImageConfig, model: ImageModel): Promise<string> => {\n  throw new Error("\u53EF\u7075AI\u4E0D\u652F\u6301\u56FE\u7247\u6A21\u578B");\n};\n\nconst videoRequest = async (config: VideoConfig, model: VideoModel): Promise<string> => {\n  if (!vendor.inputValues.accessKey) throw new Error("\u7F3A\u5C11Access Key");\n  if (!vendor.inputValues.secretKey) throw new Error("\u7F3A\u5C11Secret Key");\n\n  const baseUrl = getBaseUrl();\n\n  // \u89E3\u6790 modelName\uFF0C\u683C\u5F0F\uFF1Akling-video-o1:pro => modelName=kling-video-o1, mode=pro\n  const colonIdx = model.modelName.indexOf(":");\n  const modelName = colonIdx > -1 ? model.modelName.substring(0, colonIdx) : model.modelName;\n  const mode = colonIdx > -1 ? model.modelName.substring(colonIdx + 1) : "pro";\n\n  // \u5224\u65AD\u662F\u5426\u4E3A Omni \u6A21\u578B\n  const isOmniModel = modelName === "kling-video-o1" || modelName === "kling-v3-omni";\n\n  // \u5224\u65AD\u5F53\u524D\u9009\u4E2D\u7684\u89C6\u9891\u751F\u6210\u6A21\u5F0F\n  const currentMode = config.mode;\n  const isText = currentMode.includes("text");\n  const isSingleImage = currentMode.includes("singleImage");\n  const isStartEndRequired = currentMode.includes("startEndRequired");\n  const isEndFrameOptional = currentMode.includes("endFrameOptional");\n  const isStartFrameOptional = currentMode.includes("startFrameOptional");\n  const hasMultiRef = Array.isArray(currentMode) && currentMode.some((m) => Array.isArray(m));\n\n  // \u63D0\u53D6\u4E0D\u540C\u7C7B\u578B\u7684\u5F15\u7528\n  const imageRefs = (config.referenceList || []).filter((r) => r.type === "image");\n  const videoRefs = (config.referenceList || []).filter((r) => r.type === "video");\n\n  // =====================================================\n  // Omni \u6A21\u578B \u2014\u2014 \u4F7F\u7528 /v1/videos/omni-video \u63A5\u53E3\n  // =====================================================\n  if (isOmniModel) {\n    const requestBody: any = {\n      model_name: modelName,\n      mode: mode,\n      duration: String(config.duration),\n      sound: config.audio === true ? "on" : "off",\n    };\n\n    if (config.prompt) {\n      requestBody.prompt = config.prompt;\n    }\n\n    if (isSingleImage && imageRefs.length > 0) {\n      const imageUrl = extractImageUrl(imageRefs[0]);\n      requestBody.image_list = [{ image_url: imageUrl, type: "first_frame" }];\n      if (!requestBody.prompt) requestBody.prompt = "\u6839\u636E\u56FE\u7247\u751F\u6210\u89C6\u9891";\n    } else if (isStartEndRequired && imageRefs.length >= 2) {\n      const firstUrl = extractImageUrl(imageRefs[0]);\n      const endUrl = extractImageUrl(imageRefs[1]);\n      requestBody.image_list = [\n        { image_url: firstUrl, type: "first_frame" },\n        { image_url: endUrl, type: "end_frame" },\n      ];\n      if (!requestBody.prompt) requestBody.prompt = "\u6839\u636E\u9996\u5C3E\u5E27\u56FE\u7247\u751F\u6210\u8FC7\u6E21\u89C6\u9891";\n    } else if (isEndFrameOptional && imageRefs.length >= 1) {\n      const firstUrl = extractImageUrl(imageRefs[0]);\n      requestBody.image_list = [{ image_url: firstUrl, type: "first_frame" }];\n      if (imageRefs.length >= 2) {\n        const endUrl = extractImageUrl(imageRefs[1]);\n        requestBody.image_list.push({ image_url: endUrl, type: "end_frame" });\n      }\n      if (!requestBody.prompt) requestBody.prompt = "\u6839\u636E\u56FE\u7247\u751F\u6210\u89C6\u9891";\n    } else if (isStartFrameOptional && imageRefs.length >= 1) {\n      if (imageRefs.length >= 2) {\n        const firstUrl = extractImageUrl(imageRefs[0]);\n        const endUrl = extractImageUrl(imageRefs[1]);\n        requestBody.image_list = [\n          { image_url: firstUrl, type: "first_frame" },\n          { image_url: endUrl, type: "end_frame" },\n        ];\n      } else {\n        const endUrl = extractImageUrl(imageRefs[0]);\n        requestBody.image_list = [{ image_url: endUrl, type: "end_frame" }];\n      }\n      if (!requestBody.prompt) requestBody.prompt = "\u6839\u636E\u56FE\u7247\u751F\u6210\u89C6\u9891";\n    } else if (hasMultiRef && (imageRefs.length > 0 || videoRefs.length > 0)) {\n      requestBody.image_list = [];\n      for (let i = 0; i < imageRefs.length; i++) {\n        const imageUrl = extractImageUrl(imageRefs[i]);\n        requestBody.image_list.push({ image_url: imageUrl });\n      }\n      if (!requestBody.prompt) {\n        const refs = imageRefs.map((_, idx) => `<<<image_${idx + 1}>>>`).join("\u3001");\n        requestBody.prompt = `\u53C2\u8003${refs}\u751F\u6210\u89C6\u9891`;\n      }\n    }\n\n    // \u6587\u751F\u89C6\u9891\u6216\u65E0\u56FE\u7247\u8F93\u5165\u65F6\u9700\u8981\u8BBE\u7F6E\u5BBD\u9AD8\u6BD4\n    const hasImageInput = requestBody.image_list && requestBody.image_list.length > 0;\n    if (!hasImageInput) {\n      requestBody.aspect_ratio = config.aspectRatio || "16:9";\n      if (!requestBody.prompt) throw new Error("\u6587\u751F\u89C6\u9891\u6A21\u5F0F\u9700\u8981\u63D0\u4F9B\u63D0\u793A\u8BCD");\n    }\n\n    const apiPath = "/v1/videos/omni-video";\n    return await submitAndPoll(`${baseUrl}${apiPath}`, `${baseUrl}${apiPath}`, requestBody);\n  }\n\n  // =====================================================\n  // \u975E Omni \u6A21\u578B \u2014\u2014 \u6839\u636E\u6A21\u5F0F\u9009\u62E9\u4E0D\u540C\u63A5\u53E3\n  // =====================================================\n\n  // \u591A\u56FE\u53C2\u8003\u6A21\u5F0F \u2014\u2014 \u4F7F\u7528 /v1/videos/multi-image2video \u63A5\u53E3\uFF08\u4EC5 kling-v1-6 \u652F\u6301\uFF09\n  if (hasMultiRef && imageRefs.length > 0) {\n    const imageList = [];\n    for (let i = 0; i < imageRefs.length; i++) {\n      const rawBase64 = extractRawBase64(imageRefs[i]);\n      imageList.push({ image: rawBase64 });\n    }\n\n    const requestBody: any = {\n      model_name: modelName,\n      image_list: imageList,\n      prompt: config.prompt || "\u6839\u636E\u53C2\u8003\u56FE\u7247\u751F\u6210\u89C6\u9891",\n      mode: mode,\n      duration: String(config.duration),\n      aspect_ratio: config.aspectRatio || "16:9",\n    };\n\n    const apiPath = "/v1/videos/multi-image2video";\n    return await submitAndPoll(`${baseUrl}${apiPath}`, `${baseUrl}${apiPath}`, requestBody);\n  }\n\n  // \u6587\u751F\u89C6\u9891\u6A21\u5F0F \u2014\u2014 \u4F7F\u7528 /v1/videos/text2video \u63A5\u53E3\n  if (isText) {\n    if (!config.prompt) throw new Error("\u6587\u751F\u89C6\u9891\u6A21\u5F0F\u9700\u8981\u63D0\u4F9B\u63D0\u793A\u8BCD");\n\n    const requestBody: any = {\n      model_name: modelName,\n      prompt: config.prompt,\n      mode: mode,\n      duration: String(config.duration),\n      aspect_ratio: config.aspectRatio || "16:9",\n      sound: config.audio === true ? "on" : "off",\n    };\n\n    const apiPath = "/v1/videos/text2video";\n    return await submitAndPoll(`${baseUrl}${apiPath}`, `${baseUrl}${apiPath}`, requestBody);\n  }\n\n  // \u56FE\u751F\u89C6\u9891\u6A21\u5F0F\uFF08\u5355\u56FE / \u9996\u5C3E\u5E27 / \u5C3E\u5E27\u53EF\u9009\u7B49\uFF09\u2014\u2014 \u4F7F\u7528 /v1/videos/image2video \u63A5\u53E3\n  if ((isSingleImage || isStartEndRequired || isEndFrameOptional || isStartFrameOptional) && imageRefs.length > 0) {\n    const requestBody: any = {\n      model_name: modelName,\n      prompt: config.prompt || "\u6839\u636E\u56FE\u7247\u751F\u6210\u89C6\u9891",\n      mode: mode,\n      duration: String(config.duration),\n      sound: config.audio === true ? "on" : "off",\n    };\n\n    if (isSingleImage) {\n      requestBody.image = extractRawBase64(imageRefs[0]);\n    } else if (isStartEndRequired && imageRefs.length >= 2) {\n      requestBody.image = extractRawBase64(imageRefs[0]);\n      requestBody.image_tail = extractRawBase64(imageRefs[1]);\n    } else if (isEndFrameOptional) {\n      requestBody.image = extractRawBase64(imageRefs[0]);\n      if (imageRefs.length >= 2) {\n        requestBody.image_tail = extractRawBase64(imageRefs[1]);\n      }\n    } else if (isStartFrameOptional) {\n      if (imageRefs.length >= 2) {\n        requestBody.image = extractRawBase64(imageRefs[0]);\n        requestBody.image_tail = extractRawBase64(imageRefs[1]);\n      } else {\n        requestBody.image = extractRawBase64(imageRefs[0]);\n      }\n    }\n\n    const apiPath = "/v1/videos/image2video";\n    return await submitAndPoll(`${baseUrl}${apiPath}`, `${baseUrl}${apiPath}`, requestBody);\n  }\n\n  throw new Error("\u4E0D\u652F\u6301\u7684\u89C6\u9891\u751F\u6210\u6A21\u5F0F\u6216\u7F3A\u5C11\u5FC5\u8981\u7684\u8F93\u5165\u53C2\u6570");\n};\n\nconst ttsRequest = async (config: TTSConfig, model: TTSModel): Promise<string> => {\n  return "";\n};\n\n// ============================================================\n// \u5BFC\u51FA\n// ============================================================\n\nexports.vendor = vendor;\nexports.textRequest = textRequest;\nexports.imageRequest = imageRequest;\nexports.videoRequest = videoRequest;\nexports.ttsRequest = ttsRequest;\n\n// \u8FD9\u884C\u4EE3\u7801\u7528\u4E8E\u786E\u4FDD\u5F53\u524D\u6587\u4EF6\u88AB\u8BC6\u522B\u4E3A\u6A21\u5757\uFF0C\u907F\u514D\u5168\u5C40\u53D8\u91CF\u51B2\u7A81\nexport {};\n',
-      "minimax.ts": '/**\n * Toonflow AI\u4F9B\u5E94\u5546\u6A21\u677F - MiniMax(\u6D77\u87BAAI)\n * @version 2.0\n */\n\n// ============================================================\n// \u7C7B\u578B\u5B9A\u4E49\n// ============================================================\n\ntype VideoMode =\n  | "singleImage"\n  | "startEndRequired"\n  | "endFrameOptional"\n  | "startFrameOptional"\n  | "text"\n  | (`videoReference:${number}` | `imageReference:${number}` | `audioReference:${number}`)[];\n\ninterface TextModel {\n  name: string;\n  modelName: string;\n  type: "text";\n  think: boolean;\n}\n\ninterface ImageModel {\n  name: string;\n  modelName: string;\n  type: "image";\n  mode: ("text" | "singleImage" | "multiReference")[];\n  associationSkills?: string;\n}\n\ninterface VideoModel {\n  name: string;\n  modelName: string;\n  type: "video";\n  mode: VideoMode[];\n  associationSkills?: string;\n  audio: "optional" | false | true;\n  durationResolutionMap: { duration: number[]; resolution: string[] }[];\n}\n\ninterface TTSModel {\n  name: string;\n  modelName: string;\n  type: "tts";\n  voices: { title: string; voice: string }[];\n}\n\ninterface VendorConfig {\n  id: string;\n  version: string;\n  name: string;\n  author: string;\n  description?: string;\n  icon?: string;\n  inputs: { key: string; label: string; type: "text" | "password" | "url"; required: boolean; placeholder?: string }[];\n  inputValues: Record<string, string>;\n  models: (TextModel | ImageModel | VideoModel | TTSModel)[];\n}\n\ntype ReferenceList =\n  | { type: "image"; sourceType: "base64"; base64: string }\n  | { type: "audio"; sourceType: "base64"; base64: string }\n  | { type: "video"; sourceType: "base64"; base64: string };\n\ninterface ImageConfig {\n  prompt: string;\n  referenceList?: Extract<ReferenceList, { type: "image" }>[];\n  size: "1K" | "2K" | "4K";\n  aspectRatio: `${number}:${number}`;\n}\n\ninterface VideoConfig {\n  duration: number;\n  resolution: string;\n  aspectRatio: "16:9" | "9:16";\n  prompt: string;\n  referenceList?: ReferenceList[];\n  audio?: boolean;\n  mode: VideoMode[];\n}\n\ninterface TTSConfig {\n  text: string;\n  voice: string;\n  speechRate: number;\n  pitchRate: number;\n  volume: number;\n  referenceList?: Extract<ReferenceList, { type: "audio" }>[];\n}\n\ninterface PollResult {\n  completed: boolean;\n  data?: string;\n  error?: string;\n}\n\n// ============================================================\n// \u5168\u5C40\u58F0\u660E\n// ============================================================\n\ndeclare const axios: any;\ndeclare const logger: (msg: string) => void;\ndeclare const jsonwebtoken: any;\ndeclare const zipImage: (base64: string, size: number) => Promise<string>;\ndeclare const zipImageResolution: (base64: string, w: number, h: number) => Promise<string>;\ndeclare const mergeImages: (base64Arr: string[], maxSize?: string) => Promise<string>;\ndeclare const urlToBase64: (url: string) => Promise<string>;\ndeclare const pollTask: (fn: () => Promise<PollResult>, interval?: number, timeout?: number) => Promise<PollResult>;\ndeclare const createOpenAI: any;\ndeclare const createDeepSeek: any;\ndeclare const createZhipu: any;\ndeclare const createQwen: any;\ndeclare const createAnthropic: any;\ndeclare const createOpenAICompatible: any;\ndeclare const createXai: any;\ndeclare const createMinimax: any;\ndeclare const createGoogleGenerativeAI: any;\ndeclare const exports: {\n  vendor: VendorConfig;\n  textRequest: (m: TextModel, t: boolean, tl: 0 | 1 | 2 | 3) => any;\n  uploadReference: (base64: string, fileType: "image" | "audio" | "video") => Promise<ReferenceList>;\n  imageRequest: (c: ImageConfig, m: ImageModel) => Promise<string>;\n  videoRequest: (c: VideoConfig, m: VideoModel) => Promise<string>;\n  ttsRequest: (c: TTSConfig, m: TTSModel) => Promise<string>;\n  checkForUpdates?: () => Promise<{ hasUpdate: boolean; latestVersion: string; notice: string }>;\n  updateVendor?: () => Promise<string>;\n};\n\n// ============================================================\n// \u4F9B\u5E94\u5546\u914D\u7F6E\n// ============================================================\n\nconst vendor: VendorConfig = {\n  id: "minimax",\n  version: "2.1",\n  author: "Toonflow",\n  name: "MiniMax(\u6D77\u87BAAI)",\n  description: "MiniMax\u5B98\u65B9\u63A5\u53E3\u9002\u914D\uFF0C\u652F\u6301M\u7CFB\u5217\u63A8\u7406\u6587\u672C\u6A21\u578B\u3001\u6587\u751F\u56FE/\u56FE\u751F\u56FE\u3001\u89C6\u9891\u751F\u6210\uFF08\u6587\u751F\u89C6\u9891\u3001\u56FE\u751F\u89C6\u9891\u3001\u9996\u5C3E\u5E27\u751F\u6210\uFF09\u80FD\u529B \\n [\u524D\u5F80\u5E73\u53F0](https://minimaxi.com/)",\n  inputs: [\n    { key: "apiKey", label: "API\u5BC6\u94A5", type: "password", required: true },\n    { key: "baseUrl", label: "\u8BF7\u6C42\u5730\u5740", type: "url", required: true, placeholder: "\u793A\u4F8B\uFF1Ahttp://subrouter.railway.internal:8080" },\n  ],\n  inputValues: { apiKey: "", baseUrl: "http://subrouter.railway.internal:8080" },\n  models: [\n    // \u6587\u672C\u6A21\u578B\n    { name: "MiniMax-M2.7 (\u63A8\u7406\u7248)", modelName: "MiniMax-M2.7", type: "text", think: true },\n    { name: "MiniMax-M2.7 \u6781\u901F\u7248 (\u63A8\u7406\u7248)", modelName: "MiniMax-M2.7-highspeed", type: "text", think: true },\n    { name: "MiniMax-M2.5 (\u63A8\u7406\u7248)", modelName: "MiniMax-M2.5", type: "text", think: true },\n    { name: "MiniMax-M2.5 \u6781\u901F\u7248 (\u63A8\u7406\u7248)", modelName: "MiniMax-M2.5-highspeed", type: "text", think: true },\n    { name: "MiniMax-M2.1 (\u7F16\u7A0B\u7248)", modelName: "MiniMax-M2.1", type: "text", think: true },\n    { name: "MiniMax-M2.1 \u6781\u901F\u7248 (\u7F16\u7A0B\u7248)", modelName: "MiniMax-M2.1-highspeed", type: "text", think: true },\n    { name: "MiniMax-M2 (Agent\u7248)", modelName: "MiniMax-M2", type: "text", think: false },\n    // \u56FE\u7247\u6A21\u578B\n    { name: "\u6D77\u87BA\u56FE\u50CFV1", modelName: "image-01", type: "image", mode: ["text", "singleImage"] },\n    { name: "\u6D77\u87BA\u56FE\u50CFV1 Live\u7248", modelName: "image-01-live", type: "image", mode: ["text", "singleImage"], associationSkills: "\u652F\u6301\u81EA\u5B9A\u4E49\u753B\u98CE" },\n    // \u89C6\u9891\u6A21\u578B\n    {\n      name: "\u6D77\u87BA2.3",\n      modelName: "MiniMax-Hailuo-2.3",\n      type: "video",\n      mode: ["text", "singleImage"],\n      audio: false,\n      durationResolutionMap: [\n        { duration: [6], resolution: ["768P", "1080P"] },\n        { duration: [10], resolution: ["768P"] },\n      ],\n    },\n    {\n      name: "\u6D77\u87BA2.3\u6781\u901F\u7248",\n      modelName: "MiniMax-Hailuo-2.3-Fast",\n      type: "video",\n      mode: ["text", "singleImage"],\n      audio: false,\n      durationResolutionMap: [\n        { duration: [6], resolution: ["768P", "1080P"] },\n        { duration: [10], resolution: ["768P"] },\n      ],\n    },\n    {\n      name: "\u6D77\u87BA02",\n      modelName: "MiniMax-Hailuo-02",\n      type: "video",\n      mode: ["text", "singleImage", "startEndRequired"],\n      audio: false,\n      durationResolutionMap: [\n        { duration: [6], resolution: ["512P", "768P", "1080P"] },\n        { duration: [10], resolution: ["512P", "768P"] },\n      ],\n    },\n  ],\n};\n\n// ============================================================\n// \u8F85\u52A9\u5DE5\u5177\n// ============================================================\n\n/**\n * \u83B7\u53D6\u8BF7\u6C42\u5934\n */\nconst getHeaders = (): Record<string, string> => {\n  const apiKey = vendor.inputValues.apiKey.replace(/^Bearer\\s+/i, "");\n  return {\n    Authorization: `Bearer ${apiKey}`,\n    "Content-Type": "application/json",\n  };\n};\n\n/**\n * \u83B7\u53D6\u57FA\u7840\u8BF7\u6C42\u5730\u5740\n */\nconst getBaseUrl = (): string => {\n  return vendor.inputValues.baseUrl.replace(/\\/$/, "");\n};\n\n/**\n * \u4ECE ReferenceList \u6761\u76EE\u4E2D\u63D0\u53D6\u6709\u5934 base64 \u5B57\u7B26\u4E32\n */\nconst extractBase64WithHead = (ref: ReferenceList): string => {\n  return ref.base64.startsWith("data:") ? ref.base64 : `data:image/png;base64,${ref.base64}`;\n};\n\n// ============================================================\n// \u9002\u914D\u5668\u51FD\u6570\n// ============================================================\n\nconst textRequest = (model: TextModel, think: boolean, thinkLevel: 0 | 1 | 2 | 3) => {\n  if (!vendor.inputValues.apiKey) throw new Error("\u7F3A\u5C11API Key");\n  const apiKey = vendor.inputValues.apiKey.replace(/^Bearer\\s+/i, "");\n  const baseUrl = getBaseUrl();\n\n  const openaiBaseUrl = `${baseUrl}/v1`;\n  const extraBody = model.think ? { reasoning_split: true } : {};\n  return createOpenAI({ baseURL: openaiBaseUrl, apiKey, extraBody }).chat(model.modelName);\n};\n\nconst uploadReference = async (base64: string, fileType: "image" | "audio" | "video"): Promise<ReferenceList> => {\n  // MiniMax\u7684\u56FE\u7247\u63A5\u53E3\u76F4\u63A5\u63A5\u53D7 base64\uFF0C\u538B\u7F29\u540E\u539F\u6837\u8FD4\u56DE\n  if (fileType === "image") {\n    const compressed = await zipImage(base64, 10 * 1024);\n    return { type: "image", sourceType: "base64", base64: compressed };\n  }\n  // \u89C6\u9891\u63A5\u53E3\u7684\u56FE\u7247\u53C2\u6570\u4E5F\u662F base64\uFF0C\u538B\u7F29\u523020MB\n  return { type: fileType, sourceType: "base64", base64 } as ReferenceList;\n};\n\nconst imageRequest = async (config: ImageConfig, model: ImageModel): Promise<string> => {\n  if (!vendor.inputValues.apiKey) throw new Error("\u7F3A\u5C11API Key");\n  const baseUrl = getBaseUrl();\n  const headers = getHeaders();\n\n  const reqBody: any = {\n    model: model.modelName,\n    prompt: config.prompt,\n    aspect_ratio: config.aspectRatio,\n    response_format: "base64",\n    n: 1,\n    prompt_optimizer: true,\n    aigc_watermark: false,\n  };\n\n  // \u5904\u7406\u56FE\u751F\u56FE\u53C2\u8003\n  const imageRefs = config.referenceList || [];\n  if (imageRefs.length > 0) {\n    const refBase64 = extractBase64WithHead(imageRefs[0]);\n    reqBody.subject_reference = [{ type: "character", image_file: refBase64 }];\n  }\n\n  logger("\u5F00\u59CB\u63D0\u4EA4MiniMax\u56FE\u50CF\u751F\u6210\u4EFB\u52A1");\n  const resp = await axios.post(`${baseUrl}/v1/image_generation`, reqBody, { headers });\n  if (resp.data.base_resp.status_code !== 0) {\n    throw new Error(`\u56FE\u50CF\u751F\u6210\u5931\u8D25\uFF1A${resp.data.base_resp.status_msg}`);\n  }\n  if (resp.data.metadata.success_count === 0) {\n    throw new Error("\u56FE\u50CF\u751F\u6210\u88AB\u5B89\u5168\u7B56\u7565\u62E6\u622A\uFF0C\u8BF7\u8C03\u6574prompt\u6216\u53C2\u8003\u56FE");\n  }\n\n  const imgBase64 = resp.data.data.image_base64[0];\n  return imgBase64.startsWith("data:") ? imgBase64 : `data:image/png;base64,${imgBase64}`;\n};\n\nconst videoRequest = async (config: VideoConfig, model: VideoModel): Promise<string> => {\n  if (!vendor.inputValues.apiKey) throw new Error("\u7F3A\u5C11API Key");\n  const baseUrl = getBaseUrl();\n  const headers = getHeaders();\n\n  const reqBody: any = {\n    model: model.modelName,\n    prompt: config.prompt,\n    duration: config.duration,\n    resolution: config.resolution,\n    aigc_watermark: false,\n    prompt_optimizer: true,\n  };\n\n  // \u63D0\u53D6\u56FE\u7247\u7C7B\u578B\u7684\u5F15\u7528\n  const imageRefs = (config.referenceList || []).filter((r) => r.type === "image");\n\n  if (imageRefs.length > 0) {\n    // \u538B\u7F29\u56FE\u7247\u523020MB\u4EE5\u5185\n    const compressedImages: string[] = [];\n    for (const ref of imageRefs) {\n      const base64 = extractBase64WithHead(ref);\n      const compressed = await zipImage(base64, 20 * 1024);\n      compressedImages.push(compressed);\n    }\n\n    if (config.mode.includes("startEndRequired")) {\n      if (compressedImages.length < 2) throw new Error("\u9996\u5C3E\u5E27\u6A21\u5F0F\u9700\u8981\u4E0A\u4F20\u4E24\u5F20\u56FE\u7247");\n      reqBody.first_frame_image = compressedImages[0];\n      reqBody.last_frame_image = compressedImages[1];\n    } else if (config.mode.includes("singleImage")) {\n      reqBody.first_frame_image = compressedImages[0];\n    }\n  }\n\n  logger("\u5F00\u59CB\u63D0\u4EA4MiniMax\u89C6\u9891\u751F\u6210\u4EFB\u52A1");\n  const submitResp = await axios.post(`${baseUrl}/v1/video_generation`, reqBody, { headers });\n  if (submitResp.data.base_resp.status_code !== 0) {\n    throw new Error(`\u4EFB\u52A1\u63D0\u4EA4\u5931\u8D25\uFF1A${submitResp.data.base_resp.status_msg}`);\n  }\n  const taskId = submitResp.data.task_id;\n  logger(`\u89C6\u9891\u4EFB\u52A1\u63D0\u4EA4\u6210\u529F\uFF0C\u4EFB\u52A1ID: ${taskId}`);\n\n  // \u8F6E\u8BE2\u4EFB\u52A1\u72B6\u6001\n  const pollResult = await pollTask(\n    async () => {\n      const queryResp = await axios.get(`${baseUrl}/v1/query/video_generation`, {\n        headers: getHeaders(),\n        params: { task_id: taskId },\n      });\n      if (queryResp.data.base_resp.status_code !== 0) {\n        return { completed: true, error: queryResp.data.base_resp.status_msg };\n      }\n      const status = queryResp.data.status;\n      if (status === "Success") {\n        return { completed: true, data: queryResp.data.file_id };\n      }\n      if (status === "Fail") {\n        return { completed: true, error: "\u89C6\u9891\u751F\u6210\u5931\u8D25" };\n      }\n      logger(`\u89C6\u9891\u4EFB\u52A1\u751F\u6210\u4E2D\uFF0C\u5F53\u524D\u72B6\u6001\uFF1A${status}`);\n      return { completed: false };\n    },\n    5000,\n    600000,\n  );\n\n  if (pollResult.error) throw new Error(pollResult.error);\n  const fileId = pollResult.data!;\n  logger(`\u89C6\u9891\u4EFB\u52A1\u751F\u6210\u6210\u529F\uFF0C\u6587\u4EF6ID: ${fileId}`);\n\n  // \u83B7\u53D6\u4E0B\u8F7D\u5730\u5740\n  const fileResp = await axios.get(`${baseUrl}/v1/files/retrieve`, {\n    headers: getHeaders(),\n    params: { file_id: fileId },\n  });\n  if (fileResp.data.base_resp.status_code !== 0) {\n    throw new Error(`\u83B7\u53D6\u6587\u4EF6\u5730\u5740\u5931\u8D25\uFF1A${fileResp.data.base_resp.status_msg}`);\n  }\n  const downloadUrl = fileResp.data.file.download_url;\n  logger(`\u89C6\u9891\u4E0B\u8F7D\u5730\u5740\u83B7\u53D6\u6210\u529F\uFF0C\u5F00\u59CB\u8F6CBase64`);\n\n  return await urlToBase64(downloadUrl);\n};\n\nconst ttsRequest = async (config: TTSConfig, model: TTSModel): Promise<string> => {\n  return "";\n};\n\nconst checkForUpdates = async (): Promise<{ hasUpdate: boolean; latestVersion: string; notice: string }> => {\n  return {\n    hasUpdate: false,\n    latestVersion: "2.0",\n    notice:\n      "## \u65B0\u7248\u672C\u66F4\u65B0\u516C\u544A\\n1. \u9002\u914D\u65B0\u7248\u6A21\u677F\u67B6\u6784\uFF0C\u652F\u6301 ReferenceList \u7EDF\u4E00\u5F15\u7528\u7C7B\u578B\\n2. \u65B0\u589E uploadReference \u524D\u7F6E\u5904\u7406\u5668\\n3. \u4F18\u5316\u56FE\u7247\u538B\u7F29\u548C\u5F15\u7528\u63D0\u53D6\u903B\u8F91",\n  };\n};\n\nconst updateVendor = async (): Promise<string> => {\n  return "";\n};\n\n// ============================================================\n// \u5BFC\u51FA\n// ============================================================\n\nexports.vendor = vendor;\nexports.textRequest = textRequest;\nexports.uploadReference = uploadReference;\nexports.imageRequest = imageRequest;\nexports.videoRequest = videoRequest;\nexports.ttsRequest = ttsRequest;\nexports.checkForUpdates = checkForUpdates;\nexports.updateVendor = updateVendor;\n\n// \u8FD9\u884C\u4EE3\u7801\u7528\u4E8E\u786E\u4FDD\u5F53\u524D\u6587\u4EF6\u88AB\u8BC6\u522B\u4E3A\u6A21\u5757\uFF0C\u907F\u514D\u5168\u5C40\u53D8\u91CF\u51B2\u7A81\nexport {};',
-      "null.ts": '/**\n * Toonflow AI\u4F9B\u5E94\u5546\u6A21\u677F\n * @version 2.0\n */\n\n// ============================================================\n// \u7C7B\u578B\u5B9A\u4E49\n// ============================================================\n\ntype VideoMode =\n  | "singleImage" //\u5355\u56FE\u53C2\u8003\n  | "startEndRequired" //\u9996\u5C3E\u5E27\uFF08\u4E24\u5F20\u90FD\u5F97\u6709\uFF09\n  | "endFrameOptional" //\u9996\u5C3E\u5E27\uFF08\u5C3E\u5E27\u53EF\u9009\uFF09\n  | "startFrameOptional" //\u9996\u5C3E\u5E27\uFF08\u9996\u5E27\u53EF\u9009\uFF09\n  | "text" //\u6587\u672C\n  | (`videoReference:${number}` | `imageReference:${number}` | `audioReference:${number}`)[]; //\u591A\u53C2\u8003\uFF08\u6570\u5B57\u4EE3\u8868\u9650\u5236\u6570\u91CF\uFF09\n\ninterface TextModel {\n  name: string;\n  modelName: string;\n  type: "text";\n  think: boolean;\n}\n\ninterface ImageModel {\n  name: string;\n  modelName: string;\n  type: "image";\n  mode: ("text" | "singleImage" | "multiReference")[];\n  associationSkills?: string;\n}\n\ninterface VideoModel {\n  name: string;\n  modelName: string;\n  type: "video";\n  mode: VideoMode[];\n  associationSkills?: string;\n  audio: "optional" | false | true;\n  durationResolutionMap: { duration: number[]; resolution: string[] }[];\n}\n\ninterface TTSModel {\n  name: string;\n  modelName: string;\n  type: "tts";\n  voices: { title: string; voice: string }[];\n}\n\ninterface VendorConfig {\n  id: string; //\u552F\u4E00ID\uFF0C\u4F5C\u4E3A\u6587\u4EF6\u540D\u5B58\u50A8\u7528\u6237\u78C1\u76D8\u4E0A\uFF0C\u7981\u6B62\u7B26\u53F7\n  version: string; //\u7248\u672C\u53F7\uFF0C\u683C\u5F0F\u4E3Ax.y\uFF0C\u9700\u9075\u5B88\u8BED\u4E49\u5316\u7248\u672C\u63A7\u5236\n  name: string; //\u4F9B\u5E94\u5546\u540D\u79F0\n  author: string; //\u4F5C\u8005\n  description?: string; //\u63CF\u8FF0\uFF0C\u652F\u6301Markdown\u683C\u5F0F\n  icon?: string; //\u56FE\u6807\uFF0C\u4EC5\u652F\u6301Base64\u683C\u5F0F\uFF0C\u5EFA\u8BAE\u5C3A\u5BF8\u4E3A128x128\u50CF\u7D20\n  inputs: { key: string; label: string; type: "text" | "password" | "url"; required: boolean; placeholder?: string }[];\n  inputValues: Record<string, string>;\n  models: (TextModel | ImageModel | VideoModel | TTSModel)[];\n}\n\ntype ReferenceList =\n  | { type: "image"; sourceType: "base64"; base64: string }\n  | { type: "audio"; sourceType: "base64"; base64: string }\n  | { type: "video"; sourceType: "base64"; base64: string };\n\ninterface ImageConfig {\n  prompt: string;\n  referenceList?: Extract<ReferenceList, { type: "image" }>[];\n  size: "1K" | "2K" | "4K";\n  aspectRatio: `${number}:${number}`;\n}\n\ninterface VideoConfig {\n  duration: number;\n  resolution: string;\n  aspectRatio: "16:9" | "9:16";\n  prompt: string;\n  referenceList?: ReferenceList[];\n  audio?: boolean;\n  mode: VideoMode[];\n}\n\ninterface TTSConfig {\n  text: string;\n  voice: string;\n  speechRate: number;\n  pitchRate: number;\n  volume: number;\n  referenceList?: Extract<ReferenceList, { type: "audio" }>[];\n}\n\ninterface PollResult {\n  completed: boolean;\n  data?: string;\n  error?: string;\n}\n\n// ============================================================\n// \u5168\u5C40\u58F0\u660E\n// ============================================================\n\ndeclare const axios: any; // HTTP\u8BF7\u6C42\u5E93\ndeclare const logger: (msg: string) => void; // \u65E5\u5FD7\u51FD\u6570\ndeclare const jsonwebtoken: any; // JWT\u5904\u7406\u5E93\ndeclare const zipImage: (base64: string, size: number) => Promise<string>; // \u56FE\u7247\u538B\u7F29\u51FD\u6570\uFF0C\u8FD4\u56DE\u6709\u5934base64\u5B57\u7B26\u4E32\ndeclare const zipImageResolution: (base64: string, w: number, h: number) => Promise<string>; // \u56FE\u7247\u5206\u8FA8\u7387\u8C03\u6574\u51FD\u6570\uFF0C\u8FD4\u56DE\u6709\u5934base64\u5B57\u7B26\u4E32\ndeclare const mergeImages: (base64Arr: string[], maxSize?: string) => Promise<string>; // \u56FE\u7247\u5408\u6210\u51FD\u6570\uFF0C\u8FD4\u56DE\u6709\u5934base64\u5B57\u7B26\u4E32\ndeclare const urlToBase64: (url: string) => Promise<string>; // URL\u8F6CBase64\u51FD\u6570\uFF0C\u8FD4\u56DE\u6709\u5934base64\u5B57\u7B26\u4E32\ndeclare const pollTask: (fn: () => Promise<PollResult>, interval?: number, timeout?: number) => Promise<PollResult>; // \u8F6E\u8BE2\u51FD\u6570\uFF0Cfn\u4E3A\u5F02\u6B65\u51FD\u6570\uFF0Cinterval\u4E3A\u8F6E\u8BE2\u95F4\u9694\uFF0Ctimeout\u4E3A\u8D85\u65F6\u65F6\u95F4\uFF0C\u8FD4\u56DEfn\u7684\u7ED3\u679C\ndeclare const createOpenAI: any;\ndeclare const createDeepSeek: any;\ndeclare const createZhipu: any;\ndeclare const createQwen: any;\ndeclare const createAnthropic: any;\ndeclare const createOpenAICompatible: any;\ndeclare const createXai: any;\ndeclare const createMinimax: any;\ndeclare const createGoogleGenerativeAI: any;\ndeclare const exports: {\n  vendor: VendorConfig;\n  textRequest: (m: TextModel, t: boolean, tl: 0 | 1 | 2 | 3) => any; //\u6587\u672C\u6A21\u578B\n  imageRequest: (c: ImageConfig, m: ImageModel) => Promise<string>; //\u56FE\u7247\u6A21\u578B\uFF0C\u8FD4\u56DE\u6709\u5934base64\u5B57\u7B26\u4E32\n  videoRequest: (c: VideoConfig, m: VideoModel) => Promise<string>; //\u89C6\u9891\u6A21\u578B\uFF0C\u8FD4\u56DE\u6709\u5934base64\u5B57\u7B26\u4E32\n  ttsRequest: (c: TTSConfig, m: TTSModel) => Promise<string>; //\uFF08\u6682\u672A\u5F00\u653E\uFF09\u8BED\u97F3\u6A21\u578B\uFF0C\u8FD4\u56DE\u6709\u5934base64\u5B57\u7B26\u4E32\n  checkForUpdates?: () => Promise<{ hasUpdate: boolean; latestVersion: string; notice: string }>; //\u68C0\u67E5\u66F4\u65B0\u51FD\u6570\uFF0C\u8FD4\u56DE\u662F\u5426\u6709\u66F4\u65B0\u548C\u6700\u65B0\u7248\u672C\u53F7\u548C\u66F4\u516C\u544A\uFF08\u652F\u6301Markdown\u683C\u5F0F\uFF09\n  updateVendor?: () => Promise<string>; //\u66F4\u65B0\u51FD\u6570\uFF0C\u8FD4\u56DE\u6700\u65B0\u7684\u4EE3\u7801\u6587\u672C\n};\n\n// ============================================================\n// \u4F9B\u5E94\u5546\u914D\u7F6E\n// ============================================================\n\nconst vendor: VendorConfig = {\n  id: "null",\n  version: "2.0",\n  author: "Toonflow",\n  name: "\u7A7A\u6A21\u677F",\n  description: "## \u5F00\u53D1\u6A21\u677F\uFF0C\u60A8\u53EF\u4EE5\u4F7F\u7528\u6B64\u6A21\u677F\u8FDB\u884CVibe Coding",\n  inputs: [\n    { key: "apiKey", label: "API\u5BC6\u94A5", type: "password", required: true },\n    { key: "baseUrl", label: "\u8BF7\u6C42\u5730\u5740", type: "url", required: true, placeholder: "\u793A\u4F8B\uFF1Ahttp://subrouter.railway.internal:8080" },\n  ],\n  inputValues: { apiKey: "", baseUrl: "http://subrouter.railway.internal:8080" },\n  models: [{ name: "GPT-4o", modelName: "gpt-4o", type: "text", think: false }],\n};\n\n// ============================================================\n// \u9002\u914D\u5668\u51FD\u6570\n// ============================================================\n\nconst textRequest = (model: TextModel, think: boolean, thinkLevel: 0 | 1 | 2 | 3) => {\n  if (!vendor.inputValues.apiKey) throw new Error("\u7F3A\u5C11API Key");\n  const apiKey = vendor.inputValues.apiKey.replace(/^Bearer\\s+/i, "");\n  return createOpenAI({ baseURL: vendor.inputValues.baseUrl, apiKey }).chat(model.modelName);\n};\n\nconst imageRequest = async (config: ImageConfig, model: ImageModel): Promise<string> => {\n  return "";\n};\n\nconst videoRequest = async (config: VideoConfig, model: VideoModel): Promise<string> => {\n  return "";\n};\n\nconst ttsRequest = async (config: TTSConfig, model: TTSModel): Promise<string> => {\n  return "";\n};\n\nconst checkForUpdates = async (): Promise<{ hasUpdate: boolean; latestVersion: string; notice: string }> => {\n  return { hasUpdate: false, latestVersion: "2.0", notice: "## \u65B0\u7248\u672C\u66F4\u65B0\u516C\u544A" };\n};\n\nconst updateVendor = async (): Promise<string> => {\n  return "";\n};\n\n// ============================================================\n// \u5BFC\u51FA\n// ============================================================\n\nexports.vendor = vendor;\nexports.textRequest = textRequest;\nexports.imageRequest = imageRequest;\nexports.videoRequest = videoRequest;\nexports.ttsRequest = ttsRequest;\nexports.checkForUpdates = checkForUpdates;\nexports.updateVendor = updateVendor;\n\n// \u8FD9\u884C\u4EE3\u7801\u7528\u4E8E\u786E\u4FDD\u5F53\u524D\u6587\u4EF6\u88AB\u8BC6\u522B\u4E3A\u6A21\u5757\uFF0C\u907F\u514D\u5168\u5C40\u53D8\u91CF\u51B2\u7A81\nexport {};\n\n/**\n * ============================================================\n * AI \u4EE3\u7801\u751F\u6210\u6307\u5357\n * ============================================================\n *\n * \u3010\u6982\u8FF0\u3011\n * \u672C\u6587\u4EF6\u662F Toonflow AI \u4F9B\u5E94\u5546\u9002\u914D\u6A21\u677F\u3002AI \u5728\u751F\u6210\u65B0\u4F9B\u5E94\u5546\u9002\u914D\u4EE3\u7801\u65F6\uFF0C\n * \u5FC5\u987B\u4E25\u683C\u9075\u5B88\u4EE5\u4E0B\u89C4\u5219\uFF0C\u5E76\u8981\u6C42\u7528\u6237\u63D0\u4F9B\u76EE\u6807\u5E73\u53F0\u7684 curl \u8C03\u7528\u793A\u4F8B\u6216 API \u6587\u6863\u4FE1\u606F\u4F5C\u4E3A\u8F93\u5165\u4F9D\u636E\u3002\n *\n * \u3010\u524D\u7F6E\u8981\u6C42\u3011\n * \u5728\u751F\u6210\u4EE3\u7801\u524D\uFF0C\u8BF7\u5411\u7528\u6237\u7D22\u8981\u4EE5\u4E0B\u4FE1\u606F\uFF08\u81F3\u5C11\u5176\u4E00\uFF09\uFF1A\n *   1. \u76EE\u6807 API \u7684 curl \u8BF7\u6C42\u793A\u4F8B\uFF08\u5305\u542B\u8BF7\u6C42\u5730\u5740\u3001Headers\u3001Body \u7ED3\u6784\u3001\u54CD\u5E94\u7ED3\u6784\uFF09\n *   2. \u76EE\u6807 API \u7684\u5B98\u65B9\u6587\u6863\u94FE\u63A5\u6216\u6587\u6863\u622A\u56FE/\u6587\u672C\u5185\u5BB9\n *   3. \u9700\u8981\u9002\u914D\u7684\u6A21\u578B\u7C7B\u578B\uFF08text / image / video / tts\uFF09\u53CA\u5176\u80FD\u529B\u8BF4\u660E\n * \u6CA1\u6709\u8DB3\u591F\u4FE1\u606F\u65F6\uFF0C\u5E94\u4E3B\u52A8\u8FFD\u95EE\uFF0C\u4E0D\u8981\u51ED\u7A7A\u7F16\u9020 API \u7ED3\u6784\u3002\n *\n * \u3010\u4EE3\u7801\u89C4\u5219\u3011\n *\n * 1. \u7981\u6B62\u5F15\u5165\u4EFB\u4F55\u5916\u90E8\u5305\n *    \u4E0D\u53EF\u4F7F\u7528 import / require\uFF0C\u4EC5\u80FD\u4F7F\u7528\u672C\u6587\u4EF6\u300C\u5168\u5C40\u58F0\u660E\u300D\u533A\u57DF\u4E2D\u5DF2\u58F0\u660E\u7684\u65B9\u6CD5\u548C\u5BF9\u8C61\uFF0C\n *    \u5305\u62EC\uFF1Aaxios\u3001logger\u3001jsonwebtoken\u3001zipImage\u3001zipImageResolution\u3001mergeImages\u3001\n *    urlToBase64\u3001pollTask\uFF0C\u4EE5\u53CA createOpenAI\u3001createDeepSeek\u3001createZhipu\u3001createQwen\u3001\n *    createAnthropic\u3001createOpenAICompatible\u3001createXai\u3001createMinimax\u3001\n *    createGoogleGenerativeAI \u7B49 AI SDK \u5DE5\u5382\u51FD\u6570\u3002\n *\n * 2. \u7981\u6B62\u5728 exports.* \u51FD\u6570\u5916\u90E8\u58F0\u660E\u79BB\u6563\u7684\u5168\u5927\u5199\u5E38\u91CF\n *    \u9519\u8BEF\u793A\u4F8B\uFF1Aconst API_URL = "https://..."; const MAX_RETRY = 3;\n *    \u5982\u679C\u786E\u5B9E\u9700\u8981\u53EF\u914D\u7F6E\u7684\u5E38\u91CF\u503C\uFF0C\u5FC5\u987B\u5C06\u5176\u58F0\u660E\u5728 vendor.inputValues \u4E2D\uFF0C\n *    \u901A\u8FC7 vendor.inputValues.xxx \u8BBF\u95EE\uFF0C\u8BA9\u7528\u6237\u53EF\u5728\u754C\u9762\u4E0A\u914D\u7F6E\u3002\n *    \u5982\u679C\u662F\u7EAF\u903B\u8F91\u5185\u90E8\u4F7F\u7528\u7684\u4E34\u65F6\u53D8\u91CF\uFF0C\u5E94\u5185\u8054\u5728\u5BF9\u5E94\u7684 exports.* \u51FD\u6570\u4F53\u5185\u90E8\uFF0C\u4F7F\u7528\u5C0F\u9A7C\u5CF0\u547D\u540D\u3002\n *\n * 3. \u903B\u8F91\u5C3D\u91CF\u805A\u5408\u5728 exports.* \u5BF9\u5E94\u7684\u51FD\u6570\u5185\u90E8\n *    \u6BCF\u4E2A\u9002\u914D\u51FD\u6570\uFF08textRequest / imageRequest / videoRequest / ttsRequest\uFF09\n *    \u5E94\u81EA\u5305\u542B\uFF0C\u5C06\u8BF7\u6C42\u6784\u9020\u3001\u53D1\u9001\u3001\u8F6E\u8BE2\u3001\u7ED3\u679C\u89E3\u6790\u7B49\u903B\u8F91\u5199\u5728\u51FD\u6570\u4F53\u5185\uFF0C\u907F\u514D\u62C6\u5206\u51FA\u5927\u91CF\u5916\u90E8\u8F85\u52A9\u51FD\u6570\u3002\n *    \u5982\u679C\u591A\u4E2A\u51FD\u6570\u786E\u5B9E\u5B58\u5728\u516C\u5171\u903B\u8F91\uFF08\u5982\u7B7E\u540D\u8BA1\u7B97\u3001Token \u751F\u6210\u3001\u8BF7\u6C42\u5934\u6784\u9020\uFF09\uFF0C\n *    \u53EF\u63D0\u53D6\u4E3A\u6587\u4EF6\u5185\u7684\u5C0F\u9A7C\u5CF0\u547D\u540D\u51FD\u6570\uFF0C\u653E\u5728\u300C\u9002\u914D\u5668\u51FD\u6570\u300D\u533A\u5757\u4E4B\u524D\u7684\u300C\u8F85\u52A9\u5DE5\u5177\u300D\u533A\u5757\u4E2D\uFF0C\n *    \u4E14\u4E0D\u53EF\u4F7F\u7528\u5168\u5927\u5199\u547D\u540D\u3002\n *\n * 4. \u547D\u540D\u89C4\u8303\n *    \u6240\u6709\u53D8\u91CF\u3001\u51FD\u6570\u4E00\u5F8B\u4F7F\u7528\u5C0F\u9A7C\u5CF0\u547D\u540D\uFF08camelCase\uFF09\uFF0C\u7981\u6B62\u4F7F\u7528 UPPER_SNAKE_CASE\u3002\n *\n * 5. \u4E0D\u9700\u8981\u91CD\u65B0\u58F0\u660E\u7C7B\u578B\n *    \u672C\u6587\u4EF6\u9876\u90E8\u5DF2\u5B8C\u6574\u5B9A\u4E49\u4E86\u6240\u6709\u63A5\u53E3\u548C\u7C7B\u578B\uFF08VendorConfig\u3001ImageConfig\u3001VideoConfig\u3001\n *    TTSConfig\u3001TextModel\u3001ImageModel\u3001VideoModel\u3001TTSModel\u3001ReferenceList\u3001PollResult \u7B49\uFF09\uFF0C\n *    AI \u751F\u6210\u4EE3\u7801\u65F6\u76F4\u63A5\u4F7F\u7528\u5373\u53EF\uFF0C\u4E0D\u8981\u91CD\u590D\u58F0\u660E\u3002\n *\n * 6. \u8FD4\u56DE\u503C\u89C4\u8303\n *    - textRequest(model)\uFF1A\u8FD4\u56DE AI SDK \u7684 chat model \u5B9E\u4F8B\uFF08\u901A\u8FC7 createOpenAI \u7B49\u5DE5\u5382\u51FD\u6570\u521B\u5EFA\uFF09\u3002\n *    - imageRequest(config, model)\uFF1A\u8FD4\u56DE\u6709\u5934 base64 \u5B57\u7B26\u4E32\uFF08\u5982 "data:image/png;base64,..."\uFF09\u3002\n *      config.referenceList \u4E3A Extract<ReferenceList, { type: "image" }>[] \u7C7B\u578B\uFF0C\n *      \u6BCF\u4E2A\u5F15\u7528\u6761\u76EE\u5747\u4E3A base64 \u5F62\u5F0F\uFF08sourceType \u56FA\u5B9A\u4E3A "base64"\uFF09\u3002\n *    - videoRequest(config, model)\uFF1A\u8FD4\u56DE\u6709\u5934 base64 \u5B57\u7B26\u4E32\uFF08\u5982 "data:video/mp4;base64,..."\uFF09\u3002\n *      config.referenceList \u4E3A ReferenceList[] \u7C7B\u578B\uFF0C\u53EF\u5305\u542B image / video / audio \u4E09\u79CD\u5F15\u7528\uFF0C\n *      \u6BCF\u4E2A\u5F15\u7528\u6761\u76EE\u5747\u4E3A base64 \u5F62\u5F0F\uFF08sourceType \u56FA\u5B9A\u4E3A "base64"\uFF09\u3002\n *      config.mode \u4E3A\u5F53\u524D\u6FC0\u6D3B\u7684\u89C6\u9891\u6A21\u5F0F\u6570\u7EC4\uFF0C\u9700\u6839\u636E mode \u51B3\u5B9A\u5982\u4F55\u4F7F\u7528 referenceList\u3002\n *    - ttsRequest(config, model)\uFF1A\u8FD4\u56DE\u6709\u5934 base64 \u5B57\u7B26\u4E32\uFF08\u5982 "data:audio/mp3;base64,..."\uFF09\u3002\n *      config.referenceList \u4E3A Extract<ReferenceList, { type: "audio" }>[] \u7C7B\u578B\uFF08\u97F3\u9891\u53C2\u8003\uFF09\u3002\n *    \u5F53 API \u8FD4\u56DE\u7684\u662F URL \u800C\u975E\u4E8C\u8FDB\u5236\u6570\u636E\u65F6\uFF0C\u4F7F\u7528 urlToBase64(url) \u8F6C\u6362\u3002\n *\n * 7. ReferenceList \u4E0E VideoMode \u8BF4\u660E\n *    ReferenceList \u662F\u7EDF\u4E00\u7684\u591A\u5A92\u4F53\u5F15\u7528\u7C7B\u578B\uFF0C\u6BCF\u4E2A\u6761\u76EE\u5305\u542B\uFF1A\n *      - type: "image" | "audio" | "video"\uFF08\u5A92\u4F53\u7C7B\u578B\uFF09\n *      - sourceType: "base64"\uFF08\u5F53\u524D\u6A21\u677F\u56FA\u5B9A\u4E3A base64\uFF09\n *      - base64\uFF08\u5BF9\u5E94\u7684\u6570\u636E\uFF09\n *\n *    VideoMode \u5B9A\u4E49\u4E86\u89C6\u9891\u6A21\u578B\u652F\u6301\u7684\u8F93\u5165\u6A21\u5F0F\uFF1A\n *      - "text"\uFF1A\u7EAF\u6587\u672C\u751F\u6210\u89C6\u9891\n *      - "singleImage"\uFF1A\u5355\u5F20\u9996\u5E27\u56FE\u7247\n *      - "startEndRequired"\uFF1A\u9996\u5C3E\u5E27\uFF08\u4E24\u5F20\u90FD\u5FC5\u987B\u63D0\u4F9B\uFF09\n *      - "endFrameOptional"\uFF1A\u9996\u5C3E\u5E27\uFF08\u5C3E\u5E27\u53EF\u9009\uFF09\n *      - "startFrameOptional"\uFF1A\u9996\u5C3E\u5E27\uFF08\u9996\u5E27\u53EF\u9009\uFF09\n *      - \u6570\u7EC4\u5F62\u5F0F\u5982 ["imageReference:9", "videoReference:3", "audioReference:3"]\uFF1A\n *        \u591A\u6A21\u6001\u53C2\u8003\u6A21\u5F0F\uFF0C\u6570\u5B57\u8868\u793A\u8BE5\u7C7B\u578B\u7684\u6700\u5927\u6570\u91CF\u9650\u5236\u3002\n *\n *    \u5728 videoRequest \u4E2D\uFF0Cconfig.mode \u8868\u793A\u5F53\u524D\u9009\u62E9\u7684\u6A21\u5F0F\uFF0C\u9700\u6839\u636E\u5176\u503C\u51B3\u5B9A\uFF1A\n *      - \u5982\u4F55\u4ECE config.referenceList \u4E2D\u63D0\u53D6\u5BF9\u5E94\u7C7B\u578B\u7684\u5F15\u7528\n *      - \u5982\u4F55\u6784\u9020 API \u8BF7\u6C42\u4F53\u4E2D\u7684\u56FE\u7247/\u89C6\u9891/\u97F3\u9891\u53C2\u6570\n *\n * 8. \u5F02\u6B65\u4EFB\u52A1\u5904\u7406\n *    \u5BF9\u4E8E\u89C6\u9891\u751F\u6210\u7B49\u9700\u8981\u8F6E\u8BE2\u7684\u5F02\u6B65\u4EFB\u52A1\uFF0C\u4F7F\u7528\u5168\u5C40\u7684 pollTask \u51FD\u6570\uFF1A\n *    const result = await pollTask(async () => {\n *      const resp = await axios.get(...);\n *      if (resp.data.status === "SUCCESS") return { completed: true, data: resp.data.url };\n *      if (resp.data.status === "FAILED") return { completed: true, error: resp.data.message };\n *      return { completed: false };\n *    }, 5000, 600000); // \u6BCF5\u79D2\u8F6E\u8BE2\uFF0C10\u5206\u949F\u8D85\u65F6\n *    if (result.error) throw new Error(result.error);\n *    return await urlToBase64(result.data!);\n *\n * 9. \u9519\u8BEF\u5904\u7406\n *    \u5728\u6BCF\u4E2A\u51FD\u6570\u5F00\u5934\u6821\u9A8C\u5FC5\u9700\u53C2\u6570\uFF08\u5982 API Key\uFF09\uFF0C\u7F3A\u5931\u65F6\u4F7F\u7528 throw new Error("...") \u629B\u51FA\u3002\n *    API \u8BF7\u6C42\u5931\u8D25\u65F6\uFF0C\u4ECE\u54CD\u5E94\u4E2D\u63D0\u53D6\u6709\u610F\u4E49\u7684\u9519\u8BEF\u4FE1\u606F\u629B\u51FA\uFF0C\u4E0D\u8981\u541E\u6389\u5F02\u5E38\u3002\n *\n * 10. \u65E5\u5FD7\u8F93\u51FA\n *     \u5728\u5173\u952E\u6B65\u9AA4\u4F7F\u7528 logger("...") \u8F93\u51FA\u65E5\u5FD7\uFF08\u5982"\u5F00\u59CB\u63D0\u4EA4\u4EFB\u52A1"\u3001"\u4EFB\u52A1ID: xxx"\u3001"\u8F6E\u8BE2\u4E2D..."\uFF09\uFF0C\n *     \u4FBF\u4E8E\u8C03\u8BD5\u3002\n *\n * 11. vendor \u914D\u7F6E\u586B\u5199\n *     - id\uFF1A\u7EAF\u82F1\u6587\u5C0F\u5199\uFF0C\u4F5C\u4E3A\u6587\u4EF6\u540D\u4F7F\u7528\uFF0C\u7981\u6B62\u7279\u6B8A\u7B26\u53F7\u548C\u7A7A\u683C\u3002\n *     - version\uFF1A\u8BED\u4E49\u5316\u7248\u672C\u683C\u5F0F "x.y"\u3002\n *     - inputs\uFF1A\u6839\u636E\u76EE\u6807 API \u6240\u9700\u7684\u8BA4\u8BC1\u4FE1\u606F\u914D\u7F6E\uFF08API Key\u3001Secret\u3001\u8BF7\u6C42\u5730\u5740\u7B49\uFF09\u3002\n *     - models\uFF1A\u6839\u636E\u76EE\u6807\u5E73\u53F0\u652F\u6301\u7684\u6A21\u578B\u5217\u8868\u586B\u5199\uFF0C\u6CE8\u610F\u6B63\u786E\u8BBE\u7F6E type \u548C\u5404\u6A21\u578B\u7279\u6709\u5B57\u6BB5\u3002\n *       - VideoModel \u7684 mode \u5BF9\u5E94 API \u652F\u6301\u7684\u8F93\u5165\u6A21\u5F0F\uFF08\u53C2\u89C1\u89C4\u5219 7 \u7684 VideoMode \u8BF4\u660E\uFF09\u3002\n *       - VideoModel \u7684 audio \u5B57\u6BB5\uFF1Atrue\uFF08\u59CB\u7EC8\u751F\u6210\u97F3\u9891\uFF09\u3001false\uFF08\u4E0D\u751F\u6210\uFF09\u3001"optional"\uFF08\u7528\u6237\u53EF\u9009\uFF09\u3002\n *       - VideoModel \u7684 durationResolutionMap \u5BF9\u5E94\u5404\u65F6\u957F\u4E0B\u53EF\u9009\u7684\u5206\u8FA8\u7387\u3002\n *       - VideoModel \u7684 associationSkills \u53EF\u9009\uFF0C\u7528\u4E8E\u63CF\u8FF0\u6A21\u578B\u7684\u7279\u6B8A\u80FD\u529B\u3002\n *       - ImageModel \u7684 mode \u5BF9\u5E94 API \u652F\u6301\u7684\u751F\u56FE\u6A21\u5F0F\uFF08"text" \u7EAF\u6587\u672C\u3001"singleImage" \u5355\u56FE\u53C2\u8003\u3001"multiReference" \u591A\u56FE\u53C2\u8003\uFF09\u3002\n *       - TTSModel \u7684 voices \u5BF9\u5E94\u53EF\u9009\u7684\u97F3\u8272\u5217\u8868\u3002\n *\n * 12. \u56FE\u7247\u5904\u7406\n *     - \u9700\u8981\u538B\u7F29\u56FE\u7247\u4F53\u79EF\u65F6\u4F7F\u7528 zipImage(base64, maxSizeKB)\u3002\n *     - \u9700\u8981\u8C03\u6574\u56FE\u7247\u5206\u8FA8\u7387\u65F6\u4F7F\u7528 zipImageResolution(base64, width, height)\u3002\n *     - \u9700\u8981\u5C06\u591A\u5F20\u56FE\u7247\u62FC\u5408\u4E3A\u4E00\u5F20\u65F6\u4F7F\u7528 mergeImages(base64Arr, maxSize)\u3002\n *     - \u4EE5\u4E0A\u51FD\u6570\u5747\u63A5\u6536\u548C\u8FD4\u56DE\u6709\u5934 base64 \u5B57\u7B26\u4E32\u3002\n *\n * 13. \u6587\u4EF6\u7ED3\u6784\n *     \u751F\u6210\u7684\u4EE3\u7801\u5FC5\u987B\u4FDD\u6301\u672C\u6A21\u677F\u7684\u6574\u4F53\u7ED3\u6784\uFF1A\n *     \u7C7B\u578B\u5B9A\u4E49\u533A \u2192 \u5168\u5C40\u58F0\u660E\u533A \u2192 \u4F9B\u5E94\u5546\u914D\u7F6E\u533A \u2192 [\u8F85\u52A9\u5DE5\u5177\u533A\uFF08\u53EF\u9009\uFF09] \u2192 \u9002\u914D\u5668\u51FD\u6570\u533A \u2192 \u5BFC\u51FA\u533A\n *     \u4E0D\u8981\u6253\u4E71\u987A\u5E8F\uFF0C\u4E0D\u8981\u5220\u9664\u5DF2\u6709\u7684\u7ED3\u6784\u6CE8\u91CA\u5206\u9694\u7EBF\u3002\n *     \u8F85\u52A9\u5DE5\u5177\u533A\u7528\u4E8E\u653E\u7F6E\u591A\u4E2A\u9002\u914D\u5668\u51FD\u6570\u5171\u4EAB\u7684\u5C0F\u9A7C\u5CF0\u547D\u540D\u8F85\u52A9\u51FD\u6570\uFF08\u5982 getHeaders\u3001getBaseUrl\uFF09\u3002\n *\n * 14. \u5BFC\u51FA\u89C4\u8303\n *     \u5FC5\u987B\u5BFC\u51FA\u4EE5\u4E0B\u5B57\u6BB5\uFF08\u901A\u8FC7 exports.xxx = xxx \u8D4B\u503C\uFF09\uFF1A\n *       - exports.vendor\uFF08\u5FC5\u987B\uFF09\n *       - exports.textRequest\uFF08\u5FC5\u987B\uFF09\n *       - exports.imageRequest\uFF08\u5FC5\u987B\uFF09\n *       - exports.videoRequest\uFF08\u5FC5\u987B\uFF09\n *       - exports.ttsRequest\uFF08\u5FC5\u987B\uFF09\n *       - exports.checkForUpdates\uFF08\u53EF\u9009\uFF09\n *       - exports.updateVendor\uFF08\u53EF\u9009\uFF09\n *     \u672A\u5B9E\u73B0\u7684\u9002\u914D\u5668\u51FD\u6570\u4FDD\u7559\u7A7A\u5B9E\u73B0\uFF08return ""\uFF09\uFF0C\u4E0D\u53EF\u7701\u7565\u5BFC\u51FA\u3002\n *     \u6587\u4EF6\u672B\u5C3E\u5FC5\u987B\u5305\u542B export {}; \u4EE5\u786E\u4FDD\u6587\u4EF6\u88AB\u8BC6\u522B\u4E3A\u6A21\u5757\u3002\n *\n * \u3010\u751F\u6210\u6D41\u7A0B\u3011\n * \u5F53\u7528\u6237\u8BF7\u6C42\u751F\u6210\u65B0\u7684\u4F9B\u5E94\u5546\u9002\u914D\u65F6\uFF1A\n *   1. \u786E\u8BA4\u7528\u6237\u5DF2\u63D0\u4F9B curl \u793A\u4F8B\u6216 API \u6587\u6863\u3002\n *   2. \u5206\u6790 API \u7684\u8BA4\u8BC1\u65B9\u5F0F\u3001\u7AEF\u70B9\u5730\u5740\u3001\u8BF7\u6C42/\u54CD\u5E94\u7ED3\u6784\u3002\n *   3. \u57FA\u4E8E\u672C\u6A21\u677F\u7ED3\u6784\uFF0C\u586B\u5145 vendor \u914D\u7F6E\u548C\u5BF9\u5E94\u7684\u9002\u914D\u5668\u51FD\u6570\u3002\n *   4. \u6839\u636E\u5F53\u524D\u6A21\u677F\u7684 ReferenceList \u5B9A\u4E49\uFF0C\u6309 base64 \u5F62\u5F0F\u6784\u9020\u548C\u6D88\u8D39 referenceList\u3002\n *   5. \u4EC5\u5B9E\u73B0\u7528\u6237\u9700\u8981\u7684\u6A21\u578B\u7C7B\u578B\uFF0C\u672A\u7528\u5230\u7684\u51FD\u6570\u4FDD\u7559\u7A7A\u5B9E\u73B0\uFF08return ""\uFF09\u3002\n *   6. \u751F\u6210\u5B8C\u6574\u53EF\u7528\u7684\u4EE3\u7801\uFF0C\u786E\u4FDD\u65E0\u8BED\u6CD5\u9519\u8BEF\u3001\u65E0\u9057\u6F0F\u5BFC\u51FA\u3002\n */\n',
-      "openai.ts": '/**\n * Toonflow AI\u4F9B\u5E94\u5546\u6A21\u677F\n * @version 2.0\n */\n// ============================================================\n// \u7C7B\u578B\u5B9A\u4E49\n// ============================================================\ntype VideoMode =\n  | "singleImage"\n  | "startEndRequired"\n  | "endFrameOptional"\n  | "startFrameOptional"\n  | "text"\n  | (`videoReference:${number}` | `imageReference:${number}` | `audioReference:${number}`)[];\ninterface TextModel {\n  name: string;\n  modelName: string;\n  type: "text";\n  think: boolean;\n}\ninterface ImageModel {\n  name: string;\n  modelName: string;\n  type: "image";\n  mode: ("text" | "singleImage" | "multiReference")[];\n  associationSkills?: string;\n}\ninterface VideoModel {\n  name: string;\n  modelName: string;\n  type: "video";\n  mode: VideoMode[];\n  associationSkills?: string;\n  audio: "optional" | false | true;\n  durationResolutionMap: { duration: number[]; resolution: string[] }[];\n}\ninterface TTSModel {\n  name: string;\n  modelName: string;\n  type: "tts";\n  voices: { title: string; voice: string }[];\n}\ninterface VendorConfig {\n  id: string;\n  version: string;\n  name: string;\n  author: string;\n  description?: string;\n  icon?: string;\n  inputs: { key: string; label: string; type: "text" | "password" | "url"; required: boolean; placeholder?: string }[];\n  inputValues: Record<string, string>;\n  models: (TextModel | ImageModel | VideoModel | TTSModel)[];\n}\ninterface ImageConfig {\n  prompt: string;\n  imageBase64: string[];\n  size: "1K" | "2K" | "4K";\n  aspectRatio: `${number}:${number}`;\n}\ninterface VideoConfig {\n  duration: number;\n  resolution: string;\n  aspectRatio: "16:9" | "9:16";\n  prompt: string;\n  imageBase64?: string[];\n  audio?: boolean;\n  mode: VideoMode[];\n}\ninterface TTSConfig {\n  text: string;\n  voice: string;\n  speechRate: number;\n  pitchRate: number;\n  volume: number;\n}\ninterface PollResult {\n  completed: boolean;\n  data?: string;\n  error?: string;\n}\n// ============================================================\n// \u5168\u5C40\u58F0\u660E\n// ============================================================\ndeclare const axios: any;\ndeclare const logger: (msg: string) => void;\ndeclare const jsonwebtoken: any;\ndeclare const zipImage: (base64: string, size: number) => Promise<string>;\ndeclare const zipImageResolution: (base64: string, w: number, h: number) => Promise<string>;\ndeclare const mergeImages: (base64Arr: string[], maxSize?: string) => Promise<string>;\ndeclare const urlToBase64: (url: string) => Promise<string>;\ndeclare const pollTask: (fn: () => Promise<PollResult>, interval?: number, timeout?: number) => Promise<PollResult>;\ndeclare const createOpenAI: any;\ndeclare const createDeepSeek: any;\ndeclare const createZhipu: any;\ndeclare const createQwen: any;\ndeclare const createAnthropic: any;\ndeclare const createOpenAICompatible: any;\ndeclare const createXai: any;\ndeclare const createMinimax: any;\ndeclare const createGoogleGenerativeAI: any;\ndeclare const exports: {\n  vendor: VendorConfig;\n  textRequest: (m: TextModel, t: boolean, tl: 0 | 1 | 2 | 3) => any;\n  imageRequest: (c: ImageConfig, m: ImageModel) => Promise<string>;\n  videoRequest: (c: VideoConfig, m: VideoModel) => Promise<string>;\n  ttsRequest: (c: TTSConfig, m: TTSModel) => Promise<string>;\n  checkForUpdates?: () => Promise<{ hasUpdate: boolean; latestVersion: string; notice: string }>;\n  updateVendor?: () => Promise<string>;\n};\n// ============================================================\n// \u4F9B\u5E94\u5546\u914D\u7F6E\n// ============================================================\nconst vendor: VendorConfig = {\n  id: "openai",\n  version: "2.0",\n  author: "Toonflow",\n  name: "OpenAI\u6807\u51C6\u63A5\u53E3",\n  description: "OpenAI\u6807\u51C6\u683C\u5F0F\u63A5\u53E3\uFF0C\u53EF\u4FEE\u6539\u8BF7\u6C42\u5730\u5740\u5E76\u624B\u52A8\u6DFB\u52A0\u6A21\u578B\u3002",\n  icon: "",\n  inputs: [\n    { key: "apiKey", label: "API\u5BC6\u94A5", type: "password", required: true },\n    { key: "baseUrl", label: "\u8BF7\u6C42\u5730\u5740", type: "url", required: true, placeholder: "\u4EE5v1\u7ED3\u675F\uFF0C\u793A\u4F8B\uFF1Ahttp://subrouter.railway.internal:8080" },\n  ],\n  inputValues: {\n    apiKey: "",\n    baseUrl: "http://subrouter.railway.internal:8080",\n  },\n  models: [\n    { name: "GPT-4o", modelName: "gpt-4o", type: "text", think: false },\n    { name: "GPT-4.1", modelName: "gpt-4.1", type: "text", think: false },\n    { name: "GPT-5.1", modelName: "gpt-5.1", type: "text", think: false },\n    { name: "GPT-5.2", modelName: "gpt-5.2", type: "text", think: false },\n    { name: "GPT-5.4", modelName: "gpt-5.4", type: "text", think: false },\n  ],\n};\n// ============================================================\n// \u9002\u914D\u5668\u51FD\u6570\n// ============================================================\nconst textRequest = (model: TextModel, think: boolean, thinkLevel: 0 | 1 | 2 | 3) => {\n  if (!vendor.inputValues.apiKey) throw new Error("\u7F3A\u5C11API Key");\n  const apiKey = vendor.inputValues.apiKey.replace(/^Bearer\\s+/i, "");\n  return createOpenAI({ baseURL: vendor.inputValues.baseUrl, apiKey }).chat(model.modelName);\n};\nconst imageRequest = async (config: ImageConfig, model: ImageModel): Promise<string> => {\n  return "";\n};\nconst videoRequest = async (config: VideoConfig, model: VideoModel): Promise<string> => {\n  return "";\n};\nconst ttsRequest = async (config: TTSConfig, model: TTSModel): Promise<string> => {\n  return "";\n};\nconst checkForUpdates = async (): Promise<{ hasUpdate: boolean; latestVersion: string; notice: string }> => {\n  return { hasUpdate: false, latestVersion: "2.0", notice: "" };\n};\nconst updateVendor = async (): Promise<string> => {\n  return "";\n};\n// ============================================================\n// \u5BFC\u51FA\n// ============================================================\nexports.vendor = vendor;\nexports.textRequest = textRequest;\nexports.imageRequest = imageRequest;\nexports.videoRequest = videoRequest;\nexports.ttsRequest = ttsRequest;\nexports.checkForUpdates = checkForUpdates;\nexports.updateVendor = updateVendor;\nexport {};',
-      "toonflow.ts": '/**\n * Toonflow\u5B98\u65B9\u4E2D\u8F6C\u5E73\u53F0 \u4F9B\u5E94\u5546\u9002\u914D\n * @version 2.0\n */\n\n// ============================================================\n// \u7C7B\u578B\u5B9A\u4E49\n// ============================================================\n\ntype VideoMode =\n  | "singleImage"\n  | "startEndRequired"\n  | "endFrameOptional"\n  | "startFrameOptional"\n  | "text"\n  | (`videoReference:${number}` | `imageReference:${number}` | `audioReference:${number}`)[];\n\ninterface TextModel {\n  name: string;\n  modelName: string;\n  type: "text";\n  think: boolean;\n}\n\ninterface ImageModel {\n  name: string;\n  modelName: string;\n  type: "image";\n  mode: ("text" | "singleImage" | "multiReference")[];\n  associationSkills?: string;\n}\n\ninterface VideoModel {\n  name: string;\n  modelName: string;\n  type: "video";\n  mode: VideoMode[];\n  associationSkills?: string;\n  audio: "optional" | false | true;\n  durationResolutionMap: { duration: number[]; resolution: string[] }[];\n}\n\ninterface TTSModel {\n  name: string;\n  modelName: string;\n  type: "tts";\n  voices: { title: string; voice: string }[];\n}\n\ninterface VendorConfig {\n  id: string;\n  version: string;\n  name: string;\n  author: string;\n  description?: string;\n  icon?: string;\n  inputs: { key: string; label: string; type: "text" | "password" | "url"; required: boolean; placeholder?: string }[];\n  inputValues: Record<string, string>;\n  models: (TextModel | ImageModel | VideoModel | TTSModel)[];\n}\n\ntype ReferenceList =\n  | { type: "image"; sourceType: "base64"; base64: string }\n  | { type: "audio"; sourceType: "base64"; base64: string }\n  | { type: "video"; sourceType: "base64"; base64: string };\n\ninterface ImageConfig {\n  prompt: string;\n  referenceList?: Extract<ReferenceList, { type: "image" }>[];\n  size: "1K" | "2K" | "4K";\n  aspectRatio: `${number}:${number}`;\n}\n\ninterface VideoConfig {\n  duration: number;\n  resolution: string;\n  aspectRatio: "16:9" | "9:16";\n  prompt: string;\n  referenceList?: ReferenceList[];\n  audio?: boolean;\n  mode: VideoMode[];\n}\n\ninterface TTSConfig {\n  text: string;\n  voice: string;\n  speechRate: number;\n  pitchRate: number;\n  volume: number;\n  referenceList?: Extract<ReferenceList, { type: "audio" }>[];\n}\n\ninterface PollResult {\n  completed: boolean;\n  data?: string;\n  error?: string;\n}\n\n// ============================================================\n// \u5168\u5C40\u58F0\u660E\n// ============================================================\n\ndeclare const axios: any;\ndeclare const logger: (msg: string) => void;\ndeclare const jsonwebtoken: any;\ndeclare const zipImage: (base64: string, size: number) => Promise<string>;\ndeclare const zipImageResolution: (base64: string, w: number, h: number) => Promise<string>;\ndeclare const mergeImages: (base64Arr: string[], maxSize?: string) => Promise<string>;\ndeclare const urlToBase64: (url: string) => Promise<string>;\ndeclare const pollTask: (fn: () => Promise<PollResult>, interval?: number, timeout?: number) => Promise<PollResult>;\ndeclare const createOpenAI: any;\ndeclare const createDeepSeek: any;\ndeclare const createZhipu: any;\ndeclare const createQwen: any;\ndeclare const createAnthropic: any;\ndeclare const createOpenAICompatible: any;\ndeclare const createXai: any;\ndeclare const createMinimax: any;\ndeclare const createGoogleGenerativeAI: any;\ndeclare const exports: {\n  vendor: VendorConfig;\n  textRequest: (m: TextModel, t: boolean, tl: 0 | 1 | 2 | 3) => any;\n  imageRequest: (c: ImageConfig, m: ImageModel) => Promise<string>;\n  videoRequest: (c: VideoConfig, m: VideoModel) => Promise<string>;\n  ttsRequest: (c: TTSConfig, m: TTSModel) => Promise<string>;\n  checkForUpdates?: () => Promise<{ hasUpdate: boolean; latestVersion: string; notice: string }>;\n  updateVendor?: () => Promise<string>;\n};\n\n// ============================================================\n// \u4F9B\u5E94\u5546\u914D\u7F6E\n// ============================================================\n\nconst vendor: VendorConfig = {\n  id: "toonflow",\n  version: "2.0",\n  author: "Toonflow",\n  name: "Toonflow\u5B98\u65B9\u4E2D\u8F6C\u5E73\u53F0",\n  description:\n    "## Toonflow\u5B98\u65B9\u4E2D\u8F6C\u5E73\u53F0\\n\\nToonflow\u5B98\u65B9\u4E2D\u8F6C\u5E73\u53F0\uFF0C\u63D0\u4F9B**\u6587\u672C\u3001\u56FE\u50CF\u3001\u89C6\u9891\u3001\u97F3\u9891**\u7B49\u591A\u6A21\u6001\u751F\u6210\u80FD\u529B\u7684\u4E2D\u8F6C\u670D\u52A1\uFF0C\u652F\u6301\u63A5\u5165\u591A\u4E2A\u5927\u6A21\u578B\u4F9B\u5E94\u5546\uFF0C\u65B9\u4FBF\u7528\u6237\u7EDF\u4E00\u7BA1\u7406\u548C\u8C03\u7528\u4E0D\u540C\u4F9B\u5E94\u5546\u7684\u751F\u6210\u80FD\u529B\u3002\\n\\n\u{1F517} [\u524D\u5F80\u4E2D\u8F6C\u5E73\u53F0](https://api.toonflow.net/)\\n\\n\u5982\u679C\u8FD9\u4E2A\u9879\u76EE\u5BF9\u4F60\u6709\u5E2E\u52A9\uFF0C\u53EF\u4EE5\u8003\u8651\u652F\u6301\u4E00\u4E0B\u6211\u4EEC\u7684\u5F00\u53D1\u5DE5\u4F5C \u2615",\n  icon: "",\n  inputs: [{ key: "apiKey", label: "API\u5BC6\u94A5", type: "password", required: true }],\n  inputValues: {\n    apiKey: "",\n    baseUrl: "http://subrouter.railway.internal:8080",\n  },\n  models: [\n    { name: "claude-sonnet-4-6", type: "text", modelName: "claude-sonnet-4-6", think: false },\n    { name: "claude-opus-4-6", type: "text", modelName: "claude-opus-4-6", think: false },\n    { name: "claude-sonnet-4-5-20250929", type: "text", modelName: "claude-sonnet-4-5-20250929", think: false },\n    { name: "claude-opus-4-5-20251101", type: "text", modelName: "claude-opus-4-5-20251101", think: false },\n    { name: "claude-haiku-4-5-20251001", type: "text", modelName: "claude-haiku-4-5-20251001", think: false },\n    { name: "gpt-5.4", type: "text", modelName: "gpt-5.4", think: false },\n    { name: "gpt-5.2", type: "text", modelName: "gpt-5.2", think: false },\n    { name: "MiniMax-M2.7", type: "text", modelName: "MiniMax-M2.7", think: true },\n    { name: "MiniMax-M2.5", type: "text", modelName: "MiniMax-M2.5", think: true },\n    {\n      name: "Wan2.6 I2V 1080P (\u652F\u6301\u771F\u4EBA)",\n      type: "video",\n      modelName: "Wan2.6-I2V-1080P",\n      mode: ["text", "startEndRequired"],\n      durationResolutionMap: [{ duration: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], resolution: ["1080p"] }],\n      audio: true,\n    },\n    {\n      name: "Wan2.6 I2V 720P (\u652F\u6301\u771F\u4EBA)",\n      type: "video",\n      modelName: "Wan2.6-I2V-720P",\n      mode: ["text", "startEndRequired"],\n      durationResolutionMap: [{ duration: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], resolution: ["720p"] }],\n      audio: true,\n    },\n    {\n      name: "Seedance 1.5 Pro",\n      type: "video",\n      modelName: "doubao-seedance-1-5-pro-251215",\n      mode: ["text", "endFrameOptional"],\n      durationResolutionMap: [{ duration: [4, 5, 6, 7, 8, 9, 10, 11, 12], resolution: ["480p", "720p", "1080p"] }],\n      audio: true,\n    },\n    {\n      name: "vidu2 turbo",\n      type: "video",\n      modelName: "ViduQ2-turbo",\n      mode: ["singleImage", "startEndRequired"],\n      durationResolutionMap: [{ duration: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], resolution: ["540p", "720p", "1080p"] }],\n      audio: false,\n    },\n    {\n      name: "ViduQ3 pro",\n      type: "video",\n      modelName: "ViduQ3-pro",\n      mode: ["singleImage", "startEndRequired"],\n      durationResolutionMap: [{ duration: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16], resolution: ["540p", "720p", "1080p"] }],\n      audio: false,\n    },\n    {\n      name: "ViduQ2 pro",\n      type: "video",\n      modelName: "ViduQ2-pro",\n      mode: ["singleImage", "startEndRequired"],\n      durationResolutionMap: [{ duration: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], resolution: ["540p", "720p", "1080p"] }],\n      audio: false,\n    },\n    {\n      name: "Doubao Seedream 5.0 Lite",\n      type: "image",\n      modelName: "Doubao-Seedream-5.0-Lite",\n      mode: ["text", "singleImage", "multiReference"],\n    },\n    {\n      name: "Doubao Seedream 4.5",\n      type: "image",\n      modelName: "doubao-seedream-4-5-251128",\n      mode: ["text", "singleImage", "multiReference"],\n    },\n  ],\n};\n\n// ============================================================\n// \u8F85\u52A9\u5DE5\u5177\n// ============================================================\n\n// \u4ECE markdown \u5185\u5BB9\u4E2D\u63D0\u53D6\u7B2C\u4E00\u5F20\u56FE\u7247\nfunction extractFirstImageFromMd(content: string) {\n  const regex = /!\\[([^\\]]*)\\]\\((data:image\\/[^;]+;base64,[A-Za-z0-9+/=]+|https?:\\/\\/[^\\s)]+|\\/\\/[^\\s)]+|[^\\s)]+)\\)/;\n  const match = content.match(regex);\n  if (!match) return null;\n  const raw = match[2].trim();\n  const url = raw.startsWith("data:") ? raw : raw.split(/\\s+/)[0];\n  return { alt: match[1], url, type: url.startsWith("data:image") ? "base64" : "url" };\n}\n\n// ============================================================\n// \u9002\u914D\u5668\u51FD\u6570\n// ============================================================\n\nconst textRequest = (model: TextModel, think: boolean, thinkLevel: 0 | 1 | 2 | 3) => {\n  if (!vendor.inputValues.apiKey) throw new Error("\u7F3A\u5C11API Key");\n  const apiKey = vendor.inputValues.apiKey.replace(/^Bearer\\s+/i, "");\n  return createOpenAI({ baseURL: vendor.inputValues.baseUrl, apiKey }).chat(model.modelName);\n};\n\nconst imageRequest = async (config: ImageConfig, model: ImageModel): Promise<string> => {\n  if (!vendor.inputValues.apiKey) throw new Error("\u7F3A\u5C11API Key");\n  const apiKey = vendor.inputValues.apiKey.replace(/^Bearer\\s+/i, "");\n  const baseUrl = vendor.inputValues.baseUrl;\n  const lowerName = model.modelName.toLowerCase();\n  const imageBase64List = (config.referenceList ?? []).map((r) => r.base64);\n\n  // Gemini / nano \u7CFB\u6A21\u578B\uFF1A\u8D70 chat/completions \u63A5\u53E3\uFF0C\u4ECE\u8FD4\u56DE\u7684 markdown \u4E2D\u63D0\u53D6\u56FE\u7247\n  if (lowerName.includes("gemini") || lowerName.includes("nano")) {\n    const imageConfigGoogle: Record<string, string> = {\n      aspect_ratio: config.aspectRatio,\n      image_size: config.size,\n    };\n    const messages: any[] = [];\n    if (imageBase64List.length) {\n      messages.push({\n        role: "user",\n        content: imageBase64List.map((b) => ({ type: "image_url", image_url: { url: b } })),\n      });\n    }\n    messages.push({ role: "user", content: config.prompt + "\u8BF7\u76F4\u63A5\u8F93\u51FA\u56FE\u7247" });\n    const body = {\n      model: model.modelName,\n      messages,\n      extra_body: { google: { image_config: imageConfigGoogle } },\n    };\n    logger(`[imageRequest] \u4F7F\u7528 gemini \u9002\u914D\u5668\uFF0C\u6A21\u578B: ${model.modelName}`);\n    const response = await fetch(`${baseUrl}/chat/completions`, {\n      method: "POST",\n      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },\n      body: JSON.stringify(body),\n    });\n    if (!response.ok) {\n      const errorText = await response.text();\n      throw new Error(`\u8BF7\u6C42\u5931\u8D25\uFF0C\u72B6\u6001\u7801: ${response.status}, \u9519\u8BEF\u4FE1\u606F: ${errorText}`);\n    }\n    const data = await response.json();\n    const imageResult = extractFirstImageFromMd(data.choices[0].message.content);\n    if (!imageResult) throw new Error("\u672A\u80FD\u4ECE\u54CD\u5E94\u4E2D\u63D0\u53D6\u56FE\u7247");\n    if (imageResult.type === "base64") return imageResult.url;\n    return await urlToBase64(imageResult.url);\n  }\n\n  // \u8C46\u5305 / seedream \u7CFB\u6A21\u578B\uFF1A\u8D70 images/generations \u63A5\u53E3\n  if (lowerName.includes("doubao") || lowerName.includes("seedream")) {\n    const effectiveSize = config.size === "1K" ? "2K" : config.size;\n    const sizeMap: Record<string, Record<string, string>> = {\n      "16:9": { "2K": "2848x1600", "4K": "4096x2304" },\n      "9:16": { "2K": "1600x2848", "4K": "2304x4096" },\n    };\n    const resolvedSize = sizeMap[config.aspectRatio]?.[effectiveSize];\n    const body: Record<string, any> = {\n      model: model.modelName,\n      prompt: config.prompt,\n      size: resolvedSize,\n      response_format: "url",\n      sequential_image_generation: "disabled",\n      stream: false,\n      watermark: false,\n      ...(imageBase64List.length && { image: imageBase64List }),\n    };\n    logger(`[imageRequest] \u4F7F\u7528 doubao \u9002\u914D\u5668\uFF0C\u6A21\u578B: ${model.modelName}`);\n    const response = await fetch(`${baseUrl}/images/generations`, {\n      method: "POST",\n      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },\n      body: JSON.stringify(body),\n    });\n    if (!response.ok) {\n      const errorText = await response.text();\n      throw new Error(`\u8BF7\u6C42\u5931\u8D25\uFF0C\u72B6\u6001\u7801: ${response.status}, \u9519\u8BEF\u4FE1\u606F: ${errorText}`);\n    }\n    const data = await response.json();\n    const resultUrl = data.data[0].url;\n    return await urlToBase64(resultUrl);\n  }\n\n  throw new Error(`\u4E0D\u652F\u6301\u7684\u56FE\u50CF\u6A21\u578B: ${model.modelName}`);\n};\n\nconst videoRequest = async (config: VideoConfig, model: VideoModel): Promise<string> => {\n  if (!vendor.inputValues.apiKey) throw new Error("\u7F3A\u5C11API Key");\n  const apiKey = vendor.inputValues.apiKey.replace(/^Bearer\\s+/i, "");\n  const baseUrl = vendor.inputValues.baseUrl;\n  const lowerName = model.modelName.toLowerCase();\n\n  // \u5F53\u524D\u6FC0\u6D3B\u7684\u5355\u4E00 VideoMode\uFF08\u53D6\u7B2C\u4E00\u4E2A\u975E\u6570\u7EC4\u6A21\u5F0F\uFF0C\u6216\u6570\u7EC4\u6A21\u5F0F\uFF09\n  const activeMode = config.mode;\n  const imageRefs = (config.referenceList ?? []).filter((r) => r.type === "image").map((r) => r.base64);\n  const videoRefs = (config.referenceList ?? []).filter((r) => r.type === "video").map((r) => r.base64);\n  const audioRefs = (config.referenceList ?? []).filter((r) => r.type === "audio").map((r) => r.base64);\n\n  // \u6784\u5EFA\u6A21\u578B\u4E13\u5C5E metadata\n  let metadata: Record<string, any> = {};\n\n  if (lowerName.includes("wan")) {\n    // \u4E07\u8C61\u7CFB\u5217\n    if ((activeMode === "startEndRequired" || activeMode === "endFrameOptional" || activeMode === "startFrameOptional") && imageRefs.length >= 2) {\n      if (imageRefs[0]) metadata.first_frame_url = imageRefs[0];\n      if (imageRefs[1]) metadata.last_frame_url = imageRefs[1];\n    } else if (imageRefs.length) {\n      metadata.img_url = imageRefs[0];\n    }\n    if (typeof config.audio === "boolean") metadata.audio = config.audio;\n\n    // \u4E07\u8C61\u9700\u8981\u989D\u5916\u4F20 size \u5B57\u6BB5\n    const wanSizeMap: Record<string, Record<string, string>> = {\n      "480p": { "16:9": "832*480", "9:16": "480*832" },\n      "720p": { "16:9": "1280*720", "9:16": "720*1280" },\n      "1080p": { "16:9": "1920*1080", "9:16": "1080*1920" },\n    };\n    const wanSize = wanSizeMap[config.resolution]?.[config.aspectRatio];\n    const body: Record<string, any> = {\n      model: model.modelName,\n      prompt: config.prompt,\n      duration: config.duration,\n      size: wanSize,\n      metadata,\n    };\n    logger(`[videoRequest] \u63D0\u4EA4\u4E07\u8C61\u89C6\u9891\u4EFB\u52A1\uFF0C\u6A21\u578B: ${model.modelName}`);\n    const response = await fetch(`${baseUrl}/video/generations`, {\n      method: "POST",\n      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },\n      body: JSON.stringify(body),\n    });\n    if (!response.ok) {\n      const errorText = await response.text();\n      throw new Error(`\u8BF7\u6C42\u5931\u8D25\uFF0C\u72B6\u6001\u7801: ${response.status}, \u9519\u8BEF\u4FE1\u606F: ${errorText}`);\n    }\n    const data = await response.json();\n    const taskId = data.id;\n    logger(`[videoRequest] \u4E07\u8C61\u4EFB\u52A1ID: ${taskId}`);\n    const res = await pollTask(async () => {\n      const queryResponse = await fetch(`${baseUrl}/video/generations/${taskId}`, {\n        method: "GET",\n        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },\n      });\n      if (!queryResponse.ok) {\n        const errorText = await queryResponse.text();\n        throw new Error(`\u8F6E\u8BE2\u5931\u8D25\uFF0C\u72B6\u6001\u7801: ${queryResponse.status}, \u9519\u8BEF\u4FE1\u606F: ${errorText}`);\n      }\n      const queryData = await queryResponse.json();\n      const status = queryData?.status ?? queryData?.data?.status;\n      switch (status) {\n        case "completed":\n        case "SUCCESS":\n        case "success":\n          return { completed: true, data: queryData.data.result_url };\n        case "FAILURE":\n        case "failed":\n          return { completed: true, error: queryData?.data?.fail_reason ?? "\u89C6\u9891\u751F\u6210\u5931\u8D25" };\n        default:\n          return { completed: false };\n      }\n    });\n    if (res.error) throw new Error(res.error);\n    return await urlToBase64(res.data!);\n  }\n\n  if (lowerName.includes("doubao") || lowerName.includes("seedance")) {\n    // \u8C46\u5305/Seedance \u7CFB\u5217\n    metadata = {\n      ...(typeof config.audio === "boolean" && { generate_audio: config.audio }),\n      ratio: config.aspectRatio,\n      image_roles: [] as string[],\n      references: [] as string[],\n    };\n    if (Array.isArray(activeMode)) {\n      // \u591A\u53C2\u8003\u6A21\u5F0F\n      imageRefs.forEach((b) => metadata.references.push(b));\n      videoRefs.forEach((b) => metadata.references.push(b));\n      audioRefs.forEach((b) => metadata.references.push(b));\n    } else if (activeMode === "startEndRequired" || activeMode === "endFrameOptional" || activeMode === "startFrameOptional") {\n      imageRefs.forEach((_, i) => (metadata.image_roles as string[]).push(i === 0 ? "first_frame" : "last_frame"));\n    } else if (activeMode === "singleImage") {\n      imageRefs.forEach(() => (metadata.image_roles as string[]).push("reference_image"));\n    }\n  } else if (lowerName.includes("vidu")) {\n    // Vidu \u7CFB\u5217\n    metadata = {\n      aspect_ratio: config.aspectRatio,\n      audio: config.audio ?? false,\n      off_peak: false,\n    };\n  } else if (lowerName.includes("kling")) {\n    // \u53EF\u7075\u7CFB\u5217\n    metadata = { aspect_ratio: config.aspectRatio };\n    if (Array.isArray(activeMode)) {\n      metadata.reference = [...imageRefs, ...videoRefs, ...audioRefs];\n    } else if (activeMode === "endFrameOptional" && imageRefs.length) {\n      metadata.image_tail = imageRefs[0];\n    } else if (activeMode === "startEndRequired" && imageRefs.length >= 2) {\n      metadata.image_list = [\n        { image_url: imageRefs[0], type: "first_frame" },\n        { image_url: imageRefs[1], type: "last_frame" },\n      ];\n    } else if (activeMode === "singleImage" && imageRefs.length) {\n      metadata.image = imageRefs[0];\n    }\n  }\n\n  // \u516C\u5171\u8BF7\u6C42\u4F53\uFF08\u975E\u4E07\u8C61\u901A\u7528\u8DEF\u5F84\uFF09\n  const publicBody: Record<string, any> = {\n    model: model.modelName,\n    ...(!Array.isArray(activeMode) && imageRefs.length ? { images: imageRefs } : {}),\n    prompt: config.prompt,\n    duration: config.duration,\n    metadata,\n  };\n\n  logger(`[videoRequest] \u63D0\u4EA4\u89C6\u9891\u4EFB\u52A1\uFF0C\u6A21\u578B: ${model.modelName}`);\n  const response = await fetch(`${baseUrl}/video/generations`, {\n    method: "POST",\n    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },\n    body: JSON.stringify(publicBody),\n  });\n  if (!response.ok) {\n    const errorText = await response.text();\n    throw new Error(`\u8BF7\u6C42\u5931\u8D25\uFF0C\u72B6\u6001\u7801: ${response.status}, \u9519\u8BEF\u4FE1\u606F: ${errorText}`);\n  }\n  const data = await response.json();\n  const taskId = data.id;\n  logger(`[videoRequest] \u4EFB\u52A1ID: ${taskId}`);\n\n  const res = await pollTask(async () => {\n    const queryResponse = await fetch(`${baseUrl}/video/generations/${taskId}`, {\n      method: "GET",\n      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },\n    });\n    if (!queryResponse.ok) {\n      const errorText = await queryResponse.text();\n      throw new Error(`\u8F6E\u8BE2\u5931\u8D25\uFF0C\u72B6\u6001\u7801: ${queryResponse.status}, \u9519\u8BEF\u4FE1\u606F: ${errorText}`);\n    }\n    const queryData = await queryResponse.json();\n    const status = queryData?.status ?? queryData?.data?.status;\n    switch (status) {\n      case "completed":\n      case "SUCCESS":\n      case "success":\n        return { completed: true, data: queryData.data.result_url };\n      case "FAILURE":\n      case "failed":\n        return { completed: true, error: queryData?.data?.fail_reason ?? "\u89C6\u9891\u751F\u6210\u5931\u8D25" };\n      default:\n        return { completed: false };\n    }\n  });\n\n  if (res.error) throw new Error(res.error);\n  return await urlToBase64(res.data!);\n};\n\nconst ttsRequest = async (config: TTSConfig, model: TTSModel): Promise<string> => {\n  return "";\n};\n\nconst checkForUpdates = async (): Promise<{ hasUpdate: boolean; latestVersion: string; notice: string }> => {\n  return { hasUpdate: false, latestVersion: "2.0", notice: "" };\n};\n\nconst updateVendor = async (): Promise<string> => {\n  return "";\n};\n\n// ============================================================\n// \u5BFC\u51FA\n// ============================================================\n\nexports.vendor = vendor;\nexports.textRequest = textRequest;\nexports.imageRequest = imageRequest;\nexports.videoRequest = videoRequest;\nexports.ttsRequest = ttsRequest;\nexports.checkForUpdates = checkForUpdates;\nexports.updateVendor = updateVendor;\n\nexport {};\n',
-      "vidu.ts": '//\u5982\u9700\u9065\u6D4BAI\u8BF7\u4F7F\u7528\u5728toonflow\u5B89\u88C5\u76EE\u5F55\u8FD0\u884Cnpx @ai-sdk/devtools \uFF08\u8981\u6C42\u5728\u5176\u4ED6\u8BBE\u7F6E\u4E2D\u6253\u5F00\u9065\u6D4B\u529F\u80FD\uFF0C\u4E14toonflow\u6709\u6743\u9650\u5728\u5B89\u88C5\u76EE\u5F55\u521B\u5EFA.devtools\u6587\u4EF6\u5939\uFF09\n// ==================== \u7C7B\u578B\u5B9A\u4E49 ====================\n// \u6587\u672C\u6A21\u578B\ninterface TextModel {\n  name: string; // \u663E\u793A\u540D\u79F0\n  modelName: string;\n  type: "text";\n  think: boolean; // \u524D\u7AEF\u663E\u793A\u7528\n}\n\n// \u56FE\u50CF\u6A21\u578B\ninterface ImageModel {\n  name: string; // \u663E\u793A\u540D\u79F0\n  modelName: string;\n  type: "image";\n  mode: ("text" | "singleImage" | "multiReference")[];\n  associationSkills?: string; // \u5173\u8054\u6280\u80FD\uFF0C\u591A\u4E2A\u6280\u80FD\u7528\u9017\u53F7\u5206\u9694\n}\n// \u89C6\u9891\u6A21\u578B\ninterface VideoModel {\n  name: string; // \u663E\u793A\u540D\u79F0\n  modelName: string; //\u5168\u5C40\u552F\u4E00\n  type: "video";\n  mode: (\n    | "singleImage" // \u5355\u56FE\n    | "startEndRequired" // \u9996\u5C3E\u5E27\uFF08\u4E24\u5F20\u90FD\u5F97\u6709\uFF09\n    | "endFrameOptional" // \u9996\u5C3E\u5E27\uFF08\u5C3E\u5E27\u53EF\u9009\uFF09\n    | "startFrameOptional" // \u9996\u5C3E\u5E27\uFF08\u9996\u5E27\u53EF\u9009\uFF09\n    | "text" // \u6587\u672C\u751F\u89C6\u9891\n    | ("videoReference" | "imageReference" | "audioReference" | "textReference")[] // \u6DF7\u5408\u53C2\u8003\n  )[];\n  associationSkills?: string; // \u5173\u8054\u6280\u80FD\uFF0C\u591A\u4E2A\u6280\u80FD\u7528\u9017\u53F7\u5206\u9694\n  audio: "optional" | false | true; // \u97F3\u9891\u914D\u7F6E\n  durationResolutionMap: { duration: number[]; resolution: string[] }[];\n}\n\ninterface TTSModel {\n  name: string; // \u663E\u793A\u540D\u79F0\n  modelName: string;\n  type: "tts";\n  voices: {\n    title: string; //\u663E\u793A\u540D\u79F0\n    voice: string; //\u8BF4\u8BDD\u4EBA\n  }[];\n}\n// \u4F9B\u5E94\u5546\u914D\u7F6E\ninterface VendorConfig {\n  id: string; //\u4F9B\u5E94\u5546\u552F\u4E00\u6807\u8BC6\uFF0C\u5FC5\u987B\u5168\u5C40\u552F\u4E00\n  author: string;\n  description?: string; //md5\u683C\u5F0F\n  name: string;\n  icon?: string; //\u4EC5\u652F\u6301base64\u683C\u5F0F\n  inputs: {\n    key: string;\n    label: string;\n    type: "text" | "password" | "url";\n    required: boolean;\n    placeholder?: string;\n  }[];\n  inputValues: Record<string, string>;\n  models: (TextModel | ImageModel | VideoModel)[];\n}\n// ==================== \u5168\u5C40\u5DE5\u5177\u51FD\u6570 ====================\n//Axios\u5B9E\u4F8B\n//\u538B\u7F29\u56FE\u7247\u5927\u5C0F(1MB = 1 * 1024 * 1024)\ndeclare const zipImage: (completeBase64: string, size: number) => Promise<string>;\n//\u538B\u7F29\u56FE\u7247\u5206\u8FA8\u7387\ndeclare const zipImageResolution: (completeBase64: string, width: number, height: number) => Promise<string>;\n//\u591A\u56FE\u62FC\u63A5\u4E58\u5355\u56FE maxSize  \u6700\u5927\u8F93\u51FA\u5927\u5C0F\uFF0C\u9ED8\u8BA4\u4E3A 10mb\ndeclare const mergeImages: (completeBase64: string[], maxSize?: string) => Promise<string>;\n//Url\u8F6CBase64\ndeclare const urlToBase64: (url: string) => Promise<string>;\n//\u8F6E\u8BE2\u51FD\u6570\ndeclare const pollTask: (\n  fn: () => Promise<{ completed: boolean; data?: string; error?: string }>,\n  interval?: number,\n  timeout?: number,\n) => Promise<{ completed: boolean; data?: string; error?: string }>;\ndeclare const axios: any;\ndeclare const createOpenAI: any;\ndeclare const createDeepSeek: any;\ndeclare const createZhipu: any;\ndeclare const createQwen: any;\ndeclare const createAnthropic: any;\ndeclare const createOpenAICompatible: any;\ndeclare const createXai: any;\ndeclare const createMinimax: any;\ndeclare const createGoogleGenerativeAI: any;\ndeclare const logger: (logstring: string) => void;\ndeclare const jsonwebtoken: any;\n// ==================== \u4F9B\u5E94\u5546\u6570\u636E ====================\nconst vendor: VendorConfig = {\n  id: "vidu",\n  author: "\u642C\u7816\u7684Coder",\n  description:\n    "Vidu \u5B98\u65B9\u89C6\u9891\u751F\u6210\u5E73\u53F0\u3002 [\u524D\u5F80\u5E73\u53F0](https://platform.vidu.cn/login/)",\n  name: "Vidu \u5F00\u653E\u5E73\u53F0",\n  inputs: [\n    { key: "apiKey", label: "API\u5BC6\u94A5", type: "password", required: true, placeholder: "\u8BF7\u5230Vidu\u5B98\u65B9\u7533\u8BF7" },\n    { key: "baseUrl", label: "\u63A5\u53E3\u8DEF\u5F84", type: "url", required: true, placeholder: "http://subrouter.railway.internal:8080" },\n  ],\n  inputValues: {\n    apiKey: "",\n    baseUrl: "http://subrouter.railway.internal:8080",\n  },\n  models: [\n    {\n      name: "ViduQ3 turbo",\n      type: "video",\n      modelName: "ViduQ3-turbo",\n      durationResolutionMap: [{ duration: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16], resolution: ["540p", "720p", "1080p"] }],\n      mode: ["singleImage", "startEndRequired", "text"],\n      audio: true,\n    },\n    {\n      name: "ViduQ3 pro",\n      type: "video",\n      modelName: "ViduQ3-pro",\n      durationResolutionMap: [{ duration: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16], resolution: ["540p", "720p", "1080p"] }],\n      mode: ["singleImage", "startEndRequired", "text"],\n      audio: true,\n    },\n    {\n      name: "ViduQ2 pro fast",\n      type: "video",\n      modelName: "ViduQ2-pro-fast",\n      durationResolutionMap: [{ duration: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], resolution: ["720p", "1080p"] }],\n      mode: ["singleImage", "startEndRequired"],\n      audio: true,\n    },\n    {\n      name: "viduQ2 turbo",\n      type: "video",\n      modelName: "ViduQ2-turbo",\n      durationResolutionMap: [{ duration: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], resolution: ["540p", "720p", "1080p"] }],\n      mode: ["singleImage", "startEndRequired"],\n      audio: true,\n    },\n    {\n      name: "ViduQ2 pro",\n      type: "video",\n      modelName: "ViduQ2-pro",\n      durationResolutionMap: [{ duration: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], resolution: ["540p", "720p", "1080p"] }],\n      mode: ["singleImage", "startEndRequired"], //\u53C2\u8003\u751F\u89C6\u9891\u65E0\u6709\u6548\u8BBE\u7F6E\u503C\n      audio: true,\n    },\n    {\n      name: "ViduQ2",\n      type: "video",\n      modelName: "ViduQ2",\n      durationResolutionMap: [{ duration: [5], resolution: ["1080p"] }],\n      mode: ["text"],\n      audio: true,\n    },\n    {\n      name: "ViduQ1",\n      type: "video",\n      modelName: "ViduQ1",\n      durationResolutionMap: [{ duration: [5], resolution: ["1080p"] }],\n      mode: ["singleImage", "startEndRequired", "text"],\n      audio: true,\n    },\n    {\n      name: "ViduQ1 classic",\n      type: "video",\n      modelName: "viduQ1-classic",\n      durationResolutionMap: [{ duration: [5], resolution: ["1080p"] }],\n      mode: ["singleImage", "startEndRequired"],\n      audio: true,\n    },\n    {\n      name: "Vidu2.0",\n      type: "video",\n      modelName: "vidu2.0",\n      durationResolutionMap: [{ duration: [4, 8], resolution: ["360p", "720p", "1080p"] }],\n      mode: ["singleImage", "startEndRequired"],\n      audio: true,\n    },\n    {\n      name: "viduq1 for image",\n      type: "image",\n      modelName: "viduq1",\n      mode: ["text"],\n    },\n    {\n      name: "viduq2 for image",\n      type: "image",\n      modelName: "viduq2",\n      mode: ["text", "singleImage", "multiReference"],\n    },\n  ],\n};\nexports.vendor = vendor;\n\n// ==================== \u9002\u914D\u5668\u51FD\u6570 ====================\n\n// \u6587\u672C\u8BF7\u6C42\u51FD\u6570\nconst textRequest: (textModel: TextModel) => { url: string; model: string } = (textModel) => {\n  throw new Error("\u5F53\u524D\u4F9B\u5E94\u5546\u4EC5\u652F\u6301\u89C6\u9891\u5927\u6A21\u578B\uFF0C\u8C22\u8C22\uFF01");\n};\nexports.textRequest = textRequest;\n\n//\u56FE\u7247\u8BF7\u6C42\u51FD\u6570\ninterface ImageConfig {\n  prompt: string; //\u56FE\u7247\u63D0\u793A\u8BCD\n  imageBase64: string[]; //\u8F93\u5165\u7684\u56FE\u7247\u63D0\u793A\u8BCD\n  size: "1K" | "2K" | "4K"; // \u56FE\u7247\u5C3A\u5BF8\n  aspectRatio: `${number}:${number}`; // \u957F\u5BBD\u6BD4\n}\nconst imageRequest = async (imageConfig: ImageConfig, imageModel: ImageModel) => {\n  if (!vendor.inputValues.apiKey) throw new Error("\u7F3A\u5C11API Key");\n  const apiKey = vendor.inputValues.apiKey.replace("Token ", "");\n\n  const size = imageConfig.size === "1K" ? "2K" : imageConfig.size;\n  const sizeMap: Record<string, Record<string, string>> = {\n    "16:9": {\n      "1k": "1920x1080",\n      "2K": "2848x1600",\n      "4K": "4096x2304",\n    },\n    "9:16": {\n      "1k": "1920x1080",\n      "2K": "1600x2848",\n      "4K": "2304x4096",\n    },\n  };\n\n  const body: Record<string, any> = {\n    model: imageModel.modelName,\n    prompt: imageConfig.prompt,\n    aspect_ratio: sizeMap[imageConfig.aspectRatio][size],\n    seed: 0,\n    resolution: size,\n    ...(imageConfig.imageBase64 && { image: imageConfig.imageBase64 }),\n  };\n\n  const createImageUrl = vendor.inputValues.baseUrl + "/reference2image";\n  const response = await fetch(createImageUrl, {\n    method: "POST",\n    headers: { Authorization: `Token ${apiKey}`, "Content-Type": "application/json" },\n    body: JSON.stringify(body),\n  });\n  if (!response.ok) {\n    const errorText = await response.text(); // \u83B7\u53D6\u9519\u8BEF\u4FE1\u606F\n    console.error("\u8BF7\u6C42\u5931\u8D25\uFF0C\u72B6\u6001\u7801:", response.status, ", \u9519\u8BEF\u4FE1\u606F:", errorText);\n    throw new Error(`\u8BF7\u6C42\u5931\u8D25\uFF0C\u72B6\u6001\u7801: ${response.status}, \u9519\u8BEF\u4FE1\u606F: ${errorText}`);\n  }\n  const data = await response.json();\n  const res = await checkTaskResult(data.task_id);\n  if (!res.data) {\n    throw new Error("\u56FE\u7247\u672A\u80FD\u751F\u6210");\n  }\n  const list = JSON.parse(JSON.stringify(res.data));\n  return list[0].url;\n};\nexports.imageRequest = imageRequest;\n\ninterface VideoConfig {\n  duration: number;\n  resolution: string;\n  aspectRatio: "16:9" | "9:16";\n  prompt: string;\n  imageBase64?: string[];\n  audio?: boolean;\n  mode:\n    | "singleImage" // \u5355\u56FE\n    | "multiImage" // \u591A\u56FE\u6A21\u5F0F\n    | "gridImage" // \u7F51\u683C\u5355\u56FE\uFF08\u4F20\u5165\u4E00\u5F20\u56FE\u7247\uFF0C\u4F46\u8BE5\u56FE\u7247\u662F\u7F51\u683C\u56FE\uFF09\n    | "startEndRequired" // \u9996\u5C3E\u5E27\uFF08\u4E24\u5F20\u90FD\u5F97\u6709\uFF09\n    | "endFrameOptional" // \u9996\u5C3E\u5E27\uFF08\u5C3E\u5E27\u53EF\u9009\uFF09\n    | "startFrameOptional" // \u9996\u5C3E\u5E27\uFF08\u9996\u5E27\u53EF\u9009\uFF09\n    | "text" // \u6587\u672C\u751F\u89C6\u9891\n    | ("video" | "image" | "audio" | "text")[]; // \u6DF7\u5408\u53C2\u8003\n}\n\n// \u6784\u5EFA \u5404\u4E2A\u5E73\u53F0\u7684metadata\u53C2\u6570\n\nconst buildViduMetadata = (videoConfig: VideoConfig) => ({\n  aspect_ratio: videoConfig.aspectRatio,\n  audio: videoConfig.audio ?? false,\n  off_peak: false,\n});\n\ntype MetadataBuilder = (config: VideoConfig) => Record<string, any>;\nconst METADATA_BUILDERS: Array<[string, MetadataBuilder]> = [["vidu", buildViduMetadata]];\nconst buildModelMetadata = (modelName: string, videoConfig: VideoConfig) => {\n  const lowerName = modelName.toLowerCase();\n  const match = METADATA_BUILDERS.find(([key]) => lowerName.includes(key));\n  return match ? match[1](videoConfig) : {};\n};\n// \u68C0\u67E5\u751F\u6210\u7269\u7ED3\u679C\nconst checkTaskResult = async (taskId: string) => {\n  const queryUrl = vendor.inputValues.baseUrl + "/tasks/{id}/creations";\n  const apiKey = vendor.inputValues.apiKey;\n  const res = await pollTask(async () => {\n    const queryResponse = await fetch(queryUrl.replace("{id}", taskId), {\n      method: "GET",\n      headers: { Authorization: `Token ${apiKey}`, "Content-Type": "application/json" },\n    });\n    if (!queryResponse.ok) {\n      const errorText = await queryResponse.text(); // \u83B7\u53D6\u9519\u8BEF\u4FE1\u606F\n      console.error("\u8BF7\u6C42\u5931\u8D25\uFF0C\u72B6\u6001\u7801:", queryResponse.status, ", \u9519\u8BEF\u4FE1\u606F:", errorText);\n      throw new Error(`\u8BF7\u6C42\u5931\u8D25\uFF0C\u72B6\u6001\u7801: ${queryResponse.status}, \u9519\u8BEF\u4FE1\u606F: ${errorText}`);\n    }\n    const queryData = await queryResponse.json();\n    const status = queryData?.state ?? queryData?.data?.state;\n    const fail_reason = queryData?.data?.err_code ?? queryData?.data;\n    switch (status) {\n      case "completed":\n      case "SUCCESS":\n      case "success":\n        return { completed: true, data: queryData.creations };\n      case "FAILURE":\n      case "failed":\n        return { completed: false, error: fail_reason || "\u751F\u6210\u5931\u8D25" };\n      default:\n        return { completed: false };\n    }\n  });\n  if (res.error) throw new Error(res.error);\n  return res;\n};\n\nconst videoRequest = async (videoConfig: VideoConfig, videoModel: VideoModel) => {\n  if (!vendor.inputValues.apiKey) throw new Error("\u7F3A\u5C11API Key");\n  const apiKey = vendor.inputValues.apiKey.replace("Token ", "");\n\n  // \u6784\u5EFA\u6BCF\u4E2A\u6A21\u578B\u5BF9\u5E94\u7684\u9644\u52A0\u53C2\u6570\n  const metadata = buildModelMetadata(videoModel.modelName, videoConfig);\n\n  //\u516C\u5171\u8BF7\u6C42\u53C2\u6570\n  const publicBody = {\n    model: videoModel.modelName,\n    ...(videoConfig.imageBase64 && videoConfig.imageBase64.length ? { images: videoConfig.imageBase64 } : {}),\n    prompt: videoConfig.prompt,\n    size: videoConfig.resolution,\n    duration: videoConfig.duration,\n    metadata: metadata,\n  };\n\n  const requestUrl = vendor.inputValues.baseUrl + "/start-end2video";\n  const response = await fetch(requestUrl, {\n    method: "POST",\n    headers: { Authorization: `Token ${apiKey}`, "Content-Type": "application/json" },\n    body: JSON.stringify(publicBody),\n  });\n  if (!response.ok) {\n    const errorText = await response.text(); // \u83B7\u53D6\u9519\u8BEF\u4FE1\u606F\n    console.error("\u8BF7\u6C42\u5931\u8D25\uFF0C\u72B6\u6001\u7801:", response.status, ", \u9519\u8BEF\u4FE1\u606F:", errorText);\n    throw new Error(`\u8BF7\u6C42\u5931\u8D25\uFF0C\u72B6\u6001\u7801: ${response.status}, \u9519\u8BEF\u4FE1\u606F: ${errorText}`);\n  }\n  const data = await response.json();\n  const taskId = data.id;\n  const result = await checkTaskResult(taskId);\n  return result.data;\n};\nexports.videoRequest = videoRequest;\n\ninterface TTSConfig {\n  text: string;\n  voice: string;\n  speechRate: number;\n  pitchRate: number;\n  volume: number;\n}\nconst ttsRequest = async (ttsConfig: TTSConfig, ttsModel: TTSModel) => {\n  throw new Error("Vidu \u6682\u4E0D\u652F\u6301\u8BED\u97F3\u5408\u6210\uFF08TTS\uFF09");\n};\n',
-      "volcengine.ts": '/**\n * Toonflow AI\u4F9B\u5E94\u5546\u6A21\u677F - \u706B\u5C71\u5F15\u64CE(\u8C46\u5305)\n * @version 2.0\n */\n\n// ============================================================\n// \u7C7B\u578B\u5B9A\u4E49\n// ============================================================\n\ntype VideoMode =\n  | "singleImage"\n  | "startEndRequired"\n  | "endFrameOptional"\n  | "startFrameOptional"\n  | "text"\n  | (`videoReference:${number}` | `imageReference:${number}` | `audioReference:${number}`)[];\n\ninterface TextModel {\n  name: string;\n  modelName: string;\n  type: "text";\n  think: boolean;\n}\n\ninterface ImageModel {\n  name: string;\n  modelName: string;\n  type: "image";\n  mode: ("text" | "singleImage" | "multiReference")[];\n  associationSkills?: string;\n}\n\ninterface VideoModel {\n  name: string;\n  modelName: string;\n  type: "video";\n  mode: VideoMode[];\n  associationSkills?: string;\n  audio: "optional" | false | true;\n  durationResolutionMap: { duration: number[]; resolution: string[] }[];\n}\n\ninterface TTSModel {\n  name: string;\n  modelName: string;\n  type: "tts";\n  voices: { title: string; voice: string }[];\n}\n\ninterface VendorConfig {\n  id: string;\n  version: string;\n  name: string;\n  author: string;\n  description?: string;\n  icon?: string;\n  inputs: { key: string; label: string; type: "text" | "password" | "url"; required: boolean; placeholder?: string }[];\n  inputValues: Record<string, string>;\n  models: (TextModel | ImageModel | VideoModel | TTSModel)[];\n}\n\ntype ReferenceList =\n  | { type: "image"; sourceType: "base64"; base64: string }\n  | { type: "audio"; sourceType: "base64"; base64: string }\n  | { type: "video"; sourceType: "base64"; base64: string };\n\ninterface ImageConfig {\n  prompt: string;\n  referenceList?: Extract<ReferenceList, { type: "image" }>[];\n  size: "1K" | "2K" | "4K";\n  aspectRatio: `${number}:${number}`;\n}\n\ninterface VideoConfig {\n  duration: number;\n  resolution: string;\n  aspectRatio: "16:9" | "9:16";\n  prompt: string;\n  referenceList?: ReferenceList[];\n  audio?: boolean;\n  mode: VideoMode[];\n}\n\ninterface TTSConfig {\n  text: string;\n  voice: string;\n  speechRate: number;\n  pitchRate: number;\n  volume: number;\n  referenceList?: Extract<ReferenceList, { type: "audio" }>[];\n}\n\ninterface PollResult {\n  completed: boolean;\n  data?: string;\n  error?: string;\n}\n\n// ============================================================\n// \u5168\u5C40\u58F0\u660E\n// ============================================================\n\ndeclare const axios: any;\ndeclare const logger: (msg: string) => void;\ndeclare const jsonwebtoken: any;\ndeclare const zipImage: (base64: string, size: number) => Promise<string>;\ndeclare const zipImageResolution: (base64: string, w: number, h: number) => Promise<string>;\ndeclare const mergeImages: (base64Arr: string[], maxSize?: string) => Promise<string>;\ndeclare const urlToBase64: (url: string) => Promise<string>;\ndeclare const pollTask: (fn: () => Promise<PollResult>, interval?: number, timeout?: number) => Promise<PollResult>;\ndeclare const createOpenAI: any;\ndeclare const createDeepSeek: any;\ndeclare const createZhipu: any;\ndeclare const createQwen: any;\ndeclare const createAnthropic: any;\ndeclare const createOpenAICompatible: any;\ndeclare const createXai: any;\ndeclare const createMinimax: any;\ndeclare const createGoogleGenerativeAI: any;\ndeclare const exports: {\n  vendor: VendorConfig;\n  textRequest: (m: TextModel, t: boolean, tl: 0 | 1 | 2 | 3) => any;\n  imageRequest: (c: ImageConfig, m: ImageModel) => Promise<string>;\n  videoRequest: (c: VideoConfig, m: VideoModel) => Promise<string>;\n  ttsRequest: (c: TTSConfig, m: TTSModel) => Promise<string>;\n  checkForUpdates?: () => Promise<{ hasUpdate: boolean; latestVersion: string; notice: string }>;\n  updateVendor?: () => Promise<string>;\n};\n\n// ============================================================\n// \u4F9B\u5E94\u5546\u914D\u7F6E\n// ============================================================\n\nconst vendor: VendorConfig = {\n  id: "volcengine",\n  version: "2.3",\n  author: "leeqi",\n  name: "\u706B\u5C71\u5F15\u64CE(\u8C46\u5305)",\n  description: "\u706B\u5C71\u5F15\u64CE\u8C46\u5305\u5927\u6A21\u578B\uFF0C\u652F\u6301\u6587\u672C\u3001\u56FE\u7247\u751F\u6210\u3001\u89C6\u9891\u751F\u6210\u7B49\u80FD\u529B\u3002\\n\\n\u9700\u8981\u5728[\u706B\u5C71\u5F15\u64CE\u63A7\u5236\u53F0](https://console.volcengine.com/ark)\u83B7\u53D6API\u5BC6\u94A5\u3002",\n  icon: "",\n  inputs: [\n    { key: "apiKey", label: "API\u5BC6\u94A5", type: "password", required: true, placeholder: "\u706B\u5C71\u5F15\u64CEAPI Key" },\n    { key: "baseUrl", label: "\u8BF7\u6C42\u5730\u5740", type: "url", required: true, placeholder: "\u4EE5v3\u7ED3\u675F\uFF0C\u793A\u4F8B\uFF1Ahttp://subrouter.railway.internal:8080" },\n  ],\n  inputValues: {\n    apiKey: "",\n    baseUrl: "http://subrouter.railway.internal:8080",\n  },\n  models: [\n    // ===================== \u6587\u672C\u6A21\u578B - \u63A8\u8350 =====================\n    { name: "Doubao-Seed-2.0-Pro", modelName: "doubao-seed-2-0-pro-260215", type: "text", think: true },\n    { name: "Doubao-Seed-2.0-Lite", modelName: "doubao-seed-2-0-lite-260215", type: "text", think: true },\n    { name: "Doubao-Seed-2.0-Mini", modelName: "doubao-seed-2-0-mini-260215", type: "text", think: true },\n    { name: "Doubao-Seed-2.0-Code-Preview", modelName: "doubao-seed-2-0-code-preview-260215", type: "text", think: true },\n    { name: "Doubao-Seed-Character", modelName: "doubao-seed-character-251128", type: "text", think: false },\n    // ===================== \u6587\u672C\u6A21\u578B - \u5F80\u671F =====================\n    { name: "Doubao-Seed-1.8", modelName: "doubao-seed-1-8-251228", type: "text", think: true },\n    { name: "Doubao-Seed-Code-Preview", modelName: "doubao-seed-code-preview-251028", type: "text", think: true },\n    { name: "Doubao-Seed-1.6-Lite", modelName: "doubao-seed-1-6-lite-251015", type: "text", think: true },\n    { name: "Doubao-Seed-1.6-Flash(0828)", modelName: "doubao-seed-1-6-flash-250828", type: "text", think: true },\n    { name: "Doubao-Seed-1.6-Vision", modelName: "doubao-seed-1-6-vision-250815", type: "text", think: true },\n    { name: "Doubao-Seed-1.6(1015)", modelName: "doubao-seed-1-6-251015", type: "text", think: true },\n    { name: "Doubao-Seed-1.6(0615)", modelName: "doubao-seed-1-6-250615", type: "text", think: true },\n    { name: "Doubao-Seed-1.6-Flash(0615)", modelName: "doubao-seed-1-6-flash-250615", type: "text", think: true },\n    { name: "Doubao-Seed-Translation", modelName: "doubao-seed-translation-250915", type: "text", think: false },\n    { name: "Doubao-1.5-Pro-32K", modelName: "doubao-1-5-pro-32k-250115", type: "text", think: false },\n    { name: "Doubao-1.5-Pro-32K-Character(0715)", modelName: "doubao-1-5-pro-32k-character-250715", type: "text", think: false },\n    { name: "Doubao-1.5-Pro-32K-Character(0228)", modelName: "doubao-1-5-pro-32k-character-250228", type: "text", think: false },\n    { name: "Doubao-1.5-Lite-32K", modelName: "doubao-1-5-lite-32k-250115", type: "text", think: false },\n    { name: "Doubao-1.5-Vision-Pro-32K", modelName: "doubao-1-5-vision-pro-32k-250115", type: "text", think: false },\n    // ===================== \u6587\u672C\u6A21\u578B - \u7B2C\u4E09\u65B9(\u706B\u5C71\u5F15\u64CE\u6258\u7BA1) =====================\n    { name: "GLM-4-7", modelName: "glm-4-7-251222", type: "text", think: true },\n    { name: "DeepSeek-V3-2", modelName: "deepseek-v3-2-251201", type: "text", think: true },\n    { name: "DeepSeek-V3-1-Terminus", modelName: "deepseek-v3-1-terminus", type: "text", think: true },\n    { name: "DeepSeek-V3(0324)", modelName: "deepseek-v3-250324", type: "text", think: false },\n    { name: "DeepSeek-R1(0528)", modelName: "deepseek-r1-250528", type: "text", think: true },\n    { name: "Qwen3-32B", modelName: "qwen3-32b-20250429", type: "text", think: false },\n    { name: "Qwen3-14B", modelName: "qwen3-14b-20250429", type: "text", think: false },\n    { name: "Qwen3-8B", modelName: "qwen3-8b-20250429", type: "text", think: false },\n    { name: "Qwen3-0.6B", modelName: "qwen3-0-6b-20250429", type: "text", think: false },\n    { name: "Qwen2.5-72B", modelName: "qwen2-5-72b-20240919", type: "text", think: false },\n    { name: "GLM-4.5-Air", modelName: "glm-4-5-air", type: "text", think: false },\n    // ===================== \u56FE\u7247\u751F\u6210\u6A21\u578B =====================\n    {\n      name: "Seedream-5.0",\n      modelName: "doubao-seedream-5-0-260128",\n      type: "image",\n      mode: ["text", "singleImage", "multiReference"],\n    },\n    {\n      name: "Seedream-5.0-Lite",\n      modelName: "doubao-seedream-5-0-lite-260128",\n      type: "image",\n      mode: ["text", "singleImage", "multiReference"],\n    },\n    {\n      name: "Seedream-4.5",\n      modelName: "doubao-seedream-4-5-251128",\n      type: "image",\n      mode: ["text", "singleImage", "multiReference"],\n    },\n    {\n      name: "Seedream-4.0",\n      modelName: "doubao-seedream-4-0-250828",\n      type: "image",\n      mode: ["text", "singleImage", "multiReference"],\n    },\n    {\n      name: "Seedream-3.0-T2I",\n      modelName: "doubao-seedream-3-0-t2i-250415",\n      type: "image",\n      mode: ["text"],\n    },\n    // ===================== \u89C6\u9891\u751F\u6210\u6A21\u578B =====================\n    {\n      name: "Seedance-2.0(\u97F3\u753B\u540C\u751F)",\n      modelName: "doubao-seedance-2-0-260128",\n      type: "video",\n      mode: ["text", "startFrameOptional", ["imageReference:9", "videoReference:3", "audioReference:3"]],\n      audio: "optional",\n      durationResolutionMap: [{ duration: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], resolution: ["480p", "720p"] }],\n    },\n    {\n      name: "Seedance-2.0-Fast(\u97F3\u753B\u540C\u751F)",\n      modelName: "doubao-seedance-2-0-fast-260128",\n      type: "video",\n      mode: ["text", "startFrameOptional", ["imageReference:9", "videoReference:3", "audioReference:3"]],\n      audio: "optional",\n      durationResolutionMap: [{ duration: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], resolution: ["480p", "720p"] }],\n    },\n    {\n      name: "Seedance-1.5-Pro(\u97F3\u753B\u540C\u751F)",\n      modelName: "doubao-seedance-1-5-pro-251215",\n      type: "video",\n      mode: ["text", "startFrameOptional"],\n      audio: "optional",\n      durationResolutionMap: [{ duration: [4, 5, 6, 7, 8, 9, 10, 11, 12], resolution: ["480p", "720p", "1080p"] }],\n    },\n    {\n      name: "Seedance-1.0-Pro",\n      modelName: "doubao-seedance-1-0-pro-250528",\n      type: "video",\n      mode: ["text", "startFrameOptional"],\n      audio: false,\n      durationResolutionMap: [{ duration: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], resolution: ["480p", "720p", "1080p"] }],\n    },\n    {\n      name: "Seedance-1.0-Pro-Fast",\n      modelName: "doubao-seedance-1-0-pro-fast-251015",\n      type: "video",\n      mode: ["text", "singleImage"],\n      audio: false,\n      durationResolutionMap: [{ duration: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], resolution: ["480p", "720p", "1080p"] }],\n    },\n    {\n      name: "Seedance-1.0-Lite-T2V",\n      modelName: "doubao-seedance-1-0-lite-t2v-250428",\n      type: "video",\n      mode: ["text"],\n      audio: false,\n      durationResolutionMap: [{ duration: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], resolution: ["480p", "720p", "1080p"] }],\n    },\n    {\n      name: "Seedance-1.0-Lite-I2V",\n      modelName: "doubao-seedance-1-0-lite-i2v-250428",\n      type: "video",\n      mode: ["startFrameOptional", ["imageReference:4"]],\n      audio: false,\n      durationResolutionMap: [{ duration: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], resolution: ["480p", "720p", "1080p"] }],\n    },\n  ],\n};\n\n// ============================================================\n// \u8F85\u52A9\u5DE5\u5177\n// ============================================================\n\nconst getHeaders = () => {\n  if (!vendor.inputValues.apiKey) throw new Error("\u7F3A\u5C11API Key");\n  return {\n    "Content-Type": "application/json",\n    Authorization: `Bearer ${vendor.inputValues.apiKey.replace(/^Bearer\\s+/i, "")}`,\n  };\n};\n\nconst getBaseUrl = () => vendor.inputValues.baseUrl.replace(/\\/+$/, "");\n\n// ============================================================\n// \u9002\u914D\u5668\u51FD\u6570\n// ============================================================\n\nconst textRequest = (model: TextModel, think: boolean, thinkLevel: 0 | 1 | 2 | 3) => {\n  if (!vendor.inputValues.apiKey) throw new Error("\u7F3A\u5C11API Key");\n  const apiKey = vendor.inputValues.apiKey.replace(/^Bearer\\s+/i, "");\n\n  const effortMap: Record<number, string> = {\n    0: "minimal",\n    1: "low",\n    2: "medium",\n    3: "high",\n  };\n\n  return createOpenAICompatible({\n    name: "volcengine",\n    baseURL: getBaseUrl(),\n    apiKey,\n    fetch: async (url: string, options?: RequestInit) => {\n      const rawBody = JSON.parse((options?.body as string) ?? "{}");\n      const modifiedBody = {\n        ...rawBody,\n        thinking: {\n          type: "enabled",\n        },\n        reasoning_effort: effortMap[thinkLevel],\n      };\n      return await fetch(url, {\n        ...options,\n        body: JSON.stringify(modifiedBody),\n      });\n    },\n  }).chatModel(model.modelName);\n};\n\nconst imageRequest = async (config: ImageConfig, model: ImageModel): Promise<string> => {\n  const baseUrl = getBaseUrl();\n  const headers = getHeaders();\n\n  const body: any = {\n    model: model.modelName,\n    prompt: config.prompt || "",\n    response_format: "url",\n    watermark: false,\n  };\n\n  const isOldModel = model.modelName.includes("seedream-3-0");\n  const is5Lite = model.modelName.includes("seedream-5-0-lite");\n\n  // sequential_image_generation \u4EC5 seedream 5.0-lite/4.5/4.0 \u652F\u6301\n  if (!isOldModel) {\n    body.sequential_image_generation = "disabled";\n  }\n\n  // \u53C2\u8003\u56FE\u7247\uFF1A\u5355\u56FE\u4E3A string\uFF0C\u591A\u56FE\u4E3A array\uFF08seedream-3.0-t2i \u4E0D\u652F\u6301 image \u53C2\u6570\uFF09\n  if (!isOldModel && config.referenceList && config.referenceList.length > 0) {\n    const images = config.referenceList.map((ref) => ref.base64);\n    body.image = images.length === 1 ? images[0] : images;\n  }\n\n  // \u5C3A\u5BF8\u5904\u7406\uFF1A\u4F18\u5148\u4F7F\u7528\u63A8\u8350\u50CF\u7D20\u503C\uFF0C\u672A\u5339\u914D\u5219\u76F4\u63A5\u4F20\u5206\u8FA8\u7387\u5B57\u7B26\u4E32\u8BA9\u6A21\u578B\u81EA\u884C\u51B3\u5B9A\n  const [w, h] = config.aspectRatio.split(":").map(Number);\n  const sizeTable: Record<string, Record<string, string>> = {\n    "1K": {\n      "1:1": "1024x1024",\n      "4:3": "1152x864",\n      "3:4": "864x1152",\n      "16:9": "1280x720",\n      "9:16": "720x1280",\n      "3:2": "1248x832",\n      "2:3": "832x1248",\n      "21:9": "1512x648",\n    },\n    "2K": {\n      "1:1": "2048x2048",\n      "4:3": "2304x1728",\n      "3:4": "1728x2304",\n      "16:9": "2848x1600",\n      "9:16": "1600x2848",\n      "3:2": "2496x1664",\n      "2:3": "1664x2496",\n      "21:9": "3136x1344",\n    },\n    "4K": {\n      "1:1": "4096x4096",\n      "4:3": "4704x3520",\n      "3:4": "3520x4704",\n      "16:9": "5504x3040",\n      "9:16": "3040x5504",\n      "3:2": "4992x3328",\n      "2:3": "3328x4992",\n      "21:9": "6240x2656",\n    },\n  };\n\n  const sizeKey = config.size || "2K";\n  const ratioKey = config.aspectRatio;\n  const table = sizeTable[sizeKey];\n\n  if (table && table[ratioKey]) {\n    // \u63A8\u8350\u50CF\u7D20\u503C\u5339\u914D\u5230\u4E86\uFF0C\u4F46\u9700\u8981\u68C0\u67E5\u662F\u5426\u6EE1\u8DB3\u6A21\u578B\u6700\u4F4E\u50CF\u7D20\u8981\u6C42\n    const [pw, ph] = table[ratioKey].split("x").map(Number);\n    const totalPixels = pw * ph;\n    if (isOldModel) {\n      // seedream-3.0-t2i: \u50CF\u7D20\u8303\u56F4 [512x512, 2048x2048]\n      body.size = table[ratioKey];\n    } else if (totalPixels < 3686400) {\n      // 1K \u50CF\u7D20\u503C\u4E0D\u6EE1\u8DB3\u65B0\u6A21\u578B\u6700\u4F4E\u8981\u6C42\uFF0C\u76F4\u63A5\u4F20 "2K" \u8BA9\u6A21\u578B\u81EA\u884C\u51B3\u5B9A\n      body.size = "2K";\n    } else if (is5Lite && totalPixels > 10404496) {\n      // seedream-5.0-lite \u6700\u9AD8 10404496\uFF0C4K \u8D85\u9650\uFF0C\u56DE\u9000\u4F20 "2K"\n      body.size = "2K";\n    } else {\n      body.size = table[ratioKey];\n    }\n  } else if (isOldModel) {\n    // seedream-3.0-t2i: \u50CF\u7D20\u8303\u56F4 [512x512, 2048x2048]\uFF0C\u76F4\u63A5\u6309\u6BD4\u4F8B\u8BA1\u7B97\n    const base = sizeKey === "1K" ? 1024 : 2048;\n    const calcW = Math.min(2048, Math.round(base * Math.sqrt(w / h)));\n    const calcH = Math.min(2048, Math.round(base * Math.sqrt(h / w)));\n    body.size = `${Math.max(512, calcW)}x${Math.max(512, calcH)}`;\n  } else {\n    // \u65B0\u6A21\u578B\u672A\u5339\u914D\u63A8\u8350\u503C\u65F6\uFF0C\u76F4\u63A5\u4F20\u5206\u8FA8\u7387\u5B57\u7B26\u4E32\uFF08\u65B9\u5F0F1\uFF09\uFF0C\u7531\u6A21\u578B\u6839\u636E prompt \u81EA\u884C\u51B3\u5B9A\u5C3A\u5BF8\n    // seedream 5.0-lite \u652F\u6301 "2K"/"3K"\uFF0Cseedream 4.5 \u652F\u6301 "2K"/"4K"\uFF0Cseedream 4.0 \u652F\u6301 "1K"/"2K"/"4K"\n    if (is5Lite) {\n      body.size = sizeKey === "4K" ? "3K" : sizeKey === "1K" ? "2K" : sizeKey;\n    } else {\n      body.size = sizeKey === "1K" ? "2K" : sizeKey;\n    }\n  }\n\n  logger(`[\u56FE\u7247\u751F\u6210] \u8BF7\u6C42\u6A21\u578B: ${model.modelName}, \u5C3A\u5BF8: ${body.size}`);\n\n  const response = await axios.post(`${baseUrl}/images/generations`, body, { headers });\n  const data = response.data;\n\n  if (data?.error) {\n    throw new Error(`\u56FE\u7247\u751F\u6210\u5931\u8D25\uFF1A${data.error.message || data.error.code}`);\n  }\n\n  // \u4ECE data \u6570\u7EC4\u4E2D\u63D0\u53D6\u7B2C\u4E00\u5F20\u6210\u529F\u7684\u56FE\u7247\n  if (data?.data && data.data.length > 0) {\n    for (const item of data.data) {\n      if (item.url) {\n        return await urlToBase64(item.url);\n      }\n      if (item.b64_json) {\n        return item.b64_json;\n      }\n      if (item.error) {\n        throw new Error(`\u56FE\u7247\u751F\u6210\u5931\u8D25\uFF1A${item.error.message || item.error.code}`);\n      }\n    }\n  }\n\n  throw new Error("\u56FE\u7247\u751F\u6210\u5931\u8D25\uFF1A\u672A\u8FD4\u56DE\u6709\u6548\u7ED3\u679C");\n};\n\nconst videoRequest = async (config: VideoConfig, model: VideoModel): Promise<string> => {\n  const baseUrl = getBaseUrl();\n  const headers = getHeaders();\n\n  const content: any[] = [];\n\n  if (config.prompt) {\n    content.push({ type: "text", text: config.prompt });\n  }\n\n  if (typeof config.mode === "string") {\n    switch (config.mode) {\n      case "singleImage": {\n        const firstImage = config.referenceList?.find((r) => r.type === "image");\n        if (firstImage) {\n          content.push({\n            type: "image_url",\n            image_url: { url: firstImage.base64 },\n            role: "first_frame",\n          });\n        }\n        break;\n      }\n      case "startFrameOptional": {\n        const images = config.referenceList?.filter((r) => r.type === "image") ?? [];\n        if (images.length > 0) {\n          content.push({\n            type: "image_url",\n            image_url: { url: images[0].base64 },\n            role: "first_frame",\n          });\n          if (images.length > 1) {\n            content.push({\n              type: "image_url",\n              image_url: { url: images[1].base64 },\n              role: "last_frame",\n            });\n          }\n        }\n        break;\n      }\n      case "startEndRequired": {\n        const images = config.referenceList?.filter((r) => r.type === "image") ?? [];\n        if (images.length >= 2) {\n          content.push({\n            type: "image_url",\n            image_url: { url: images[0].base64 },\n            role: "first_frame",\n          });\n          content.push({\n            type: "image_url",\n            image_url: { url: images[1].base64 },\n            role: "last_frame",\n          });\n        }\n        break;\n      }\n      case "endFrameOptional": {\n        const images = config.referenceList?.filter((r) => r.type === "image") ?? [];\n        if (images.length > 0) {\n          content.push({\n            type: "image_url",\n            image_url: { url: images[0].base64 },\n            role: "first_frame",\n          });\n          if (images.length > 1) {\n            content.push({\n              type: "image_url",\n              image_url: { url: images[1].base64 },\n              role: "last_frame",\n            });\n          }\n        }\n        break;\n      }\n      case "text":\n      default:\n        break;\n    }\n  } else if (Array.isArray(config.mode)) {\n    // \u591A\u6A21\u6001\u53C2\u8003\u6A21\u5F0F\uFF1A\u6309\u7C7B\u578B\u5206\u522B\u63D0\u53D6\u5E76\u6DFB\u52A0\n    const imageRefs = config.referenceList?.filter((r) => r.type === "image") ?? [];\n    const videoRefs = config.referenceList?.filter((r) => r.type === "video") ?? [];\n    const audioRefs = config.referenceList?.filter((r) => r.type === "audio") ?? [];\n\n    for (const refDef of config.mode) {\n      if (typeof refDef === "string") {\n        if (refDef.startsWith("imageReference:")) {\n          const maxCount = parseInt(refDef.split(":")[1], 10);\n          for (const ref of imageRefs.slice(0, maxCount)) {\n            content.push({\n              type: "image_url",\n              image_url: { url: ref.base64 },\n              role: "reference_image",\n            });\n          }\n        } else if (refDef.startsWith("videoReference:")) {\n          const maxCount = parseInt(refDef.split(":")[1], 10);\n          for (const ref of videoRefs.slice(0, maxCount)) {\n            content.push({\n              type: "video_url",\n              video_url: { url: ref.base64 },\n              role: "reference_video",\n            });\n          }\n        } else if (refDef.startsWith("audioReference:")) {\n          const maxCount = parseInt(refDef.split(":")[1], 10);\n          for (const ref of audioRefs.slice(0, maxCount)) {\n            content.push({\n              type: "audio_url",\n              audio_url: { url: ref.base64 },\n              role: "reference_audio",\n            });\n          }\n        }\n      }\n    }\n  }\n\n  const body: any = {\n    model: model.modelName,\n    content,\n    ratio: config.aspectRatio,\n    duration: config.duration,\n    resolution: config.resolution || "720p",\n    watermark: false,\n  };\n\n  if (model.audio === "optional") {\n    body.generate_audio = config.audio !== false;\n  } else if (model.audio === true) {\n    body.generate_audio = true;\n  } else {\n    body.generate_audio = false;\n  }\n\n  logger(`[\u89C6\u9891\u751F\u6210] \u63D0\u4EA4\u4EFB\u52A1, \u6A21\u578B: ${model.modelName}, \u65F6\u957F: ${config.duration}s, \u5206\u8FA8\u7387: ${config.resolution}`);\n\n  const createResponse = await axios.post(`${baseUrl}/contents/generations/tasks`, body, { headers });\n  const taskId = createResponse.data?.id;\n\n  if (!taskId) {\n    throw new Error("\u89C6\u9891\u751F\u6210\u4EFB\u52A1\u521B\u5EFA\u5931\u8D25\uFF1A\u672A\u8FD4\u56DE\u4EFB\u52A1ID");\n  }\n\n  logger(`[\u89C6\u9891\u751F\u6210] \u4EFB\u52A1\u5DF2\u521B\u5EFA, ID: ${taskId}`);\n\n  const result = await pollTask(\n    async (): Promise<PollResult> => {\n      const queryResponse = await axios.get(`${baseUrl}/contents/generations/tasks/${taskId}`, { headers });\n      const task = queryResponse.data;\n\n      logger(`[\u89C6\u9891\u751F\u6210] \u4EFB\u52A1\u72B6\u6001: ${task.status}`);\n\n      switch (task.status) {\n        case "succeeded":\n          if (task.content?.video_url) {\n            return { completed: true, data: task.content.video_url };\n          }\n          return { completed: true, error: "\u4EFB\u52A1\u6210\u529F\u4F46\u672A\u8FD4\u56DE\u89C6\u9891URL" };\n        case "failed":\n          return { completed: true, error: task.error?.message || "\u89C6\u9891\u751F\u6210\u5931\u8D25" };\n        case "expired":\n          return { completed: true, error: "\u89C6\u9891\u751F\u6210\u4EFB\u52A1\u8D85\u65F6" };\n        case "cancelled":\n          return { completed: true, error: "\u89C6\u9891\u751F\u6210\u4EFB\u52A1\u5DF2\u53D6\u6D88" };\n        default:\n          return { completed: false };\n      }\n    },\n    10000,\n    600000 * 3,\n  );\n\n  if (result.error) {\n    throw new Error(result.error);\n  }\n\n  return await urlToBase64(result.data!);\n};\n\nconst ttsRequest = async (config: TTSConfig, model: TTSModel): Promise<string> => {\n  return "";\n};\n\nconst checkForUpdates = async (): Promise<{ hasUpdate: boolean; latestVersion: string; notice: string }> => {\n  return { hasUpdate: false, latestVersion: "2.0", notice: "" };\n};\n\nconst updateVendor = async (): Promise<string> => {\n  return "";\n};\n\n// ============================================================\n// \u5BFC\u51FA\n// ============================================================\n\nexports.vendor = vendor;\nexports.textRequest = textRequest;\nexports.imageRequest = imageRequest;\nexports.videoRequest = videoRequest;\nexports.ttsRequest = ttsRequest;\nexports.checkForUpdates = checkForUpdates;\nexports.updateVendor = updateVendor;\n\nexport {};\n'
+      "atlascloud.ts": '/**\n * Toonflow AI\u4F9B\u5E94\u5546\u6A21\u677F - AtlasCloud MASS\n * @version 0.8\n *\n * \u8BF4\u660E\uFF1A\n * 1) \u6587\u672C\u63A5\u53E3\u4F7F\u7528 OpenAI \u517C\u5BB9\u57FA\u5730\u5740\uFF1Ahttps://api.toonflow.net/v1\n * 2) \u56FE\u7247/\u89C6\u9891\u4F7F\u7528 Atlas Cloud \u5A92\u4F53\u63A5\u53E3\uFF1Ahttps://api.toonflow.net/v1\n * 3) \u56FE\u7247/\u89C6\u9891\u4E3A\u5F02\u6B65\u4EFB\u52A1\uFF1A\u63D0\u4EA4\u540E\u8F6E\u8BE2 /api/v1/model/prediction/{id}\n */\n\n// ============================================================\n// \u7C7B\u578B\u5B9A\u4E49\n// ============================================================\n\ntype VideoMode =\n  | "singleImage"\n  | "startEndRequired"\n  | "endFrameOptional"\n  | "startFrameOptional"\n  | "text"\n  | (`videoReference:${number}` | `imageReference:${number}` | `audioReference:${number}`)[];\n\ninterface TextModel {\n  name: string;\n  modelName: string;\n  type: "text";\n  think: boolean;\n}\n\ninterface ImageModel {\n  name: string;\n  modelName: string;\n  type: "image";\n  mode: ("text" | "singleImage" | "multiReference")[];\n  associationSkills?: string;\n}\n\ninterface VideoModel {\n  name: string;\n  modelName: string;\n  type: "video";\n  mode: VideoMode[];\n  associationSkills?: string;\n  audio: "optional" | false | true;\n  durationResolutionMap: { duration: number[]; resolution: string[] }[];\n}\n\ninterface TTSModel {\n  name: string;\n  modelName: string;\n  type: "tts";\n  voices: { title: string; voice: string }[];\n}\n\ninterface VendorConfig {\n  id: string;\n  version: string;\n  name: string;\n  author: string;\n  description?: string;\n  icon?: string;\n  inputs: { key: string; label: string; type: "text" | "password" | "url"; required: boolean; placeholder?: string; disabled?: boolean }[];\n  inputValues: Record<string, string>;\n  models: (TextModel | ImageModel | VideoModel | TTSModel)[];\n}\n\ntype ReferenceList =\n  | { type: "image"; sourceType: "base64"; base64: string }\n  | { type: "audio"; sourceType: "base64"; base64: string }\n  | { type: "video"; sourceType: "base64"; base64: string };\n\ninterface ImageConfig {\n  prompt: string;\n  referenceList?: Extract<ReferenceList, { type: "image" }>[];\n  size: "1K" | "2K" | "4K";\n  aspectRatio: `${number}:${number}`;\n}\n\ninterface VideoConfig {\n  duration: number;\n  resolution: string;\n  aspectRatio: "16:9" | "9:16";\n  prompt: string;\n  referenceList?: ReferenceList[];\n  audio?: boolean;\n  mode: VideoMode[];\n}\n\ninterface TTSConfig {\n  text: string;\n  voice: string;\n  speechRate: number;\n  pitchRate: number;\n  volume: number;\n  referenceList?: Extract<ReferenceList, { type: "audio" }>[];\n}\n\ninterface PollResult {\n  completed: boolean;\n  data?: string;\n  error?: string;\n}\n\ntype AtlasVideoModelKind =\n  | "seedanceTextToVideo"\n  | "seedanceReferenceToVideo"\n  | "seedanceImageToVideo"\n  | "wanReferenceToVideo"\n  | "generic";\n\n// ============================================================\n// \u5168\u5C40\u58F0\u660E\n// ============================================================\n\ndeclare const axios: any;\ndeclare const logger: (msg: string) => void;\ndeclare const urlToBase64: (url: string) => Promise<string>;\ndeclare const pollTask: (fn: () => Promise<PollResult>, interval?: number, timeout?: number) => Promise<PollResult>;\ndeclare const createOpenAICompatible: any;\ndeclare const exports: {\n  vendor: VendorConfig;\n  textRequest: (m: TextModel, t: boolean, tl: 0 | 1 | 2 | 3) => any;\n  imageRequest: (c: ImageConfig, m: ImageModel) => Promise<string>;\n  videoRequest: (c: VideoConfig, m: VideoModel) => Promise<string>;\n  ttsRequest: (c: TTSConfig, m: TTSModel) => Promise<string>;\n  checkForUpdates?: () => Promise<{ hasUpdate: boolean; latestVersion: string; notice: string }>;\n  updateVendor?: () => Promise<string>;\n};\n\n// ============================================================\n// \u4F9B\u5E94\u5546\u914D\u7F6E\n// ============================================================\n\nconst vendor: VendorConfig = {\n  id: "atlascloud",\n  version: "1.0",\n  author: "AtlasCloud",\n  name: "AtlasCloud MASS",\n  description: "AtlasCloud \u5168\u6A21\u6001\u5E73\u53F0\u63A5\u5165 Toonflow\u3002\u9ED8\u8BA4\u6309\u5B98\u65B9\u6587\u6863\u586B\u5199\u6587\u672C\u3001\u56FE\u7247\u3001\u89C6\u9891\u4E0E\u4EFB\u52A1\u8F6E\u8BE2\u8DEF\u5F84\u3002",\n  inputs: [\n    { key: "apiKey", label: "API\u5BC6\u94A5", type: "password", required: true, placeholder: "AtlasCloud API Key" },\n    { key: "chatBaseUrl", label: "\u6587\u672C\u57FA\u5730\u5740", type: "url", required: true, placeholder: "https://api.toonflow.net/v1", disabled: true },\n    { key: "mediaBaseUrl", label: "\u5A92\u4F53\u57FA\u5730\u5740", type: "url", required: true, placeholder: "https://api.toonflow.net/v1", disabled: true },\n  ],\n  inputValues: {\n    apiKey: "",\n    chatBaseUrl: "https://api.toonflow.net/v1",\n    mediaBaseUrl: "https://api.toonflow.net/v1",\n  },\n  models: [\n    { name: "DeepSeek V4 Pro", modelName: "deepseek-ai/deepseek-v4-pro", type: "text", think: false },\n    { name: "DeepSeek V4 Flash", modelName: "deepseek-ai/deepseek-v4-flash", type: "text", think: false },\n    { name: "Kimi K2.6", modelName: "moonshotai/kimi-k2.6", type: "text", think: false },\n    { name: "GLM 5.1", modelName: "zai-org/glm-5.1", type: "text", think: false },\n    { name: "MiniMax M2.7", modelName: "minimaxai/minimax-m2.7", type: "text", think: false },\n    { name: "GPT Image 2", modelName: "openai/gpt-image-2/text-to-image", type: "image", mode: ["text", "singleImage"] },\n    { name: "Nano Banana Pro", modelName: "google/nano-banana-pro/text-to-image", type: "image", mode: ["text", "singleImage", "multiReference"] },\n    { name: "Nano Banana 2", modelName: "google/nano-banana-2/text-to-image", type: "image", mode: ["text", "singleImage", "multiReference"] },\n    { name: "Seedream v5", modelName: "bytedance/seedream-v5.0-lite/sequential", type: "image", mode: ["text"] },\n    { name: "Qwen Image 2 Pro", modelName: "qwen/qwen-image-2.0-pro/text-to-image", type: "image", mode: ["text"] },\n    {\n      name: "Seedance 2.0 Audio-Visual",\n      modelName: "bytedance/seedance-2.0/text-to-video",\n      type: "video",\n      mode: ["text", "startFrameOptional", ["imageReference:9", "videoReference:3", "audioReference:3"]],\n      audio: "optional",\n      durationResolutionMap: [{ duration: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], resolution: ["480p", "720p"] }],\n    },\n    {\n      name: "Seedance 2.0 Reference-to-Video",\n      modelName: "bytedance/seedance-2.0/reference-to-video",\n      type: "video",\n      mode: ["singleImage"],\n      audio: "optional",\n      durationResolutionMap: [{ duration: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], resolution: ["480p", "720p", "1080p"] }],\n    },\n    {\n      name: "Seedance 2.0 Multi-Image-to-Video",\n      modelName: "bytedance/seedance-2.0/image-to-video",\n      type: "video",\n      mode: ["startFrameOptional", ["imageReference:4"]],\n      audio: "optional",\n      durationResolutionMap: [{ duration: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], resolution: ["480p", "720p", "1080p"] }],\n    },\n    {\n      name: "Seedance 2.0 Fast Audio-Visual",\n      modelName: "bytedance/seedance-2.0-fast/text-to-video",\n      type: "video",\n      mode: ["text", "startFrameOptional", ["imageReference:9", "videoReference:3", "audioReference:3"]],\n      audio: "optional",\n      durationResolutionMap: [{ duration: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], resolution: ["480p", "720p"] }],\n    },\n    {\n      name: "Seedance 2.0 Fast Reference-to-Video",\n      modelName: "bytedance/seedance-2.0-fast/reference-to-video",\n      type: "video",\n      mode: ["singleImage"],\n      audio: "optional",\n      durationResolutionMap: [{ duration: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], resolution: ["480p", "720p"] }],\n    },\n    {\n      name: "Wan-2.7 Reference-to-video",\n      modelName: "alibaba/wan-2.7/reference-to-video",\n      type: "video",\n      mode: ["singleImage"],\n      audio: "optional",\n      durationResolutionMap: [{ duration: [2, 3, 4, 5, 6, 7, 8, 9, 10], resolution: ["720p", "1080p"] }],\n    },\n  ],\n};\n\n// ============================================================\n// \u8F85\u52A9\u5DE5\u5177\n// ============================================================\n\nconst getChatBaseUrl = () => vendor.inputValues.chatBaseUrl.replace(/\\/+$/, "");\n\nconst getMediaBaseUrl = () => vendor.inputValues.mediaBaseUrl.replace(/\\/+$/, "");\n\nconst joinUrl = (base: string, path: string) => `${base}${path.startsWith("/") ? "" : "/"}${path}`;\n\nconst getHeaders = () => {\n  if (!vendor.inputValues.apiKey) throw new Error("\u7F3A\u5C11 API Key");\n  return {\n    "Content-Type": "application/json",\n    Authorization: `Bearer ${vendor.inputValues.apiKey.replace(/^Bearer\\s+/i, "")}`,\n  };\n};\n\nconst readByPath = (obj: any, path: string): any => {\n  if (!obj || !path) return undefined;\n  const normalizedPath = path.replace(/\\[(\\d+)\\]/g, ".$1");\n  return normalizedPath.split(".").reduce((acc, key) => (acc == null ? undefined : acc[key]), obj);\n};\n\nconst pickFirstPath = (obj: any, paths: string[]): any => {\n  for (const path of paths) {\n    const value = readByPath(obj, path);\n    if (value !== undefined && value !== null && value !== "") return value;\n  }\n  return undefined;\n};\n\nconst extractTaskId = (data: any): string | undefined => {\n  return pickFirstPath(data, ["id", "taskId", "task_id", "data.id", "data.taskId", "data.task_id"]);\n};\n\nconst extractUrl = (data: any): string | undefined => {\n  return (\n    (Array.isArray(readByPath(data, "data.outputs")) ? readByPath(data, "data.outputs")[0] : undefined) ||\n    (Array.isArray(readByPath(data, "outputs")) ? readByPath(data, "outputs")[0] : undefined) ||\n    readByPath(data, "url") ||\n    readByPath(data, "video_url") ||\n    readByPath(data, "image_url") ||\n    readByPath(data, "data.url") ||\n    readByPath(data, "data.video_url") ||\n    readByPath(data, "data.image_url") ||\n    readByPath(data, "data.output.url") ||\n    readByPath(data, "data.output.video_url") ||\n    readByPath(data, "output.url")\n  );\n};\n\nconst extractB64 = (data: any): string | undefined => {\n  return pickFirstPath(data, ["b64_json", "data.b64_json", "data.0.b64_json", "data[0].b64_json"]);\n};\n\nconst extractStatus = (data: any): string => {\n  const statusRaw = pickFirstPath(data, ["status", "data.status", "data.state", "state"]);\n  return String(statusRaw || "").toLowerCase();\n};\n\nconst extractError = (data: any): string | undefined => {\n  return pickFirstPath(data, ["error.message", "message", "msg", "data.error.message", "data.message"]);\n};\n\nconst isDnsOrNetworkError = (err: any): boolean => {\n  const msg = String(err?.message || err || "");\n  return /ENOTFOUND|EAI_AGAIN|ECONNRESET|ETIMEDOUT|timeout/i.test(msg);\n};\n\nconst withNetworkRetry = async <T>(fn: () => Promise<T>, maxRetry = 3, waitMs = 1500): Promise<T> => {\n  let lastErr: any;\n  for (let i = 0; i < maxRetry; i += 1) {\n    try {\n      return await fn();\n    } catch (err) {\n      lastErr = err;\n      if (!isDnsOrNetworkError(err) || i === maxRetry - 1) throw err;\n      await new Promise((resolve) => setTimeout(resolve, waitMs * (i + 1)));\n    }\n  }\n  throw lastErr;\n};\n\nconst resolveAtlasImageModelName = (modelName: string, hasImageRefs: boolean): string => {\n  if (!hasImageRefs) return modelName;\n\n  switch (modelName) {\n    case "google/nano-banana-pro/text-to-image":\n      return "google/nano-banana-pro/edit";\n    case "google/nano-banana-2/text-to-image":\n      return "google/nano-banana-2/edit";\n    default:\n      return modelName;\n  }\n};\n\nconst resolveAtlasVideoModelKind = (modelName: string): AtlasVideoModelKind => {\n  if (modelName === "alibaba/wan-2.7/reference-to-video") return "wanReferenceToVideo";\n  if (/^bytedance\\/seedance-2\\.0(?:-fast)?\\/reference-to-video$/.test(modelName)) return "seedanceReferenceToVideo";\n  if (/^bytedance\\/seedance-2\\.0(?:-fast)?\\/image-to-video$/.test(modelName)) return "seedanceImageToVideo";\n  if (/^bytedance\\/seedance-2\\.0(?:-fast)?\\/text-to-video$/.test(modelName)) return "seedanceTextToVideo";\n  return "generic";\n};\n\nconst clampNumber = (value: unknown, min: number, max: number, fallback: number): number => {\n  const num = Number(value);\n  if (!Number.isFinite(num)) return fallback;\n  return Math.max(min, Math.min(max, num));\n};\n\nconst normalizeResolution = (value: unknown, allowed: string[], fallback: string): string => {\n  const lower = String(value || "").toLowerCase();\n  const matched = allowed.find((item) => item.toLowerCase() === lower);\n  if (matched) return matched;\n  if (/1080/.test(lower)) return allowed.find((item) => /1080/i.test(item)) || fallback;\n  if (/720/.test(lower)) return allowed.find((item) => /720/i.test(item)) || fallback;\n  if (/480/.test(lower)) return allowed.find((item) => /480/i.test(item)) || fallback;\n  return fallback;\n};\n\nconst getReferenceLimit = (\n  modes: VideoMode[],\n  prefix: "imageReference" | "videoReference" | "audioReference",\n): number | undefined => {\n  for (const mode of modes) {\n    if (!Array.isArray(mode)) continue;\n    for (const entry of mode) {\n      if (!entry.startsWith(`${prefix}:`)) continue;\n      const limit = Number(entry.split(":")[1]);\n      if (Number.isFinite(limit) && limit > 0) return limit;\n    }\n  }\n  return undefined;\n};\n\nconst limitReferences = (refs: string[], maxCount?: number): string[] => {\n  if (!maxCount || maxCount < 1) return refs;\n  return refs.slice(0, maxCount);\n};\n\nconst summarizeRefCount = (usedCount: number, rawCount: number): string => {\n  return usedCount === rawCount ? String(usedCount) : `${usedCount}/${rawCount}`;\n};\n\nconst buildAtlasVideoPayload = (config: VideoConfig, model: VideoModel) => {\n  const rawImageRefs = (config.referenceList || []).filter((r) => r.type === "image").map((r) => r.base64).filter(Boolean);\n  const rawVideoRefs = (config.referenceList || []).filter((r) => r.type === "video").map((r) => r.base64).filter(Boolean);\n  const rawAudioRefs = (config.referenceList || []).filter((r) => r.type === "audio").map((r) => r.base64).filter(Boolean);\n\n  const imageRefs = limitReferences(rawImageRefs, getReferenceLimit(model.mode, "imageReference"));\n  const videoRefs = limitReferences(rawVideoRefs, getReferenceLimit(model.mode, "videoReference"));\n  const audioRefs = limitReferences(rawAudioRefs, getReferenceLimit(model.mode, "audioReference"));\n  const kind = resolveAtlasVideoModelKind(model.modelName);\n  const ratio = config.aspectRatio || "16:9";\n  const shouldGenerateAudio = model.audio === true || (model.audio === "optional" && config.audio !== false);\n  const body: any = {\n    model: model.modelName,\n    prompt: config.prompt || "",\n  };\n\n  if (kind === "wanReferenceToVideo") {\n    if (imageRefs.length < 1) {\n      throw new Error(`${model.name} \u9700\u8981\u81F3\u5C11 1 \u5F20\u53C2\u8003\u56FE`);\n    }\n    body.images = [imageRefs[0]];\n    body.ratio = ratio;\n    body.duration = clampNumber(config.duration, 2, 10, 5);\n    body.resolution = normalizeResolution(config.resolution, ["720P", "1080P"], "720P");\n    body.prompt_extend = false;\n    body.seed = -1;\n  } else if (kind === "seedanceReferenceToVideo") {\n    if (imageRefs.length < 1) {\n      throw new Error(`${model.name} \u9700\u8981\u81F3\u5C11 1 \u5F20\u53C2\u8003\u56FE`);\n    }\n    if (shouldGenerateAudio) body.generate_audio = true;\n    body.images = [imageRefs[0]];\n    body.ratio = ratio;\n    body.duration = clampNumber(config.duration, 4, 15, 5);\n    body.resolution = normalizeResolution(config.resolution, ["480p", "720p", "1080p"], "720p");\n    body.watermark = false;\n  } else if (kind === "seedanceImageToVideo") {\n    if (imageRefs.length < 1) {\n      throw new Error(`${model.name} \u9700\u8981\u81F3\u5C11 1 \u5F20\u53C2\u8003\u56FE`);\n    }\n    if (shouldGenerateAudio) body.generate_audio = true;\n    body.images = imageRefs;\n    body.ratio = ratio;\n    body.duration = clampNumber(config.duration, 4, 15, 5);\n    body.resolution = normalizeResolution(config.resolution, ["480p", "720p", "1080p"], "720p");\n    body.watermark = false;\n  } else {\n    if (shouldGenerateAudio) body.generate_audio = true;\n    if (imageRefs.length > 0) body.reference_images = imageRefs;\n    if (videoRefs.length > 0) body.reference_videos = videoRefs;\n    if (audioRefs.length > 0) body.reference_audios = audioRefs;\n    body.ratio = ratio;\n    body.duration = clampNumber(config.duration, 4, 15, 5);\n    body.resolution = normalizeResolution(config.resolution, ["480p", "720p"], "720p");\n    body.watermark = false;\n  }\n\n  return {\n    body,\n    summary: `kind=${kind} imageRefs=${summarizeRefCount(imageRefs.length, rawImageRefs.length)} videoRefs=${summarizeRefCount(videoRefs.length, rawVideoRefs.length)} audioRefs=${summarizeRefCount(audioRefs.length, rawAudioRefs.length)} resolution=${body.resolution} duration=${body.duration}${shouldGenerateAudio ? " audio=on" : " audio=off"}`,\n  };\n};\n\n// ============================================================\n// \u9002\u914D\u5668\u51FD\u6570\n// ============================================================\n\nconst textRequest = (model: TextModel, think: boolean, thinkLevel: 0 | 1 | 2 | 3) => {\n  if (!vendor.inputValues.apiKey) throw new Error("\u7F3A\u5C11 API Key");\n  const apiKey = vendor.inputValues.apiKey.replace(/^Bearer\\s+/i, "");\n  const effortMap: Record<number, string> = { 0: "minimal", 1: "low", 2: "medium", 3: "high" };\n\n  return createOpenAICompatible({\n    name: "atlascloud",\n    baseURL: getChatBaseUrl(),\n    apiKey,\n    fetch: async (url: string, options?: RequestInit) => {\n      const rawBody = JSON.parse((options?.body as string) ?? "{}");\n      const body = think\n        ? {\n          ...rawBody,\n          thinking: { type: "enabled" },\n          reasoning_effort: effortMap[thinkLevel],\n        }\n        : rawBody;\n      return await fetch(url, { ...options, body: JSON.stringify(body) });\n    },\n  }).chatModel(model.modelName);\n};\n\nconst imageRequest = async (config: ImageConfig, model: ImageModel): Promise<string> => {\n  const headers = getHeaders();\n  const url = joinUrl(getMediaBaseUrl(), "/model/generateImage");\n  const sizeToResolution: Record<ImageConfig["size"], string> = {\n    "1K": "1k",\n    "2K": "2k",\n    "4K": "4k",\n  };\n  const imageRefs = (config.referenceList || []).map((ref) => ref.base64).filter(Boolean);\n  const resolvedModelName = resolveAtlasImageModelName(model.modelName, imageRefs.length > 0);\n  const isNanoModel = /^google\\/nano-banana-(pro|2)\\//.test(resolvedModelName);\n  const supportsImageConditioning = /^(openai\\/gpt-image-2\\/text-to-image|google\\/nano-banana-(pro|2)\\/edit)$/.test(resolvedModelName);\n\n  const body: any = {\n    model: resolvedModelName,\n    prompt: config.prompt || "",\n  };\n  if (supportsImageConditioning && imageRefs.length > 0) {\n    body.images = imageRefs;\n  }\n  if (isNanoModel) {\n    body.aspect_ratio = config.aspectRatio || "16:9";\n    body.resolution = sizeToResolution[config.size || "1K"] || "1k";\n  }\n\n  logger(`[AtlasCloud \u56FE\u7247] \u63D0\u4EA4\u4EFB\u52A1: ${model.modelName} -> ${resolvedModelName}, refs=${imageRefs.length}`);\n  const submitResp = await axios.post(url, body, { headers });\n  const submitData = submitResp.data;\n\n  // \u540C\u6B65\u8FD4\u56DE\uFF08\u76F4\u63A5\u62FF\u56FE\uFF09\n  const syncB64 = extractB64(submitData);\n  if (syncB64) return syncB64;\n  const syncUrl = extractUrl(submitData);\n  if (syncUrl) return await urlToBase64(syncUrl);\n\n  // \u5F02\u6B65\u8FD4\u56DE\uFF08\u62FF taskId \u518D\u8F6E\u8BE2\uFF09\n  const taskId = extractTaskId(submitData);\n  if (!taskId) {\n    throw new Error(`\u56FE\u7247\u4EFB\u52A1\u63D0\u4EA4\u5931\u8D25\uFF1A\u672A\u83B7\u53D6\u5230\u4EFB\u52A1ID\u3002\u539F\u59CB\u54CD\u5E94\uFF1A${JSON.stringify(submitData).slice(0, 500)}`);\n  }\n\n  const pollResult = await pollTask(\n    async (): Promise<PollResult> => {\n      const resultUrl = joinUrl(getMediaBaseUrl(), `/model/prediction/${taskId}`);\n      const resultResp = await axios.get(resultUrl, { headers });\n      const data = resultResp.data;\n      const status = extractStatus(data);\n\n      if (["succeeded", "success", "done", "completed"].includes(status)) {\n        const b64 = extractB64(data);\n        if (b64) return { completed: true, data: b64 };\n        const mediaUrl = extractUrl(data);\n        if (mediaUrl) return { completed: true, data: mediaUrl };\n        return { completed: true, error: "\u4EFB\u52A1\u6210\u529F\u4F46\u672A\u8FD4\u56DE\u7ED3\u679C\u5730\u5740" };\n      }\n      if (["failed", "error", "cancelled", "canceled", "expired"].includes(status)) {\n        return { completed: true, error: extractError(data) || "\u56FE\u7247\u751F\u6210\u5931\u8D25" };\n      }\n      return { completed: false };\n    },\n    3000,\n    600000,\n  );\n\n  if (pollResult.error) throw new Error(pollResult.error);\n  if (!pollResult.data) throw new Error("\u56FE\u7247\u751F\u6210\u5931\u8D25\uFF1A\u8F6E\u8BE2\u672A\u8FD4\u56DE\u6570\u636E");\n  if (pollResult.data.startsWith("data:")) return pollResult.data;\n  if (pollResult.data.startsWith("http")) return await urlToBase64(pollResult.data);\n  return pollResult.data;\n};\n\nconst videoRequest = async (config: VideoConfig, model: VideoModel): Promise<string> => {\n  const headers = getHeaders();\n  const url = joinUrl(getMediaBaseUrl(), "/model/generateVideo");\n  const { body, summary } = buildAtlasVideoPayload(config, model);\n\n  logger(`[AtlasCloud \u89C6\u9891] \u63D0\u4EA4\u4EFB\u52A1: ${model.modelName}, ${summary}`);\n  const submitResp: any = await withNetworkRetry<any>(() => axios.post(url, body, { headers }), 3, 1500);\n  const submitData = submitResp.data;\n\n  const taskId = extractTaskId(submitData);\n  if (!taskId) {\n    const syncUrl = extractUrl(submitData);\n    if (syncUrl) return await urlToBase64(syncUrl);\n    throw new Error(`\u89C6\u9891\u4EFB\u52A1\u63D0\u4EA4\u5931\u8D25\uFF1A\u672A\u83B7\u53D6\u5230\u4EFB\u52A1ID\u3002\u539F\u59CB\u54CD\u5E94\uFF1A${JSON.stringify(submitData).slice(0, 500)}`);\n  }\n\n  const pollResult = await pollTask(\n    async (): Promise<PollResult> => {\n      const resultUrl = joinUrl(getMediaBaseUrl(), `/model/prediction/${taskId}`);\n      const resultResp: any = await withNetworkRetry<any>(() => axios.get(resultUrl, { headers }), 3, 1200);\n      const data = resultResp.data;\n      const status = extractStatus(data);\n\n      if (["succeeded", "success", "done", "completed"].includes(status)) {\n        const mediaUrl = extractUrl(data);\n        if (mediaUrl) return { completed: true, data: mediaUrl };\n        return { completed: true, error: "\u4EFB\u52A1\u6210\u529F\u4F46\u672A\u8FD4\u56DE\u89C6\u9891\u5730\u5740" };\n      }\n      if (["failed", "error", "cancelled", "canceled", "expired"].includes(status)) {\n        return { completed: true, error: extractError(data) || "\u89C6\u9891\u751F\u6210\u5931\u8D25" };\n      }\n      return { completed: false };\n    },\n    5000,\n    1800000,\n  );\n\n  if (pollResult.error) throw new Error(pollResult.error);\n  if (!pollResult.data) throw new Error("\u89C6\u9891\u751F\u6210\u5931\u8D25\uFF1A\u8F6E\u8BE2\u672A\u8FD4\u56DE\u6570\u636E");\n  return await urlToBase64(pollResult.data);\n};\n\nconst ttsRequest = async (_config: TTSConfig, _model: TTSModel): Promise<string> => {\n  // AtlasCloud \u5F53\u524D\u7248\u672C\u5148\u4E0D\u63A5 TTS\u3002\n  return "";\n};\n\nconst checkForUpdates = async (): Promise<{ hasUpdate: boolean; latestVersion: string; notice: string }> => {\n  return {\n    hasUpdate: false,\n    latestVersion: vendor.version,\n    notice: "AtlasCloud MASS \u521D\u7A3F\u3002",\n  };\n};\n\nconst updateVendor = async (): Promise<string> => {\n  return "";\n};\n\n// ============================================================\n// \u5BFC\u51FA\n// ============================================================\n\nexports.vendor = vendor;\nexports.textRequest = textRequest;\nexports.imageRequest = imageRequest;\nexports.videoRequest = videoRequest;\nexports.ttsRequest = ttsRequest;\nexports.checkForUpdates = checkForUpdates;\nexports.updateVendor = updateVendor;\n\nexport { };\n',
+      "deepseek.ts": '/**\n * Toonflow AI\u4F9B\u5E94\u5546\u6A21\u677F - DeepSeek\n * @version 2.0\n */\n\n// ============================================================\n// \u7C7B\u578B\u5B9A\u4E49\n// ============================================================\n\ntype VideoMode =\n  | "singleImage"\n  | "startEndRequired"\n  | "endFrameOptional"\n  | "startFrameOptional"\n  | "text"\n  | (`videoReference:${number}` | `imageReference:${number}` | `audioReference:${number}`)[];\n\ninterface TextModel {\n  name: string;\n  modelName: string;\n  type: "text";\n  think: boolean;\n}\n\ninterface ImageModel {\n  name: string;\n  modelName: string;\n  type: "image";\n  mode: ("text" | "singleImage" | "multiReference")[];\n  associationSkills?: string;\n}\n\ninterface VideoModel {\n  name: string;\n  modelName: string;\n  type: "video";\n  mode: VideoMode[];\n  associationSkills?: string;\n  audio: "optional" | false | true;\n  durationResolutionMap: { duration: number[]; resolution: string[] }[];\n}\n\ninterface TTSModel {\n  name: string;\n  modelName: string;\n  type: "tts";\n  voices: { title: string; voice: string }[];\n}\n\ninterface VendorConfig {\n  id: string;\n  version: string;\n  name: string;\n  author: string;\n  description?: string;\n  icon?: string;\n  inputs: { key: string; label: string; type: "text" | "password" | "url"; required: boolean; placeholder?: string }[];\n  inputValues: Record<string, string>;\n  models: (TextModel | ImageModel | VideoModel | TTSModel)[];\n}\n\ninterface ImageConfig {\n  prompt: string;\n  imageBase64: string[];\n  size: "1K" | "2K" | "4K";\n  aspectRatio: `${number}:${number}`;\n}\n\ninterface VideoConfig {\n  duration: number;\n  resolution: string;\n  aspectRatio: "16:9" | "9:16";\n  prompt: string;\n  imageBase64?: string[];\n  audio?: boolean;\n  mode: VideoMode[];\n}\n\ninterface TTSConfig {\n  text: string;\n  voice: string;\n  speechRate: number;\n  pitchRate: number;\n  volume: number;\n}\n\ninterface PollResult {\n  completed: boolean;\n  data?: string;\n  error?: string;\n}\n\n// ============================================================\n// \u5168\u5C40\u58F0\u660E\n// ============================================================\n\ndeclare const axios: any;\ndeclare const logger: (msg: string) => void;\ndeclare const jsonwebtoken: any;\ndeclare const zipImage: (base64: string, size: number) => Promise<string>;\ndeclare const zipImageResolution: (base64: string, w: number, h: number) => Promise<string>;\ndeclare const mergeImages: (base64Arr: string[], maxSize?: string) => Promise<string>;\ndeclare const urlToBase64: (url: string) => Promise<string>;\ndeclare const pollTask: (fn: () => Promise<PollResult>, interval?: number, timeout?: number) => Promise<PollResult>;\ndeclare const createOpenAI: any;\ndeclare const createDeepSeek: any;\ndeclare const createZhipu: any;\ndeclare const createQwen: any;\ndeclare const createAnthropic: any;\ndeclare const createOpenAICompatible: any;\ndeclare const createXai: any;\ndeclare const createMinimax: any;\ndeclare const createGoogleGenerativeAI: any;\ndeclare const exports: {\n  vendor: VendorConfig;\n  textRequest: (m: TextModel, t: boolean, tl: 0 | 1 | 2 | 3) => any;\n  imageRequest: (c: ImageConfig, m: ImageModel) => Promise<string>;\n  videoRequest: (c: VideoConfig, m: VideoModel) => Promise<string>;\n  ttsRequest: (c: TTSConfig, m: TTSModel) => Promise<string>;\n  checkForUpdates?: () => Promise<{ hasUpdate: boolean; latestVersion: string; notice: string }>;\n  updateVendor?: () => Promise<string>;\n};\n\n// ============================================================\n// \u4F9B\u5E94\u5546\u914D\u7F6E\n// ============================================================\n\nconst vendor: VendorConfig = {\n  id: "deepseek",\n  version: "2.0",\n  author: "Toonflow",\n  name: "DeepSeek",\n  description:\n    "DeepSeek \u5B98\u65B9\u63A5\u53E3\u9002\u914D\uFF0C\u652F\u6301 V4 \u7CFB\u5217\u6A21\u578B\u4E0E\u601D\u8003\u6A21\u5F0F\uFF08\u601D\u7EF4\u94FE\u8F93\u51FA\uFF09\u3002\\n\\n[\u524D\u5F80\u5E73\u53F0](https://platform.deepseek.com/)",\n  icon: "",\n  inputs: [\n    { key: "apiKey", label: "API\u5BC6\u94A5", type: "password", required: true },\n    { key: "baseUrl", label: "\u8BF7\u6C42\u5730\u5740", type: "url", required: true, placeholder: "\u793A\u4F8B\uFF1Ahttps://api.toonflow.net/v1" },\n  ],\n  inputValues: {\n    apiKey: "",\n    baseUrl: "https://api.toonflow.net/v1",\n  },\n  models: [\n    { name: "DeepSeek V4 Pro", modelName: "deepseek-v4-pro", type: "text", think: true },\n    { name: "DeepSeek V4 Flash", modelName: "deepseek-v4-flash", type: "text", think: true },\n  ],\n};\n\n// ============================================================\n// \u9002\u914D\u5668\u51FD\u6570\n// ============================================================\n\nconst textRequest = (model: TextModel, think: boolean, thinkLevel: 0 | 1 | 2 | 3) => {\n  if (!vendor.inputValues.apiKey) throw new Error("\u7F3A\u5C11API Key");\n  const apiKey = vendor.inputValues.apiKey.replace(/^Bearer\\s+/i, "");\n\n  // \u4EC5\u5F53\u6A21\u578B\u652F\u6301\u63A8\u7406\u4E14\u7528\u6237\u660E\u786E\u5F00\u542F\u65F6\uFF0C\u624D\u6CE8\u5165 thinking \u53C2\u6570\n  const enableThinking = model.think && think;\n  const extraBody: Record<string, any> = {};\n\n  if (enableThinking) {\n    // DeepSeek API \u89C4\u8303\uFF1A\u5F00\u542F\u601D\u8003\u65F6\u9700\u663E\u5F0F\u4F20\u5165 type: "enabled"\n    extraBody.thinking = { type: "enabled" };\n\n    // \u6620\u5C04\u601D\u8003\u5F3A\u5EA6\uFF08low/medium \u4F1A\u7EDF\u4E00\u6620\u5C04\u4E3A high\uFF0Cxhigh \u6620\u5C04\u4E3A max\uFF09\n    const effortMap: Record<0 | 1 | 2 | 3, "high" | "max"> = {\n      0: "high",\n      1: "high",\n      2: "high",\n      3: "max",\n    };\n    extraBody.reasoning_effort = effortMap[thinkLevel];\n  }\n  return createDeepSeek({\n    baseURL: vendor.inputValues.baseUrl,\n    apiKey,\n    extraBody,\n  }).chat(model.modelName);\n};\n\nconst imageRequest = async (config: ImageConfig, model: ImageModel): Promise<string> => {\n  return "";\n};\n\nconst videoRequest = async (config: VideoConfig, model: VideoModel): Promise<string> => {\n  return "";\n};\n\nconst ttsRequest = async (config: TTSConfig, model: TTSModel): Promise<string> => {\n  return "";\n};\n\nconst checkForUpdates = async (): Promise<{ hasUpdate: boolean; latestVersion: string; notice: string }> => {\n  return { hasUpdate: false, latestVersion: "2.0", notice: "" };\n};\n\nconst updateVendor = async (): Promise<string> => {\n  return "";\n};\n\n// ============================================================\n// \u5BFC\u51FA\n// ============================================================\n\nexports.vendor = vendor;\nexports.textRequest = textRequest;\nexports.imageRequest = imageRequest;\nexports.videoRequest = videoRequest;\nexports.ttsRequest = ttsRequest;\nexports.checkForUpdates = checkForUpdates;\nexports.updateVendor = updateVendor;\nexport { };\n',
+      "grsai.ts": '/**\n * Toonflow AI\u4F9B\u5E94\u5546\u6A21\u677F\n * @version 2.0\n */\n\n// ============================================================\n// \u7C7B\u578B\u5B9A\u4E49\n// ============================================================\n\ntype VideoMode =\n  | "singleImage" //\u5355\u56FE\u53C2\u8003\n  | "startEndRequired" //\u9996\u5C3E\u5E27\uFF08\u4E24\u5F20\u90FD\u5F97\u6709\uFF09\n  | "endFrameOptional" //\u9996\u5C3E\u5E27\uFF08\u5C3E\u5E27\u53EF\u9009\uFF09\n  | "startFrameOptional" //\u9996\u5C3E\u5E27\uFF08\u9996\u5E27\u53EF\u9009\uFF09\n  | "text" //\u6587\u672C\n  | (\n      | `videoReference:${number}`\n      | `imageReference:${number}`\n      | `audioReference:${number}`\n    )[]; //\u591A\u53C2\u8003\uFF08\u6570\u5B57\u4EE3\u8868\u9650\u5236\u6570\u91CF\uFF09\n\ninterface TextModel {\n  name: string;\n  modelName: string;\n  type: "text";\n  think: boolean;\n}\n\ninterface ImageModel {\n  name: string;\n  modelName: string;\n  type: "image";\n  mode: ("text" | "singleImage" | "multiReference")[];\n  associationSkills?: string;\n}\n\ninterface VideoModel {\n  name: string;\n  modelName: string;\n  type: "video";\n  mode: VideoMode[];\n  associationSkills?: string;\n  audio: "optional" | false | true;\n  durationResolutionMap: { duration: number[]; resolution: string[] }[];\n}\n\ninterface TTSModel {\n  name: string;\n  modelName: string;\n  type: "tts";\n  voices: { title: string; voice: string }[];\n}\n\ninterface VendorConfig {\n  id: string; //\u552F\u4E00ID\uFF0C\u4F5C\u4E3A\u6587\u4EF6\u540D\u5B58\u50A8\u7528\u6237\u78C1\u76D8\u4E0A\uFF0C\u7981\u6B62\u7B26\u53F7\n  version: string; //\u7248\u672C\u53F7\uFF0C\u683C\u5F0F\u4E3Ax.y\uFF0C\u9700\u9075\u5B88\u8BED\u4E49\u5316\u7248\u672C\u63A7\u5236\n  name: string; //\u4F9B\u5E94\u5546\u540D\u79F0\n  author: string; //\u4F5C\u8005\n  description?: string; //\u63CF\u8FF0\uFF0C\u652F\u6301Markdown\u683C\u5F0F\n  icon?: string; //\u56FE\u6807\uFF0C\u4EC5\u652F\u6301Base64\u683C\u5F0F\uFF0C\u5EFA\u8BAE\u5C3A\u5BF8\u4E3A128x128\u50CF\u7D20\n  inputs: {\n    key: string;\n    label: string;\n    type: "text" | "password" | "url";\n    required: boolean;\n    placeholder?: string;\n  }[];\n  inputValues: Record<string, string>;\n  models: (TextModel | ImageModel | VideoModel | TTSModel)[];\n}\n\ntype ReferenceList =\n  | { type: "image"; sourceType: "base64"; base64: string }\n  | { type: "audio"; sourceType: "base64"; base64: string }\n  | { type: "video"; sourceType: "base64"; base64: string };\n\ninterface ImageConfig {\n  prompt: string;\n  referenceList?: Extract<ReferenceList, { type: "image" }>[];\n  size: "1K" | "2K" | "4K";\n  aspectRatio: `${number}:${number}`;\n}\n\ninterface VideoConfig {\n  duration: number;\n  resolution: string;\n  aspectRatio: "16:9" | "9:16";\n  prompt: string;\n  referenceList?: ReferenceList[];\n  audio?: boolean;\n  mode: VideoMode[];\n}\n\ninterface TTSConfig {\n  text: string;\n  voice: string;\n  speechRate: number;\n  pitchRate: number;\n  volume: number;\n  referenceList?: Extract<ReferenceList, { type: "audio" }>[];\n}\n\ninterface PollResult {\n  completed: boolean;\n  data?: string;\n  error?: string;\n}\n\n// ============================================================\n// \u5168\u5C40\u58F0\u660E\n// ============================================================\n\ndeclare const axios: any; // HTTP\u8BF7\u6C42\u5E93\ndeclare const logger: (msg: string) => void; // \u65E5\u5FD7\u51FD\u6570\ndeclare const jsonwebtoken: any; // JWT\u5904\u7406\u5E93\ndeclare const zipImage: (base64: string, size: number) => Promise<string>; // \u56FE\u7247\u538B\u7F29\u51FD\u6570\uFF0C\u8FD4\u56DE\u6709\u5934base64\u5B57\u7B26\u4E32\ndeclare const zipImageResolution: (\n  base64: string,\n  w: number,\n  h: number,\n) => Promise<string>; // \u56FE\u7247\u5206\u8FA8\u7387\u8C03\u6574\u51FD\u6570\uFF0C\u8FD4\u56DE\u6709\u5934base64\u5B57\u7B26\u4E32\ndeclare const mergeImages: (\n  base64Arr: string[],\n  maxSize?: string,\n) => Promise<string>; // \u56FE\u7247\u5408\u6210\u51FD\u6570\uFF0C\u8FD4\u56DE\u6709\u5934base64\u5B57\u7B26\u4E32\ndeclare const urlToBase64: (url: string) => Promise<string>; // URL\u8F6CBase64\u51FD\u6570\uFF0C\u8FD4\u56DE\u6709\u5934base64\u5B57\u7B26\u4E32\ndeclare const pollTask: (\n  fn: () => Promise<PollResult>,\n  interval?: number,\n  timeout?: number,\n) => Promise<PollResult>; // \u8F6E\u8BE2\u51FD\u6570\uFF0Cfn\u4E3A\u5F02\u6B65\u51FD\u6570\uFF0Cinterval\u4E3A\u8F6E\u8BE2\u95F4\u9694\uFF0Ctimeout\u4E3A\u8D85\u65F6\u65F6\u95F4\uFF0C\u8FD4\u56DEfn\u7684\u7ED3\u679C\ndeclare const createOpenAI: any;\ndeclare const createDeepSeek: any;\ndeclare const createZhipu: any;\ndeclare const createQwen: any;\ndeclare const createAnthropic: any;\ndeclare const createOpenAICompatible: any;\ndeclare const createXai: any;\ndeclare const createMinimax: any;\ndeclare const createGoogleGenerativeAI: any;\ndeclare const exports: {\n  vendor: VendorConfig;\n  textRequest: (m: TextModel, t: boolean, tl: 0 | 1 | 2 | 3) => any; //\u6587\u672C\u6A21\u578B\n  imageRequest: (c: ImageConfig, m: ImageModel) => Promise<string>; //\u56FE\u7247\u6A21\u578B\uFF0C\u8FD4\u56DE\u6709\u5934base64\u5B57\u7B26\u4E32\n  videoRequest: (c: VideoConfig, m: VideoModel) => Promise<string>; //\u89C6\u9891\u6A21\u578B\uFF0C\u8FD4\u56DE\u6709\u5934base64\u5B57\u7B26\u4E32\n  ttsRequest: (c: TTSConfig, m: TTSModel) => Promise<string>; //\uFF08\u6682\u672A\u5F00\u653E\uFF09\u8BED\u97F3\u6A21\u578B\uFF0C\u8FD4\u56DE\u6709\u5934base64\u5B57\u7B26\u4E32\n  checkForUpdates?: () => Promise<{\n    hasUpdate: boolean;\n    latestVersion: string;\n    notice: string;\n  }>; //\u68C0\u67E5\u66F4\u65B0\u51FD\u6570\uFF0C\u8FD4\u56DE\u662F\u5426\u6709\u66F4\u65B0\u548C\u6700\u65B0\u7248\u672C\u53F7\u548C\u66F4\u516C\u544A\uFF08\u652F\u6301Markdown\u683C\u5F0F\uFF09\n  updateVendor?: () => Promise<string>; //\u66F4\u65B0\u51FD\u6570\uFF0C\u8FD4\u56DE\u6700\u65B0\u7684\u4EE3\u7801\u6587\u672C\n};\n\n// ============================================================\n// \u4F9B\u5E94\u5546\u914D\u7F6E\n// ============================================================\n\nconst vendor: VendorConfig = {\n  id: "grsai",\n  version: "2.1",\n  author: "Toonflow",\n  name: "Grsai",\n  description:\n    "Grsai AI\u5E73\u53F0\u9002\u914D\uFF0C\u652F\u6301\u6587\u751F\u56FE\u3001\u56FE\u751F\u56FE\u3001\u6587\u751F\u89C6\u9891\u3001Gemini\u517C\u5BB9\u6587\u672C\u6A21\u578B \\n [\u524D\u5F80\u4E2D\u8F6C\u5E73\u53F0](https://tf.grsai.ai/zh)",\n  inputs: [\n    { key: "apiKey", label: "API\u5BC6\u94A5", type: "password", required: true },\n    {\n      key: "baseUrl",\n      label: "\u8BF7\u6C42\u5730\u5740",\n      type: "url",\n      required: true,\n      placeholder: "\u793A\u4F8B\uFF1Ahttps://api.toonflow.net/v1",\n    },\n  ],\n  inputValues: { apiKey: "", baseUrl: "https://api.toonflow.net/v1" },\n  models: [\n    {\n      name: "GPT Image 2",\n      modelName: "gpt-image-2",\n      type: "image",\n      mode: ["text", "singleImage", "multiReference"],\n    },\n    {\n      name: "Nano Banana Fast",\n      modelName: "nano-banana-fast",\n      type: "image",\n      mode: ["text", "singleImage", "multiReference"],\n    },\n    {\n      name: "Nano Banana 2",\n      modelName: "nano-banana-2",\n      type: "image",\n      mode: ["text", "singleImage", "multiReference"],\n    },\n    {\n      name: "Nano Banana Pro",\n      modelName: "nano-banana-pro",\n      type: "image",\n      mode: ["text", "singleImage", "multiReference"],\n    },\n  ],\n};\n\n// ============================================================\n// \u8F85\u52A9\u5DE5\u5177\n// ============================================================\n\nconst getHeaders = () => {\n  const apiKey = vendor.inputValues.apiKey.replace(/^Bearer\\s+/i, "");\n  return {\n    "Content-Type": "application/json",\n    Authorization: `Bearer ${apiKey}`,\n  };\n};\n\n// ============================================================\n// \u9002\u914D\u5668\u51FD\u6570\n// ============================================================\n\nconst textRequest = (\n  model: TextModel,\n  think: boolean,\n  thinkLevel: 0 | 1 | 2 | 3,\n) => {\n  if (!vendor.inputValues.apiKey) throw new Error("\u7F3A\u5C11API Key");\n  const apiKey = vendor.inputValues.apiKey.replace(/^Bearer\\s+/i, "");\n  return createGoogleGenerativeAI({\n    baseURL: `${vendor.inputValues.baseUrl}/v1beta`,\n    apiKey,\n  }).chat(model.modelName);\n};\n\nconst imageRequest = async (\n  config: ImageConfig,\n  model: ImageModel,\n): Promise<string> => {\n  if (!vendor.inputValues.apiKey) throw new Error("\u7F3A\u5C11API Key");\n  const baseUrl = vendor.inputValues.baseUrl;\n  const headers = getHeaders();\n\n  // \u6784\u9020\u8BF7\u6C42\u53C2\u6570\n  const requestBody: any = {\n    model: model.modelName,\n    prompt: config.prompt,\n    aspectRatio: config.aspectRatio,\n    webHook: "-1",\n    shutProgress: true,\n  };\n\n  // \u8865\u5145\u6A21\u578B\u4E13\u5C5E\u53C2\u6570\n  if (model.modelName.startsWith("nano-banana")) {\n    requestBody.imageSize = config.size;\n  } else {\n    requestBody.size = config.aspectRatio;\n    requestBody.variants = 1;\n  }\n\n  // \u5904\u7406\u53C2\u8003\u56FE\n  if (config.referenceList && config.referenceList.length > 0) {\n    requestBody.urls = config.referenceList.map((img) => img.base64);\n  }\n\n  // \u9009\u62E9\u63A5\u53E3\u8DEF\u5F84\n  const apiPath = model.modelName.startsWith("nano-banana")\n    ? "/v1/draw/nano-banana"\n    : "/v1/draw/completions";\n\n  logger(`\u5F00\u59CB\u63D0\u4EA4\u56FE\u7247\u751F\u6210\u4EFB\u52A1\uFF0C\u6A21\u578B\uFF1A${model.modelName}`);\n  const submitResp = await axios.post(`${baseUrl}${apiPath}`, requestBody, {\n    headers,\n  });\n  if (submitResp.data.code !== 0)\n    throw new Error(`\u4EFB\u52A1\u63D0\u4EA4\u5931\u8D25\uFF1A${submitResp.data.msg}`);\n\n  const taskId = submitResp.data.data.id;\n  logger(`\u56FE\u7247\u4EFB\u52A1\u63D0\u4EA4\u6210\u529F\uFF0C\u4EFB\u52A1ID\uFF1A${taskId}`);\n\n  // \u8F6E\u8BE2\u7ED3\u679C\n  const pollResult = await pollTask(\n    async () => {\n      const resp = await axios.post(\n        `${baseUrl}/v1/draw/result`,\n        { id: taskId },\n        { headers },\n      );\n      if (resp.data.code !== 0)\n        return { completed: true, error: resp.data.msg };\n\n      const taskData = resp.data.data;\n      if (taskData.status === "failed")\n        return {\n          completed: true,\n          error: taskData.failure_reason || taskData.error,\n        };\n      if (taskData.status === "succeeded") {\n        const imgUrl = taskData.results?.[0]?.url || taskData.url;\n        return { completed: true, data: imgUrl };\n      }\n      logger(`\u56FE\u7247\u4EFB\u52A1\u751F\u6210\u4E2D\uFF0C\u8FDB\u5EA6\uFF1A${taskData.progress}%`);\n      return { completed: false };\n    },\n    3000,\n    600000,\n  );\n\n  if (pollResult.error) throw new Error(pollResult.error);\n  logger(`\u56FE\u7247\u751F\u6210\u5B8C\u6210\uFF0C\u5F00\u59CB\u8F6C\u6362Base64`);\n  return await urlToBase64(pollResult.data!);\n};\n\nconst videoRequest = async (\n  config: VideoConfig,\n  model: VideoModel,\n): Promise<string> => {\n  if (!vendor.inputValues.apiKey) throw new Error("\u7F3A\u5C11API Key");\n  const baseUrl = vendor.inputValues.baseUrl;\n  const headers = getHeaders();\n\n  // \u6784\u9020\u8BF7\u6C42\u53C2\u6570\n  const requestBody: any = {\n    model: model.modelName,\n    prompt: config.prompt,\n    aspectRatio: config.aspectRatio,\n    webHook: "-1",\n    shutProgress: true,\n  };\n\n  // \u5904\u7406\u53C2\u8003\u8D44\u6E90\n  if (config.referenceList && config.referenceList.length > 0) {\n    const imageRefs = config.referenceList.filter(\n      (item) => item.type === "image",\n    ) as Extract<ReferenceList, { type: "image" }>[];\n    if (config.mode.includes("endFrameOptional") && imageRefs.length >= 1) {\n      requestBody.firstFrameUrl = imageRefs[0].base64;\n      if (imageRefs.length >= 2) requestBody.lastFrameUrl = imageRefs[1].base64;\n    } else if (\n      config.mode.some(\n        (m) => Array.isArray(m) && m.includes("imageReference:3"),\n      )\n    ) {\n      requestBody.urls = imageRefs.map((img) => img.base64);\n    }\n  }\n\n  logger(`\u5F00\u59CB\u63D0\u4EA4\u89C6\u9891\u751F\u6210\u4EFB\u52A1\uFF0C\u6A21\u578B\uFF1A${model.modelName}`);\n  const submitResp = await axios.post(`${baseUrl}/v1/video/veo`, requestBody, {\n    headers,\n  });\n  if (submitResp.data.code !== 0)\n    throw new Error(`\u4EFB\u52A1\u63D0\u4EA4\u5931\u8D25\uFF1A${submitResp.data.msg}`);\n\n  const taskId = submitResp.data.data.id;\n  logger(`\u89C6\u9891\u4EFB\u52A1\u63D0\u4EA4\u6210\u529F\uFF0C\u4EFB\u52A1ID\uFF1A${taskId}`);\n\n  // \u8F6E\u8BE2\u7ED3\u679C\n  const pollResult = await pollTask(\n    async () => {\n      const resp = await axios.post(\n        `${baseUrl}/v1/draw/result`,\n        { id: taskId },\n        { headers },\n      );\n      if (resp.data.code !== 0)\n        return { completed: true, error: resp.data.msg };\n\n      const taskData = resp.data.data;\n      if (taskData.status === "failed")\n        return {\n          completed: true,\n          error: taskData.failure_reason || taskData.error,\n        };\n      if (taskData.status === "succeeded") {\n        return { completed: true, data: taskData.url };\n      }\n      logger(`\u89C6\u9891\u4EFB\u52A1\u751F\u6210\u4E2D\uFF0C\u8FDB\u5EA6\uFF1A${taskData.progress}%`);\n      return { completed: false };\n    },\n    5000,\n    1800000,\n  );\n\n  if (pollResult.error) throw new Error(pollResult.error);\n  logger(`\u89C6\u9891\u751F\u6210\u5B8C\u6210\uFF0C\u5F00\u59CB\u8F6C\u6362Base64`);\n  return await urlToBase64(pollResult.data!);\n};\n\nconst ttsRequest = async (\n  config: TTSConfig,\n  model: TTSModel,\n): Promise<string> => {\n  return "";\n};\n\nconst checkForUpdates = async (): Promise<{\n  hasUpdate: boolean;\n  latestVersion: string;\n  notice: string;\n}> => {\n  return {\n    hasUpdate: false,\n    latestVersion: "1.0",\n    notice: "## \u65B0\u7248\u672C\u66F4\u65B0\u516C\u544A",\n  };\n};\n\nconst updateVendor = async (): Promise<string> => {\n  return "";\n};\n\n// ============================================================\n// \u5BFC\u51FA\n// ============================================================\n\nexports.vendor = vendor;\nexports.textRequest = textRequest;\nexports.imageRequest = imageRequest;\nexports.videoRequest = videoRequest;\nexports.ttsRequest = ttsRequest;\nexports.checkForUpdates = checkForUpdates;\nexports.updateVendor = updateVendor;\n\n// \u8FD9\u884C\u4EE3\u7801\u7528\u4E8E\u786E\u4FDD\u5F53\u524D\u6587\u4EF6\u88AB\u8BC6\u522B\u4E3A\u6A21\u5757\uFF0C\u907F\u514D\u5168\u5C40\u53D8\u91CF\u51B2\u7A81\nexport {};\n',
+      "klingai.ts": '/**\n * Toonflow AI\u4F9B\u5E94\u5546\u6A21\u677F - \u53EF\u7075AI\n * @version 2.0\n */\n\n// ============================================================\n// \u7C7B\u578B\u5B9A\u4E49\n// ============================================================\n\ntype VideoMode =\n  | "singleImage"\n  | "startEndRequired"\n  | "endFrameOptional"\n  | "startFrameOptional"\n  | "text"\n  | (`videoReference:${number}` | `imageReference:${number}` | `audioReference:${number}`)[];\n\ninterface TextModel {\n  name: string;\n  modelName: string;\n  type: "text";\n  think: boolean;\n}\n\ninterface ImageModel {\n  name: string;\n  modelName: string;\n  type: "image";\n  mode: ("text" | "singleImage" | "multiReference")[];\n  associationSkills?: string;\n}\n\ninterface VideoModel {\n  name: string;\n  modelName: string;\n  type: "video";\n  mode: VideoMode[];\n  associationSkills?: string;\n  audio: "optional" | false | true;\n  durationResolutionMap: { duration: number[]; resolution: string[] }[];\n}\n\ninterface TTSModel {\n  name: string;\n  modelName: string;\n  type: "tts";\n  voices: { title: string; voice: string }[];\n}\n\ninterface VendorConfig {\n  id: string;\n  version: string;\n  name: string;\n  author: string;\n  description?: string;\n  icon?: string;\n  inputs: { key: string; label: string; type: "text" | "password" | "url"; required: boolean; placeholder?: string }[];\n  inputValues: Record<string, string>;\n  models: (TextModel | ImageModel | VideoModel | TTSModel)[];\n}\n\ntype ReferenceList =\n  | { type: "image"; sourceType: "base64"; base64: string }\n  | { type: "audio"; sourceType: "base64"; base64: string }\n  | { type: "video"; sourceType: "base64"; base64: string };\n\ninterface ImageConfig {\n  prompt: string;\n  referenceList?: Extract<ReferenceList, { type: "image" }>[];\n  size: "1K" | "2K" | "4K";\n  aspectRatio: `${number}:${number}`;\n}\n\ninterface VideoConfig {\n  duration: number;\n  resolution: string;\n  aspectRatio: "16:9" | "9:16";\n  prompt: string;\n  referenceList?: ReferenceList[];\n  audio?: boolean;\n  mode: VideoMode[];\n}\n\ninterface TTSConfig {\n  text: string;\n  voice: string;\n  speechRate: number;\n  pitchRate: number;\n  volume: number;\n  referenceList?: Extract<ReferenceList, { type: "audio" }>[];\n}\n\ninterface PollResult {\n  completed: boolean;\n  data?: string;\n  error?: string;\n}\n\n// ============================================================\n// \u5168\u5C40\u58F0\u660E\n// ============================================================\n\ndeclare const axios: any;\ndeclare const logger: (msg: string) => void;\ndeclare const jsonwebtoken: any;\ndeclare const zipImage: (base64: string, size: number) => Promise<string>;\ndeclare const zipImageResolution: (base64: string, w: number, h: number) => Promise<string>;\ndeclare const mergeImages: (base64Arr: string[], maxSize?: string) => Promise<string>;\ndeclare const urlToBase64: (url: string) => Promise<string>;\ndeclare const pollTask: (fn: () => Promise<PollResult>, interval?: number, timeout?: number) => Promise<PollResult>;\ndeclare const createOpenAI: any;\ndeclare const createDeepSeek: any;\ndeclare const createZhipu: any;\ndeclare const createQwen: any;\ndeclare const createAnthropic: any;\ndeclare const createOpenAICompatible: any;\ndeclare const createXai: any;\ndeclare const createMinimax: any;\ndeclare const createGoogleGenerativeAI: any;\ndeclare const exports: {\n  vendor: VendorConfig;\n  textRequest: (m: TextModel, t: boolean, tl: 0 | 1 | 2 | 3) => any;\n  imageRequest: (c: ImageConfig, m: ImageModel) => Promise<string>;\n  videoRequest: (c: VideoConfig, m: VideoModel) => Promise<string>;\n  ttsRequest: (c: TTSConfig, m: TTSModel) => Promise<string>;\n  checkForUpdates?: () => Promise<{ hasUpdate: boolean; latestVersion: string; notice: string }>;\n  updateVendor?: () => Promise<string>;\n};\n\n// ============================================================\n// \u4F9B\u5E94\u5546\u914D\u7F6E\n// ============================================================\n\nconst vendor: VendorConfig = {\n  id: "klingai",\n  version: "2.0",\n  author: "Toonflow",\n  name: "\u53EF\u7075AI",\n  description:\n    "\u53EF\u7075AI\u89C6\u9891\u751F\u6210\\n\\n\u652F\u6301\u53EF\u7075\u5168\u7CFB\u5217\u89C6\u9891\u6A21\u578B\uFF0C\u5305\u62EC kling-video-o1\u3001kling-v3-omni\u3001kling-v3\u3001kling-v2-6\u3001kling-v2-5-turbo\u3001kling-v2-1\u3001kling-v2-master\u3001kling-v1-6\u3001kling-v1-5\u3001kling-v1 \u7B49\u3002\\n\\n\u9700\u8981\u5728[\u53EF\u7075AI\u5F00\u653E\u5E73\u53F0](https://klingai.com)\\n\\n\u83B7\u53D6 Access Key \u548C Secret Key\u3002",\n  inputs: [\n    { key: "accessKey", label: "Access Key", type: "password", required: true, placeholder: "\u8BF7\u8F93\u5165\u53EF\u7075AI\u7684Access Key" },\n    { key: "secretKey", label: "Secret Key", type: "password", required: true, placeholder: "\u8BF7\u8F93\u5165\u53EF\u7075AI\u7684Secret Key" },\n    { key: "baseUrl", label: "\u8BF7\u6C42\u5730\u5740", type: "url", required: true, placeholder: "\u9ED8\u8BA4\uFF1Ahttps://api.toonflow.net/v1" },\n  ],\n  inputValues: { accessKey: "", secretKey: "", baseUrl: "https://api.toonflow.net/v1" },\n  models: [\n    // kling-video-o1 (Omni)\n    {\n      name: "kling-video-o1 \u6807\u51C6",\n      modelName: "kling-video-o1:std",\n      type: "video",\n      mode: ["text", "singleImage", "startEndRequired", ["imageReference:7", "videoReference:1"]],\n      audio: false,\n      durationResolutionMap: [{ duration: [5, 10], resolution: ["720p"] }],\n    },\n    {\n      name: "kling-video-o1 \u4E13\u5BB6",\n      modelName: "kling-video-o1:pro",\n      type: "video",\n      mode: ["text", "singleImage", "startEndRequired", ["imageReference:7", "videoReference:1"]],\n      audio: false,\n      durationResolutionMap: [{ duration: [5, 10], resolution: ["720p"] }],\n    },\n    // kling-v3-omni (Omni)\n    {\n      name: "kling-v3-omni \u6807\u51C6",\n      modelName: "kling-v3-omni:std",\n      type: "video",\n      mode: ["text", "singleImage", "startEndRequired", ["imageReference:7", "videoReference:1"]],\n      audio: false,\n      durationResolutionMap: [{ duration: [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], resolution: ["720p"] }],\n    },\n    {\n      name: "kling-v3-omni \u4E13\u5BB6",\n      modelName: "kling-v3-omni:pro",\n      type: "video",\n      mode: ["text", "singleImage", "startEndRequired", ["imageReference:7", "videoReference:1"]],\n      audio: false,\n      durationResolutionMap: [{ duration: [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], resolution: ["720p"] }],\n    },\n    // kling-v3\n    {\n      name: "kling-v3 \u6807\u51C6",\n      modelName: "kling-v3:std",\n      type: "video",\n      mode: ["text", "singleImage", "startEndRequired"],\n      audio: false,\n      durationResolutionMap: [{ duration: [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], resolution: ["720p"] }],\n    },\n    {\n      name: "kling-v3 \u4E13\u5BB6",\n      modelName: "kling-v3:pro",\n      type: "video",\n      mode: ["text", "singleImage", "startEndRequired"],\n      audio: false,\n      durationResolutionMap: [{ duration: [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], resolution: ["720p"] }],\n    },\n    // kling-v2-6\n    {\n      name: "kling-v2-6 \u6807\u51C6",\n      modelName: "kling-v2-6:std",\n      type: "video",\n      mode: ["text", "singleImage"],\n      audio: false,\n      durationResolutionMap: [{ duration: [5, 10], resolution: ["720p"] }],\n    },\n    {\n      name: "kling-v2-6 \u4E13\u5BB6",\n      modelName: "kling-v2-6:pro",\n      type: "video",\n      mode: ["text", "singleImage", "startEndRequired"],\n      audio: "optional",\n      durationResolutionMap: [{ duration: [5, 10], resolution: ["1080p"] }],\n    },\n    // kling-v2-5-turbo\n    {\n      name: "kling-v2-5-turbo \u6807\u51C6",\n      modelName: "kling-v2-5-turbo:std",\n      type: "video",\n      mode: ["text", "singleImage"],\n      audio: false,\n      durationResolutionMap: [{ duration: [5, 10], resolution: ["1080p"] }],\n    },\n    {\n      name: "kling-v2-5-turbo \u4E13\u5BB6",\n      modelName: "kling-v2-5-turbo:pro",\n      type: "video",\n      mode: ["text", "singleImage", "startEndRequired"],\n      audio: false,\n      durationResolutionMap: [{ duration: [5, 10], resolution: ["1080p"] }],\n    },\n    // kling-v2-1\n    {\n      name: "kling-v2-1 \u6807\u51C6",\n      modelName: "kling-v2-1:std",\n      type: "video",\n      mode: ["singleImage"],\n      audio: false,\n      durationResolutionMap: [{ duration: [5, 10], resolution: ["720p"] }],\n    },\n    {\n      name: "kling-v2-1 \u4E13\u5BB6",\n      modelName: "kling-v2-1:pro",\n      type: "video",\n      mode: ["singleImage", "startEndRequired"],\n      audio: false,\n      durationResolutionMap: [{ duration: [5, 10], resolution: ["1080p"] }],\n    },\n    // kling-v2-1-master\n    {\n      name: "kling-v2-1 Master",\n      modelName: "kling-v2-1-master:pro",\n      type: "video",\n      mode: ["text", "singleImage"],\n      audio: false,\n      durationResolutionMap: [{ duration: [5, 10], resolution: ["1080p"] }],\n    },\n    // kling-v2-master\n    {\n      name: "kling-v2 Master",\n      modelName: "kling-v2-master:pro",\n      type: "video",\n      mode: ["text", "singleImage"],\n      audio: false,\n      durationResolutionMap: [{ duration: [5, 10], resolution: ["720p"] }],\n    },\n    // kling-v1-6\n    {\n      name: "kling-v1-6 \u6807\u51C6",\n      modelName: "kling-v1-6:std",\n      type: "video",\n      mode: ["text", "singleImage", ["imageReference:4"]],\n      audio: false,\n      durationResolutionMap: [{ duration: [5, 10], resolution: ["720p"] }],\n    },\n    {\n      name: "kling-v1-6 \u4E13\u5BB6",\n      modelName: "kling-v1-6:pro",\n      type: "video",\n      mode: ["text", "singleImage", "endFrameOptional", ["imageReference:4"]],\n      audio: false,\n      durationResolutionMap: [{ duration: [5, 10], resolution: ["1080p"] }],\n    },\n    // kling-v1-5\n    {\n      name: "kling-v1-5 \u6807\u51C6",\n      modelName: "kling-v1-5:std",\n      type: "video",\n      mode: ["singleImage"],\n      audio: false,\n      durationResolutionMap: [{ duration: [5, 10], resolution: ["720p"] }],\n    },\n    {\n      name: "kling-v1-5 \u4E13\u5BB6",\n      modelName: "kling-v1-5:pro",\n      type: "video",\n      mode: ["singleImage", "endFrameOptional"],\n      audio: false,\n      durationResolutionMap: [{ duration: [5, 10], resolution: ["1080p"] }],\n    },\n    // kling-v1\n    {\n      name: "kling-v1 \u6807\u51C6",\n      modelName: "kling-v1:std",\n      type: "video",\n      mode: ["text", "singleImage", "startEndRequired"],\n      audio: false,\n      durationResolutionMap: [{ duration: [5, 10], resolution: ["720p"] }],\n    },\n    {\n      name: "kling-v1 \u4E13\u5BB6",\n      modelName: "kling-v1:pro",\n      type: "video",\n      mode: ["text", "singleImage", "startEndRequired"],\n      audio: false,\n      durationResolutionMap: [{ duration: [5, 10], resolution: ["720p"] }],\n    },\n  ],\n};\n\n// ============================================================\n// \u8F85\u52A9\u5DE5\u5177\n// ============================================================\n\n/**\n * \u751F\u6210\u53EF\u7075AI\u7684JWT\u9274\u6743Token\n */\nconst generateAuthToken = (): string => {\n  const now = Math.floor(Date.now() / 1000);\n  const payload = {\n    iss: vendor.inputValues.accessKey,\n    exp: now + 1800,\n    nbf: now - 5,\n  };\n  return jsonwebtoken.sign(payload, vendor.inputValues.secretKey, {\n    algorithm: "HS256",\n    header: { alg: "HS256", typ: "JWT" },\n  });\n};\n\n/**\n * \u83B7\u53D6\u57FA\u7840\u8BF7\u6C42\u5730\u5740\n */\nconst getBaseUrl = (): string => {\n  return vendor.inputValues.baseUrl || "https://api.toonflow.net/v1";\n};\n\n/**\n * \u4ECE ReferenceList \u6761\u76EE\u4E2D\u63D0\u53D6\u53EF\u7528\u7684\u6570\u636E\u5B57\u7B26\u4E32\n * \u5BF9\u4E8E url \u7C7B\u578B\u8FD4\u56DE url\uFF0C\u5BF9\u4E8E base64 \u7C7B\u578B\u8FD4\u56DE\u7EAF base64\uFF08\u53BB\u6389 data: \u524D\u7F00\uFF09\n */\nconst extractRawBase64 = (ref: ReferenceList): string => {\n  return ref.base64.replace(/^data:[^;]+;base64,/, "");\n};\n\n/**\n * \u4ECE ReferenceList \u6761\u76EE\u4E2D\u63D0\u53D6\u5E26\u5934\u7684 base64 \u6216 url\n * \u7528\u4E8E omni-video \u63A5\u53E3\uFF0C\u8BE5\u63A5\u53E3\u7684 image_url \u652F\u6301\u5E26\u524D\u7F00\u7684 base64 \u548C url\n */\nconst extractImageUrl = (ref: ReferenceList): string => {\n  return ref.base64.startsWith("data:") ? ref.base64 : `data:image/jpeg;base64,${ref.base64}`;\n};\n\n/**\n * \u63D0\u4EA4\u4EFB\u52A1\u5E76\u8F6E\u8BE2\u83B7\u53D6\u7ED3\u679C\u7684\u901A\u7528\u51FD\u6570\n */\nconst submitAndPoll = async (submitUrl: string, queryUrlBase: string, requestBody: any): Promise<string> => {\n  const token = generateAuthToken();\n\n  logger(`\u5F00\u59CB\u63D0\u4EA4\u53EF\u7075AI\u89C6\u9891\u751F\u6210\u4EFB\u52A1: ${submitUrl}`);\n  logger(\n    `\u8BF7\u6C42\u53C2\u6570: ${JSON.stringify({\n      ...requestBody,\n      image: requestBody.image ? "[BASE64]" : undefined,\n      image_tail: requestBody.image_tail ? "[BASE64]" : undefined,\n      image_list: requestBody.image_list ? "[IMAGES]" : undefined,\n    })}`,\n  );\n\n  const submitResp = await axios.post(submitUrl, requestBody, {\n    headers: {\n      "Content-Type": "application/json",\n      Authorization: `Bearer ${token}`,\n    },\n  });\n\n  if (submitResp.data.code !== 0) {\n    throw new Error(`\u63D0\u4EA4\u4EFB\u52A1\u5931\u8D25: ${submitResp.data.message || JSON.stringify(submitResp.data)}`);\n  }\n\n  const taskId = submitResp.data.data.task_id;\n  logger(`\u4EFB\u52A1\u5DF2\u63D0\u4EA4\uFF0C\u4EFB\u52A1ID: ${taskId}`);\n\n  const result = await pollTask(\n    async () => {\n      const freshToken = generateAuthToken();\n      const queryResp = await axios.get(`${queryUrlBase}/${taskId}`, {\n        headers: {\n          Authorization: `Bearer ${freshToken}`,\n        },\n      });\n\n      if (queryResp.data.code !== 0) {\n        return { completed: true, error: `\u67E5\u8BE2\u4EFB\u52A1\u5931\u8D25: ${queryResp.data.message}` };\n      }\n\n      const taskData = queryResp.data.data;\n      const status = taskData.task_status;\n      logger(`\u8F6E\u8BE2\u4E2D... \u4EFB\u52A1\u72B6\u6001: ${status}`);\n\n      if (status === "succeed") {\n        const videoUrl = taskData.task_result?.videos?.[0]?.url;\n        if (!videoUrl) {\n          return { completed: true, error: "\u4EFB\u52A1\u5B8C\u6210\u4F46\u672A\u83B7\u53D6\u5230\u89C6\u9891URL" };\n        }\n        return { completed: true, data: videoUrl };\n      }\n\n      if (status === "failed") {\n        return { completed: true, error: `\u89C6\u9891\u751F\u6210\u5931\u8D25: ${taskData.task_status_msg || "\u672A\u77E5\u9519\u8BEF"}` };\n      }\n\n      return { completed: false };\n    },\n    5000,\n    600000,\n  );\n\n  if (result.error) throw new Error(result.error);\n  logger(`\u89C6\u9891\u751F\u6210\u5B8C\u6210\uFF0C\u6B63\u5728\u8F6C\u6362\u4E3ABase64...`);\n  return await urlToBase64(result.data!);\n};\n\n// ============================================================\n// \u9002\u914D\u5668\u51FD\u6570\n// ============================================================\n\nconst textRequest = (model: TextModel, think: boolean, thinkLevel: 0 | 1 | 2 | 3) => {\n  throw new Error("\u53EF\u7075AI\u4E0D\u652F\u6301\u6587\u672C\u6A21\u578B");\n};\n\nconst imageRequest = async (config: ImageConfig, model: ImageModel): Promise<string> => {\n  throw new Error("\u53EF\u7075AI\u4E0D\u652F\u6301\u56FE\u7247\u6A21\u578B");\n};\n\nconst videoRequest = async (config: VideoConfig, model: VideoModel): Promise<string> => {\n  if (!vendor.inputValues.accessKey) throw new Error("\u7F3A\u5C11Access Key");\n  if (!vendor.inputValues.secretKey) throw new Error("\u7F3A\u5C11Secret Key");\n\n  const baseUrl = getBaseUrl();\n\n  // \u89E3\u6790 modelName\uFF0C\u683C\u5F0F\uFF1Akling-video-o1:pro => modelName=kling-video-o1, mode=pro\n  const colonIdx = model.modelName.indexOf(":");\n  const modelName = colonIdx > -1 ? model.modelName.substring(0, colonIdx) : model.modelName;\n  const mode = colonIdx > -1 ? model.modelName.substring(colonIdx + 1) : "pro";\n\n  // \u5224\u65AD\u662F\u5426\u4E3A Omni \u6A21\u578B\n  const isOmniModel = modelName === "kling-video-o1" || modelName === "kling-v3-omni";\n\n  // \u5224\u65AD\u5F53\u524D\u9009\u4E2D\u7684\u89C6\u9891\u751F\u6210\u6A21\u5F0F\n  const currentMode = config.mode;\n  const isText = currentMode.includes("text");\n  const isSingleImage = currentMode.includes("singleImage");\n  const isStartEndRequired = currentMode.includes("startEndRequired");\n  const isEndFrameOptional = currentMode.includes("endFrameOptional");\n  const isStartFrameOptional = currentMode.includes("startFrameOptional");\n  const hasMultiRef = Array.isArray(currentMode) && currentMode.some((m) => Array.isArray(m));\n\n  // \u63D0\u53D6\u4E0D\u540C\u7C7B\u578B\u7684\u5F15\u7528\n  const imageRefs = (config.referenceList || []).filter((r) => r.type === "image");\n  const videoRefs = (config.referenceList || []).filter((r) => r.type === "video");\n\n  // =====================================================\n  // Omni \u6A21\u578B \u2014\u2014 \u4F7F\u7528 /v1/videos/omni-video \u63A5\u53E3\n  // =====================================================\n  if (isOmniModel) {\n    const requestBody: any = {\n      model_name: modelName,\n      mode: mode,\n      duration: String(config.duration),\n      sound: config.audio === true ? "on" : "off",\n    };\n\n    if (config.prompt) {\n      requestBody.prompt = config.prompt;\n    }\n\n    if (isSingleImage && imageRefs.length > 0) {\n      const imageUrl = extractImageUrl(imageRefs[0]);\n      requestBody.image_list = [{ image_url: imageUrl, type: "first_frame" }];\n      if (!requestBody.prompt) requestBody.prompt = "\u6839\u636E\u56FE\u7247\u751F\u6210\u89C6\u9891";\n    } else if (isStartEndRequired && imageRefs.length >= 2) {\n      const firstUrl = extractImageUrl(imageRefs[0]);\n      const endUrl = extractImageUrl(imageRefs[1]);\n      requestBody.image_list = [\n        { image_url: firstUrl, type: "first_frame" },\n        { image_url: endUrl, type: "end_frame" },\n      ];\n      if (!requestBody.prompt) requestBody.prompt = "\u6839\u636E\u9996\u5C3E\u5E27\u56FE\u7247\u751F\u6210\u8FC7\u6E21\u89C6\u9891";\n    } else if (isEndFrameOptional && imageRefs.length >= 1) {\n      const firstUrl = extractImageUrl(imageRefs[0]);\n      requestBody.image_list = [{ image_url: firstUrl, type: "first_frame" }];\n      if (imageRefs.length >= 2) {\n        const endUrl = extractImageUrl(imageRefs[1]);\n        requestBody.image_list.push({ image_url: endUrl, type: "end_frame" });\n      }\n      if (!requestBody.prompt) requestBody.prompt = "\u6839\u636E\u56FE\u7247\u751F\u6210\u89C6\u9891";\n    } else if (isStartFrameOptional && imageRefs.length >= 1) {\n      if (imageRefs.length >= 2) {\n        const firstUrl = extractImageUrl(imageRefs[0]);\n        const endUrl = extractImageUrl(imageRefs[1]);\n        requestBody.image_list = [\n          { image_url: firstUrl, type: "first_frame" },\n          { image_url: endUrl, type: "end_frame" },\n        ];\n      } else {\n        const endUrl = extractImageUrl(imageRefs[0]);\n        requestBody.image_list = [{ image_url: endUrl, type: "end_frame" }];\n      }\n      if (!requestBody.prompt) requestBody.prompt = "\u6839\u636E\u56FE\u7247\u751F\u6210\u89C6\u9891";\n    } else if (hasMultiRef && (imageRefs.length > 0 || videoRefs.length > 0)) {\n      requestBody.image_list = [];\n      for (let i = 0; i < imageRefs.length; i++) {\n        const imageUrl = extractImageUrl(imageRefs[i]);\n        requestBody.image_list.push({ image_url: imageUrl });\n      }\n      if (!requestBody.prompt) {\n        const refs = imageRefs.map((_, idx) => `<<<image_${idx + 1}>>>`).join("\u3001");\n        requestBody.prompt = `\u53C2\u8003${refs}\u751F\u6210\u89C6\u9891`;\n      }\n    }\n\n    // \u6587\u751F\u89C6\u9891\u6216\u65E0\u56FE\u7247\u8F93\u5165\u65F6\u9700\u8981\u8BBE\u7F6E\u5BBD\u9AD8\u6BD4\n    const hasImageInput = requestBody.image_list && requestBody.image_list.length > 0;\n    if (!hasImageInput) {\n      requestBody.aspect_ratio = config.aspectRatio || "16:9";\n      if (!requestBody.prompt) throw new Error("\u6587\u751F\u89C6\u9891\u6A21\u5F0F\u9700\u8981\u63D0\u4F9B\u63D0\u793A\u8BCD");\n    }\n\n    const apiPath = "/v1/videos/omni-video";\n    return await submitAndPoll(`${baseUrl}${apiPath}`, `${baseUrl}${apiPath}`, requestBody);\n  }\n\n  // =====================================================\n  // \u975E Omni \u6A21\u578B \u2014\u2014 \u6839\u636E\u6A21\u5F0F\u9009\u62E9\u4E0D\u540C\u63A5\u53E3\n  // =====================================================\n\n  // \u591A\u56FE\u53C2\u8003\u6A21\u5F0F \u2014\u2014 \u4F7F\u7528 /v1/videos/multi-image2video \u63A5\u53E3\uFF08\u4EC5 kling-v1-6 \u652F\u6301\uFF09\n  if (hasMultiRef && imageRefs.length > 0) {\n    const imageList = [];\n    for (let i = 0; i < imageRefs.length; i++) {\n      const rawBase64 = extractRawBase64(imageRefs[i]);\n      imageList.push({ image: rawBase64 });\n    }\n\n    const requestBody: any = {\n      model_name: modelName,\n      image_list: imageList,\n      prompt: config.prompt || "\u6839\u636E\u53C2\u8003\u56FE\u7247\u751F\u6210\u89C6\u9891",\n      mode: mode,\n      duration: String(config.duration),\n      aspect_ratio: config.aspectRatio || "16:9",\n    };\n\n    const apiPath = "/v1/videos/multi-image2video";\n    return await submitAndPoll(`${baseUrl}${apiPath}`, `${baseUrl}${apiPath}`, requestBody);\n  }\n\n  // \u6587\u751F\u89C6\u9891\u6A21\u5F0F \u2014\u2014 \u4F7F\u7528 /v1/videos/text2video \u63A5\u53E3\n  if (isText) {\n    if (!config.prompt) throw new Error("\u6587\u751F\u89C6\u9891\u6A21\u5F0F\u9700\u8981\u63D0\u4F9B\u63D0\u793A\u8BCD");\n\n    const requestBody: any = {\n      model_name: modelName,\n      prompt: config.prompt,\n      mode: mode,\n      duration: String(config.duration),\n      aspect_ratio: config.aspectRatio || "16:9",\n      sound: config.audio === true ? "on" : "off",\n    };\n\n    const apiPath = "/v1/videos/text2video";\n    return await submitAndPoll(`${baseUrl}${apiPath}`, `${baseUrl}${apiPath}`, requestBody);\n  }\n\n  // \u56FE\u751F\u89C6\u9891\u6A21\u5F0F\uFF08\u5355\u56FE / \u9996\u5C3E\u5E27 / \u5C3E\u5E27\u53EF\u9009\u7B49\uFF09\u2014\u2014 \u4F7F\u7528 /v1/videos/image2video \u63A5\u53E3\n  if ((isSingleImage || isStartEndRequired || isEndFrameOptional || isStartFrameOptional) && imageRefs.length > 0) {\n    const requestBody: any = {\n      model_name: modelName,\n      prompt: config.prompt || "\u6839\u636E\u56FE\u7247\u751F\u6210\u89C6\u9891",\n      mode: mode,\n      duration: String(config.duration),\n      sound: config.audio === true ? "on" : "off",\n    };\n\n    if (isSingleImage) {\n      requestBody.image = extractRawBase64(imageRefs[0]);\n    } else if (isStartEndRequired && imageRefs.length >= 2) {\n      requestBody.image = extractRawBase64(imageRefs[0]);\n      requestBody.image_tail = extractRawBase64(imageRefs[1]);\n    } else if (isEndFrameOptional) {\n      requestBody.image = extractRawBase64(imageRefs[0]);\n      if (imageRefs.length >= 2) {\n        requestBody.image_tail = extractRawBase64(imageRefs[1]);\n      }\n    } else if (isStartFrameOptional) {\n      if (imageRefs.length >= 2) {\n        requestBody.image = extractRawBase64(imageRefs[0]);\n        requestBody.image_tail = extractRawBase64(imageRefs[1]);\n      } else {\n        requestBody.image = extractRawBase64(imageRefs[0]);\n      }\n    }\n\n    const apiPath = "/v1/videos/image2video";\n    return await submitAndPoll(`${baseUrl}${apiPath}`, `${baseUrl}${apiPath}`, requestBody);\n  }\n\n  throw new Error("\u4E0D\u652F\u6301\u7684\u89C6\u9891\u751F\u6210\u6A21\u5F0F\u6216\u7F3A\u5C11\u5FC5\u8981\u7684\u8F93\u5165\u53C2\u6570");\n};\n\nconst ttsRequest = async (config: TTSConfig, model: TTSModel): Promise<string> => {\n  return "";\n};\n\n// ============================================================\n// \u5BFC\u51FA\n// ============================================================\n\nexports.vendor = vendor;\nexports.textRequest = textRequest;\nexports.imageRequest = imageRequest;\nexports.videoRequest = videoRequest;\nexports.ttsRequest = ttsRequest;\n\n// \u8FD9\u884C\u4EE3\u7801\u7528\u4E8E\u786E\u4FDD\u5F53\u524D\u6587\u4EF6\u88AB\u8BC6\u522B\u4E3A\u6A21\u5757\uFF0C\u907F\u514D\u5168\u5C40\u53D8\u91CF\u51B2\u7A81\nexport {};\n',
+      "minimax.ts": '/**\n * Toonflow AI\u4F9B\u5E94\u5546\u6A21\u677F - MiniMax(\u6D77\u87BAAI)\n * @version 2.0\n */\n\n// ============================================================\n// \u7C7B\u578B\u5B9A\u4E49\n// ============================================================\n\ntype VideoMode =\n  | "singleImage"\n  | "startEndRequired"\n  | "endFrameOptional"\n  | "startFrameOptional"\n  | "text"\n  | (`videoReference:${number}` | `imageReference:${number}` | `audioReference:${number}`)[];\n\ninterface TextModel {\n  name: string;\n  modelName: string;\n  type: "text";\n  think: boolean;\n}\n\ninterface ImageModel {\n  name: string;\n  modelName: string;\n  type: "image";\n  mode: ("text" | "singleImage" | "multiReference")[];\n  associationSkills?: string;\n}\n\ninterface VideoModel {\n  name: string;\n  modelName: string;\n  type: "video";\n  mode: VideoMode[];\n  associationSkills?: string;\n  audio: "optional" | false | true;\n  durationResolutionMap: { duration: number[]; resolution: string[] }[];\n}\n\ninterface TTSModel {\n  name: string;\n  modelName: string;\n  type: "tts";\n  voices: { title: string; voice: string }[];\n}\n\ninterface VendorConfig {\n  id: string;\n  version: string;\n  name: string;\n  author: string;\n  description?: string;\n  icon?: string;\n  inputs: { key: string; label: string; type: "text" | "password" | "url"; required: boolean; placeholder?: string }[];\n  inputValues: Record<string, string>;\n  models: (TextModel | ImageModel | VideoModel | TTSModel)[];\n}\n\ntype ReferenceList =\n  | { type: "image"; sourceType: "base64"; base64: string }\n  | { type: "audio"; sourceType: "base64"; base64: string }\n  | { type: "video"; sourceType: "base64"; base64: string };\n\ninterface ImageConfig {\n  prompt: string;\n  referenceList?: Extract<ReferenceList, { type: "image" }>[];\n  size: "1K" | "2K" | "4K";\n  aspectRatio: `${number}:${number}`;\n}\n\ninterface VideoConfig {\n  duration: number;\n  resolution: string;\n  aspectRatio: "16:9" | "9:16";\n  prompt: string;\n  referenceList?: ReferenceList[];\n  audio?: boolean;\n  mode: VideoMode[];\n}\n\ninterface TTSConfig {\n  text: string;\n  voice: string;\n  speechRate: number;\n  pitchRate: number;\n  volume: number;\n  referenceList?: Extract<ReferenceList, { type: "audio" }>[];\n}\n\ninterface PollResult {\n  completed: boolean;\n  data?: string;\n  error?: string;\n}\n\n// ============================================================\n// \u5168\u5C40\u58F0\u660E\n// ============================================================\n\ndeclare const axios: any;\ndeclare const logger: (msg: string) => void;\ndeclare const jsonwebtoken: any;\ndeclare const zipImage: (base64: string, size: number) => Promise<string>;\ndeclare const zipImageResolution: (base64: string, w: number, h: number) => Promise<string>;\ndeclare const mergeImages: (base64Arr: string[], maxSize?: string) => Promise<string>;\ndeclare const urlToBase64: (url: string) => Promise<string>;\ndeclare const pollTask: (fn: () => Promise<PollResult>, interval?: number, timeout?: number) => Promise<PollResult>;\ndeclare const createOpenAI: any;\ndeclare const createDeepSeek: any;\ndeclare const createZhipu: any;\ndeclare const createQwen: any;\ndeclare const createAnthropic: any;\ndeclare const createOpenAICompatible: any;\ndeclare const createXai: any;\ndeclare const createMinimax: any;\ndeclare const createGoogleGenerativeAI: any;\ndeclare const exports: {\n  vendor: VendorConfig;\n  textRequest: (m: TextModel, t: boolean, tl: 0 | 1 | 2 | 3) => any;\n  uploadReference: (base64: string, fileType: "image" | "audio" | "video") => Promise<ReferenceList>;\n  imageRequest: (c: ImageConfig, m: ImageModel) => Promise<string>;\n  videoRequest: (c: VideoConfig, m: VideoModel) => Promise<string>;\n  ttsRequest: (c: TTSConfig, m: TTSModel) => Promise<string>;\n  checkForUpdates?: () => Promise<{ hasUpdate: boolean; latestVersion: string; notice: string }>;\n  updateVendor?: () => Promise<string>;\n};\n\n// ============================================================\n// \u4F9B\u5E94\u5546\u914D\u7F6E\n// ============================================================\n\nconst vendor: VendorConfig = {\n  id: "minimax",\n  version: "2.1",\n  author: "Toonflow",\n  name: "MiniMax(\u6D77\u87BAAI)",\n  description: "MiniMax\u5B98\u65B9\u63A5\u53E3\u9002\u914D\uFF0C\u652F\u6301M\u7CFB\u5217\u63A8\u7406\u6587\u672C\u6A21\u578B\u3001\u6587\u751F\u56FE/\u56FE\u751F\u56FE\u3001\u89C6\u9891\u751F\u6210\uFF08\u6587\u751F\u89C6\u9891\u3001\u56FE\u751F\u89C6\u9891\u3001\u9996\u5C3E\u5E27\u751F\u6210\uFF09\u80FD\u529B \\n [\u524D\u5F80\u5E73\u53F0](https://minimaxi.com/)",\n  inputs: [\n    { key: "apiKey", label: "API\u5BC6\u94A5", type: "password", required: true },\n    { key: "baseUrl", label: "\u8BF7\u6C42\u5730\u5740", type: "url", required: true, placeholder: "\u793A\u4F8B\uFF1Ahttps://api.toonflow.net/v1" },\n  ],\n  inputValues: { apiKey: "", baseUrl: "https://api.toonflow.net/v1" },\n  models: [\n    // \u6587\u672C\u6A21\u578B\n    { name: "MiniMax-M2.7 (\u63A8\u7406\u7248)", modelName: "MiniMax-M2.7", type: "text", think: true },\n    { name: "MiniMax-M2.7 \u6781\u901F\u7248 (\u63A8\u7406\u7248)", modelName: "MiniMax-M2.7-highspeed", type: "text", think: true },\n    { name: "MiniMax-M2.5 (\u63A8\u7406\u7248)", modelName: "MiniMax-M2.5", type: "text", think: true },\n    { name: "MiniMax-M2.5 \u6781\u901F\u7248 (\u63A8\u7406\u7248)", modelName: "MiniMax-M2.5-highspeed", type: "text", think: true },\n    { name: "MiniMax-M2.1 (\u7F16\u7A0B\u7248)", modelName: "MiniMax-M2.1", type: "text", think: true },\n    { name: "MiniMax-M2.1 \u6781\u901F\u7248 (\u7F16\u7A0B\u7248)", modelName: "MiniMax-M2.1-highspeed", type: "text", think: true },\n    { name: "MiniMax-M2 (Agent\u7248)", modelName: "MiniMax-M2", type: "text", think: false },\n    // \u56FE\u7247\u6A21\u578B\n    { name: "\u6D77\u87BA\u56FE\u50CFV1", modelName: "image-01", type: "image", mode: ["text", "singleImage"] },\n    { name: "\u6D77\u87BA\u56FE\u50CFV1 Live\u7248", modelName: "image-01-live", type: "image", mode: ["text", "singleImage"], associationSkills: "\u652F\u6301\u81EA\u5B9A\u4E49\u753B\u98CE" },\n    // \u89C6\u9891\u6A21\u578B\n    {\n      name: "\u6D77\u87BA2.3",\n      modelName: "MiniMax-Hailuo-2.3",\n      type: "video",\n      mode: ["text", "singleImage"],\n      audio: false,\n      durationResolutionMap: [\n        { duration: [6], resolution: ["768P", "1080P"] },\n        { duration: [10], resolution: ["768P"] },\n      ],\n    },\n    {\n      name: "\u6D77\u87BA2.3\u6781\u901F\u7248",\n      modelName: "MiniMax-Hailuo-2.3-Fast",\n      type: "video",\n      mode: ["text", "singleImage"],\n      audio: false,\n      durationResolutionMap: [\n        { duration: [6], resolution: ["768P", "1080P"] },\n        { duration: [10], resolution: ["768P"] },\n      ],\n    },\n    {\n      name: "\u6D77\u87BA02",\n      modelName: "MiniMax-Hailuo-02",\n      type: "video",\n      mode: ["text", "singleImage", "startEndRequired"],\n      audio: false,\n      durationResolutionMap: [\n        { duration: [6], resolution: ["512P", "768P", "1080P"] },\n        { duration: [10], resolution: ["512P", "768P"] },\n      ],\n    },\n  ],\n};\n\n// ============================================================\n// \u8F85\u52A9\u5DE5\u5177\n// ============================================================\n\n/**\n * \u83B7\u53D6\u8BF7\u6C42\u5934\n */\nconst getHeaders = (): Record<string, string> => {\n  const apiKey = vendor.inputValues.apiKey.replace(/^Bearer\\s+/i, "");\n  return {\n    Authorization: `Bearer ${apiKey}`,\n    "Content-Type": "application/json",\n  };\n};\n\n/**\n * \u83B7\u53D6\u57FA\u7840\u8BF7\u6C42\u5730\u5740\n */\nconst getBaseUrl = (): string => {\n  return vendor.inputValues.baseUrl.replace(/\\/$/, "");\n};\n\n/**\n * \u4ECE ReferenceList \u6761\u76EE\u4E2D\u63D0\u53D6\u6709\u5934 base64 \u5B57\u7B26\u4E32\n */\nconst extractBase64WithHead = (ref: ReferenceList): string => {\n  return ref.base64.startsWith("data:") ? ref.base64 : `data:image/png;base64,${ref.base64}`;\n};\n\n// ============================================================\n// \u9002\u914D\u5668\u51FD\u6570\n// ============================================================\n\nconst textRequest = (model: TextModel, think: boolean, thinkLevel: 0 | 1 | 2 | 3) => {\n  if (!vendor.inputValues.apiKey) throw new Error("\u7F3A\u5C11API Key");\n  const apiKey = vendor.inputValues.apiKey.replace(/^Bearer\\s+/i, "");\n  const baseUrl = getBaseUrl();\n\n  const openaiBaseUrl = `${baseUrl}/v1`;\n  const extraBody = model.think ? { reasoning_split: true } : {};\n  return createOpenAI({ baseURL: openaiBaseUrl, apiKey, extraBody }).chat(model.modelName);\n};\n\nconst uploadReference = async (base64: string, fileType: "image" | "audio" | "video"): Promise<ReferenceList> => {\n  // MiniMax\u7684\u56FE\u7247\u63A5\u53E3\u76F4\u63A5\u63A5\u53D7 base64\uFF0C\u538B\u7F29\u540E\u539F\u6837\u8FD4\u56DE\n  if (fileType === "image") {\n    const compressed = await zipImage(base64, 10 * 1024);\n    return { type: "image", sourceType: "base64", base64: compressed };\n  }\n  // \u89C6\u9891\u63A5\u53E3\u7684\u56FE\u7247\u53C2\u6570\u4E5F\u662F base64\uFF0C\u538B\u7F29\u523020MB\n  return { type: fileType, sourceType: "base64", base64 } as ReferenceList;\n};\n\nconst imageRequest = async (config: ImageConfig, model: ImageModel): Promise<string> => {\n  if (!vendor.inputValues.apiKey) throw new Error("\u7F3A\u5C11API Key");\n  const baseUrl = getBaseUrl();\n  const headers = getHeaders();\n\n  const reqBody: any = {\n    model: model.modelName,\n    prompt: config.prompt,\n    aspect_ratio: config.aspectRatio,\n    response_format: "base64",\n    n: 1,\n    prompt_optimizer: true,\n    aigc_watermark: false,\n  };\n\n  // \u5904\u7406\u56FE\u751F\u56FE\u53C2\u8003\n  const imageRefs = config.referenceList || [];\n  if (imageRefs.length > 0) {\n    const refBase64 = extractBase64WithHead(imageRefs[0]);\n    reqBody.subject_reference = [{ type: "character", image_file: refBase64 }];\n  }\n\n  logger("\u5F00\u59CB\u63D0\u4EA4MiniMax\u56FE\u50CF\u751F\u6210\u4EFB\u52A1");\n  const resp = await axios.post(`${baseUrl}/v1/image_generation`, reqBody, { headers });\n  if (resp.data.base_resp.status_code !== 0) {\n    throw new Error(`\u56FE\u50CF\u751F\u6210\u5931\u8D25\uFF1A${resp.data.base_resp.status_msg}`);\n  }\n  if (resp.data.metadata.success_count === 0) {\n    throw new Error("\u56FE\u50CF\u751F\u6210\u88AB\u5B89\u5168\u7B56\u7565\u62E6\u622A\uFF0C\u8BF7\u8C03\u6574prompt\u6216\u53C2\u8003\u56FE");\n  }\n\n  const imgBase64 = resp.data.data.image_base64[0];\n  return imgBase64.startsWith("data:") ? imgBase64 : `data:image/png;base64,${imgBase64}`;\n};\n\nconst videoRequest = async (config: VideoConfig, model: VideoModel): Promise<string> => {\n  if (!vendor.inputValues.apiKey) throw new Error("\u7F3A\u5C11API Key");\n  const baseUrl = getBaseUrl();\n  const headers = getHeaders();\n\n  const reqBody: any = {\n    model: model.modelName,\n    prompt: config.prompt,\n    duration: config.duration,\n    resolution: config.resolution,\n    aigc_watermark: false,\n    prompt_optimizer: true,\n  };\n\n  // \u63D0\u53D6\u56FE\u7247\u7C7B\u578B\u7684\u5F15\u7528\n  const imageRefs = (config.referenceList || []).filter((r) => r.type === "image");\n\n  if (imageRefs.length > 0) {\n    // \u538B\u7F29\u56FE\u7247\u523020MB\u4EE5\u5185\n    const compressedImages: string[] = [];\n    for (const ref of imageRefs) {\n      const base64 = extractBase64WithHead(ref);\n      const compressed = await zipImage(base64, 20 * 1024);\n      compressedImages.push(compressed);\n    }\n\n    if (config.mode.includes("startEndRequired")) {\n      if (compressedImages.length < 2) throw new Error("\u9996\u5C3E\u5E27\u6A21\u5F0F\u9700\u8981\u4E0A\u4F20\u4E24\u5F20\u56FE\u7247");\n      reqBody.first_frame_image = compressedImages[0];\n      reqBody.last_frame_image = compressedImages[1];\n    } else if (config.mode.includes("singleImage")) {\n      reqBody.first_frame_image = compressedImages[0];\n    }\n  }\n\n  logger("\u5F00\u59CB\u63D0\u4EA4MiniMax\u89C6\u9891\u751F\u6210\u4EFB\u52A1");\n  const submitResp = await axios.post(`${baseUrl}/v1/video_generation`, reqBody, { headers });\n  if (submitResp.data.base_resp.status_code !== 0) {\n    throw new Error(`\u4EFB\u52A1\u63D0\u4EA4\u5931\u8D25\uFF1A${submitResp.data.base_resp.status_msg}`);\n  }\n  const taskId = submitResp.data.task_id;\n  logger(`\u89C6\u9891\u4EFB\u52A1\u63D0\u4EA4\u6210\u529F\uFF0C\u4EFB\u52A1ID: ${taskId}`);\n\n  // \u8F6E\u8BE2\u4EFB\u52A1\u72B6\u6001\n  const pollResult = await pollTask(\n    async () => {\n      const queryResp = await axios.get(`${baseUrl}/v1/query/video_generation`, {\n        headers: getHeaders(),\n        params: { task_id: taskId },\n      });\n      if (queryResp.data.base_resp.status_code !== 0) {\n        return { completed: true, error: queryResp.data.base_resp.status_msg };\n      }\n      const status = queryResp.data.status;\n      if (status === "Success") {\n        return { completed: true, data: queryResp.data.file_id };\n      }\n      if (status === "Fail") {\n        return { completed: true, error: "\u89C6\u9891\u751F\u6210\u5931\u8D25" };\n      }\n      logger(`\u89C6\u9891\u4EFB\u52A1\u751F\u6210\u4E2D\uFF0C\u5F53\u524D\u72B6\u6001\uFF1A${status}`);\n      return { completed: false };\n    },\n    5000,\n    600000,\n  );\n\n  if (pollResult.error) throw new Error(pollResult.error);\n  const fileId = pollResult.data!;\n  logger(`\u89C6\u9891\u4EFB\u52A1\u751F\u6210\u6210\u529F\uFF0C\u6587\u4EF6ID: ${fileId}`);\n\n  // \u83B7\u53D6\u4E0B\u8F7D\u5730\u5740\n  const fileResp = await axios.get(`${baseUrl}/v1/files/retrieve`, {\n    headers: getHeaders(),\n    params: { file_id: fileId },\n  });\n  if (fileResp.data.base_resp.status_code !== 0) {\n    throw new Error(`\u83B7\u53D6\u6587\u4EF6\u5730\u5740\u5931\u8D25\uFF1A${fileResp.data.base_resp.status_msg}`);\n  }\n  const downloadUrl = fileResp.data.file.download_url;\n  logger(`\u89C6\u9891\u4E0B\u8F7D\u5730\u5740\u83B7\u53D6\u6210\u529F\uFF0C\u5F00\u59CB\u8F6CBase64`);\n\n  return await urlToBase64(downloadUrl);\n};\n\nconst ttsRequest = async (config: TTSConfig, model: TTSModel): Promise<string> => {\n  return "";\n};\n\nconst checkForUpdates = async (): Promise<{ hasUpdate: boolean; latestVersion: string; notice: string }> => {\n  return {\n    hasUpdate: false,\n    latestVersion: "2.0",\n    notice:\n      "## \u65B0\u7248\u672C\u66F4\u65B0\u516C\u544A\\n1. \u9002\u914D\u65B0\u7248\u6A21\u677F\u67B6\u6784\uFF0C\u652F\u6301 ReferenceList \u7EDF\u4E00\u5F15\u7528\u7C7B\u578B\\n2. \u65B0\u589E uploadReference \u524D\u7F6E\u5904\u7406\u5668\\n3. \u4F18\u5316\u56FE\u7247\u538B\u7F29\u548C\u5F15\u7528\u63D0\u53D6\u903B\u8F91",\n  };\n};\n\nconst updateVendor = async (): Promise<string> => {\n  return "";\n};\n\n// ============================================================\n// \u5BFC\u51FA\n// ============================================================\n\nexports.vendor = vendor;\nexports.textRequest = textRequest;\nexports.uploadReference = uploadReference;\nexports.imageRequest = imageRequest;\nexports.videoRequest = videoRequest;\nexports.ttsRequest = ttsRequest;\nexports.checkForUpdates = checkForUpdates;\nexports.updateVendor = updateVendor;\n\n// \u8FD9\u884C\u4EE3\u7801\u7528\u4E8E\u786E\u4FDD\u5F53\u524D\u6587\u4EF6\u88AB\u8BC6\u522B\u4E3A\u6A21\u5757\uFF0C\u907F\u514D\u5168\u5C40\u53D8\u91CF\u51B2\u7A81\nexport {};',
+      "null.ts": '/**\n * Toonflow AI\u4F9B\u5E94\u5546\u6A21\u677F\n * @version 2.0\n */\n\n// ============================================================\n// \u7C7B\u578B\u5B9A\u4E49\n// ============================================================\n\ntype VideoMode =\n  | "singleImage" //\u5355\u56FE\u53C2\u8003\n  | "startEndRequired" //\u9996\u5C3E\u5E27\uFF08\u4E24\u5F20\u90FD\u5F97\u6709\uFF09\n  | "endFrameOptional" //\u9996\u5C3E\u5E27\uFF08\u5C3E\u5E27\u53EF\u9009\uFF09\n  | "startFrameOptional" //\u9996\u5C3E\u5E27\uFF08\u9996\u5E27\u53EF\u9009\uFF09\n  | "text" //\u6587\u672C\n  | (`videoReference:${number}` | `imageReference:${number}` | `audioReference:${number}`)[]; //\u591A\u53C2\u8003\uFF08\u6570\u5B57\u4EE3\u8868\u9650\u5236\u6570\u91CF\uFF09\n\ninterface TextModel {\n  name: string;\n  modelName: string;\n  type: "text";\n  think: boolean;\n}\n\ninterface ImageModel {\n  name: string;\n  modelName: string;\n  type: "image";\n  mode: ("text" | "singleImage" | "multiReference")[];\n  associationSkills?: string;\n}\n\ninterface VideoModel {\n  name: string;\n  modelName: string;\n  type: "video";\n  mode: VideoMode[];\n  associationSkills?: string;\n  audio: "optional" | false | true;\n  durationResolutionMap: { duration: number[]; resolution: string[] }[];\n}\n\ninterface TTSModel {\n  name: string;\n  modelName: string;\n  type: "tts";\n  voices: { title: string; voice: string }[];\n}\n\ninterface VendorConfig {\n  id: string; //\u552F\u4E00ID\uFF0C\u4F5C\u4E3A\u6587\u4EF6\u540D\u5B58\u50A8\u7528\u6237\u78C1\u76D8\u4E0A\uFF0C\u7981\u6B62\u7B26\u53F7\n  version: string; //\u7248\u672C\u53F7\uFF0C\u683C\u5F0F\u4E3Ax.y\uFF0C\u9700\u9075\u5B88\u8BED\u4E49\u5316\u7248\u672C\u63A7\u5236\n  name: string; //\u4F9B\u5E94\u5546\u540D\u79F0\n  author: string; //\u4F5C\u8005\n  description?: string; //\u63CF\u8FF0\uFF0C\u652F\u6301Markdown\u683C\u5F0F\n  icon?: string; //\u56FE\u6807\uFF0C\u4EC5\u652F\u6301Base64\u683C\u5F0F\uFF0C\u5EFA\u8BAE\u5C3A\u5BF8\u4E3A128x128\u50CF\u7D20\n  inputs: { key: string; label: string; type: "text" | "password" | "url"; required: boolean; placeholder?: string }[];\n  inputValues: Record<string, string>;\n  models: (TextModel | ImageModel | VideoModel | TTSModel)[];\n}\n\ntype ReferenceList =\n  | { type: "image"; sourceType: "base64"; base64: string }\n  | { type: "audio"; sourceType: "base64"; base64: string }\n  | { type: "video"; sourceType: "base64"; base64: string };\n\ninterface ImageConfig {\n  prompt: string;\n  referenceList?: Extract<ReferenceList, { type: "image" }>[];\n  size: "1K" | "2K" | "4K";\n  aspectRatio: `${number}:${number}`;\n}\n\ninterface VideoConfig {\n  duration: number;\n  resolution: string;\n  aspectRatio: "16:9" | "9:16";\n  prompt: string;\n  referenceList?: ReferenceList[];\n  audio?: boolean;\n  mode: VideoMode[];\n}\n\ninterface TTSConfig {\n  text: string;\n  voice: string;\n  speechRate: number;\n  pitchRate: number;\n  volume: number;\n  referenceList?: Extract<ReferenceList, { type: "audio" }>[];\n}\n\ninterface PollResult {\n  completed: boolean;\n  data?: string;\n  error?: string;\n}\n\n// ============================================================\n// \u5168\u5C40\u58F0\u660E\n// ============================================================\n\ndeclare const axios: any; // HTTP\u8BF7\u6C42\u5E93\ndeclare const logger: (msg: string) => void; // \u65E5\u5FD7\u51FD\u6570\ndeclare const jsonwebtoken: any; // JWT\u5904\u7406\u5E93\ndeclare const zipImage: (base64: string, size: number) => Promise<string>; // \u56FE\u7247\u538B\u7F29\u51FD\u6570\uFF0C\u8FD4\u56DE\u6709\u5934base64\u5B57\u7B26\u4E32\ndeclare const zipImageResolution: (base64: string, w: number, h: number) => Promise<string>; // \u56FE\u7247\u5206\u8FA8\u7387\u8C03\u6574\u51FD\u6570\uFF0C\u8FD4\u56DE\u6709\u5934base64\u5B57\u7B26\u4E32\ndeclare const mergeImages: (base64Arr: string[], maxSize?: string) => Promise<string>; // \u56FE\u7247\u5408\u6210\u51FD\u6570\uFF0C\u8FD4\u56DE\u6709\u5934base64\u5B57\u7B26\u4E32\ndeclare const urlToBase64: (url: string) => Promise<string>; // URL\u8F6CBase64\u51FD\u6570\uFF0C\u8FD4\u56DE\u6709\u5934base64\u5B57\u7B26\u4E32\ndeclare const pollTask: (fn: () => Promise<PollResult>, interval?: number, timeout?: number) => Promise<PollResult>; // \u8F6E\u8BE2\u51FD\u6570\uFF0Cfn\u4E3A\u5F02\u6B65\u51FD\u6570\uFF0Cinterval\u4E3A\u8F6E\u8BE2\u95F4\u9694\uFF0Ctimeout\u4E3A\u8D85\u65F6\u65F6\u95F4\uFF0C\u8FD4\u56DEfn\u7684\u7ED3\u679C\ndeclare const createOpenAI: any;\ndeclare const createDeepSeek: any;\ndeclare const createZhipu: any;\ndeclare const createQwen: any;\ndeclare const createAnthropic: any;\ndeclare const createOpenAICompatible: any;\ndeclare const createXai: any;\ndeclare const createMinimax: any;\ndeclare const createGoogleGenerativeAI: any;\ndeclare const exports: {\n  vendor: VendorConfig;\n  textRequest: (m: TextModel, t: boolean, tl: 0 | 1 | 2 | 3) => any; //\u6587\u672C\u6A21\u578B\n  imageRequest: (c: ImageConfig, m: ImageModel) => Promise<string>; //\u56FE\u7247\u6A21\u578B\uFF0C\u8FD4\u56DE\u6709\u5934base64\u5B57\u7B26\u4E32\n  videoRequest: (c: VideoConfig, m: VideoModel) => Promise<string>; //\u89C6\u9891\u6A21\u578B\uFF0C\u8FD4\u56DE\u6709\u5934base64\u5B57\u7B26\u4E32\n  ttsRequest: (c: TTSConfig, m: TTSModel) => Promise<string>; //\uFF08\u6682\u672A\u5F00\u653E\uFF09\u8BED\u97F3\u6A21\u578B\uFF0C\u8FD4\u56DE\u6709\u5934base64\u5B57\u7B26\u4E32\n  checkForUpdates?: () => Promise<{ hasUpdate: boolean; latestVersion: string; notice: string }>; //\u68C0\u67E5\u66F4\u65B0\u51FD\u6570\uFF0C\u8FD4\u56DE\u662F\u5426\u6709\u66F4\u65B0\u548C\u6700\u65B0\u7248\u672C\u53F7\u548C\u66F4\u516C\u544A\uFF08\u652F\u6301Markdown\u683C\u5F0F\uFF09\n  updateVendor?: () => Promise<string>; //\u66F4\u65B0\u51FD\u6570\uFF0C\u8FD4\u56DE\u6700\u65B0\u7684\u4EE3\u7801\u6587\u672C\n};\n\n// ============================================================\n// \u4F9B\u5E94\u5546\u914D\u7F6E\n// ============================================================\n\nconst vendor: VendorConfig = {\n  id: "null",\n  version: "2.0",\n  author: "Toonflow",\n  name: "\u7A7A\u6A21\u677F",\n  description: "## \u5F00\u53D1\u6A21\u677F\uFF0C\u60A8\u53EF\u4EE5\u4F7F\u7528\u6B64\u6A21\u677F\u8FDB\u884CVibe Coding",\n  inputs: [\n    { key: "apiKey", label: "API\u5BC6\u94A5", type: "password", required: true },\n    { key: "baseUrl", label: "\u8BF7\u6C42\u5730\u5740", type: "url", required: true, placeholder: "\u793A\u4F8B\uFF1Ahttps://api.toonflow.net/v1" },\n  ],\n  inputValues: { apiKey: "", baseUrl: "https://api.toonflow.net/v1" },\n  models: [{ name: "GPT-4o", modelName: "gpt-4o", type: "text", think: false }],\n};\n\n// ============================================================\n// \u9002\u914D\u5668\u51FD\u6570\n// ============================================================\n\nconst textRequest = (model: TextModel, think: boolean, thinkLevel: 0 | 1 | 2 | 3) => {\n  if (!vendor.inputValues.apiKey) throw new Error("\u7F3A\u5C11API Key");\n  const apiKey = vendor.inputValues.apiKey.replace(/^Bearer\\s+/i, "");\n  return createOpenAI({ baseURL: vendor.inputValues.baseUrl, apiKey }).chat(model.modelName);\n};\n\nconst imageRequest = async (config: ImageConfig, model: ImageModel): Promise<string> => {\n  return "";\n};\n\nconst videoRequest = async (config: VideoConfig, model: VideoModel): Promise<string> => {\n  return "";\n};\n\nconst ttsRequest = async (config: TTSConfig, model: TTSModel): Promise<string> => {\n  return "";\n};\n\nconst checkForUpdates = async (): Promise<{ hasUpdate: boolean; latestVersion: string; notice: string }> => {\n  return { hasUpdate: false, latestVersion: "2.0", notice: "## \u65B0\u7248\u672C\u66F4\u65B0\u516C\u544A" };\n};\n\nconst updateVendor = async (): Promise<string> => {\n  return "";\n};\n\n// ============================================================\n// \u5BFC\u51FA\n// ============================================================\n\nexports.vendor = vendor;\nexports.textRequest = textRequest;\nexports.imageRequest = imageRequest;\nexports.videoRequest = videoRequest;\nexports.ttsRequest = ttsRequest;\nexports.checkForUpdates = checkForUpdates;\nexports.updateVendor = updateVendor;\n\n// \u8FD9\u884C\u4EE3\u7801\u7528\u4E8E\u786E\u4FDD\u5F53\u524D\u6587\u4EF6\u88AB\u8BC6\u522B\u4E3A\u6A21\u5757\uFF0C\u907F\u514D\u5168\u5C40\u53D8\u91CF\u51B2\u7A81\nexport {};\n\n/**\n * ============================================================\n * AI \u4EE3\u7801\u751F\u6210\u6307\u5357\n * ============================================================\n *\n * \u3010\u6982\u8FF0\u3011\n * \u672C\u6587\u4EF6\u662F Toonflow AI \u4F9B\u5E94\u5546\u9002\u914D\u6A21\u677F\u3002AI \u5728\u751F\u6210\u65B0\u4F9B\u5E94\u5546\u9002\u914D\u4EE3\u7801\u65F6\uFF0C\n * \u5FC5\u987B\u4E25\u683C\u9075\u5B88\u4EE5\u4E0B\u89C4\u5219\uFF0C\u5E76\u8981\u6C42\u7528\u6237\u63D0\u4F9B\u76EE\u6807\u5E73\u53F0\u7684 curl \u8C03\u7528\u793A\u4F8B\u6216 API \u6587\u6863\u4FE1\u606F\u4F5C\u4E3A\u8F93\u5165\u4F9D\u636E\u3002\n *\n * \u3010\u524D\u7F6E\u8981\u6C42\u3011\n * \u5728\u751F\u6210\u4EE3\u7801\u524D\uFF0C\u8BF7\u5411\u7528\u6237\u7D22\u8981\u4EE5\u4E0B\u4FE1\u606F\uFF08\u81F3\u5C11\u5176\u4E00\uFF09\uFF1A\n *   1. \u76EE\u6807 API \u7684 curl \u8BF7\u6C42\u793A\u4F8B\uFF08\u5305\u542B\u8BF7\u6C42\u5730\u5740\u3001Headers\u3001Body \u7ED3\u6784\u3001\u54CD\u5E94\u7ED3\u6784\uFF09\n *   2. \u76EE\u6807 API \u7684\u5B98\u65B9\u6587\u6863\u94FE\u63A5\u6216\u6587\u6863\u622A\u56FE/\u6587\u672C\u5185\u5BB9\n *   3. \u9700\u8981\u9002\u914D\u7684\u6A21\u578B\u7C7B\u578B\uFF08text / image / video / tts\uFF09\u53CA\u5176\u80FD\u529B\u8BF4\u660E\n * \u6CA1\u6709\u8DB3\u591F\u4FE1\u606F\u65F6\uFF0C\u5E94\u4E3B\u52A8\u8FFD\u95EE\uFF0C\u4E0D\u8981\u51ED\u7A7A\u7F16\u9020 API \u7ED3\u6784\u3002\n *\n * \u3010\u4EE3\u7801\u89C4\u5219\u3011\n *\n * 1. \u7981\u6B62\u5F15\u5165\u4EFB\u4F55\u5916\u90E8\u5305\n *    \u4E0D\u53EF\u4F7F\u7528 import / require\uFF0C\u4EC5\u80FD\u4F7F\u7528\u672C\u6587\u4EF6\u300C\u5168\u5C40\u58F0\u660E\u300D\u533A\u57DF\u4E2D\u5DF2\u58F0\u660E\u7684\u65B9\u6CD5\u548C\u5BF9\u8C61\uFF0C\n *    \u5305\u62EC\uFF1Aaxios\u3001logger\u3001jsonwebtoken\u3001zipImage\u3001zipImageResolution\u3001mergeImages\u3001\n *    urlToBase64\u3001pollTask\uFF0C\u4EE5\u53CA createOpenAI\u3001createDeepSeek\u3001createZhipu\u3001createQwen\u3001\n *    createAnthropic\u3001createOpenAICompatible\u3001createXai\u3001createMinimax\u3001\n *    createGoogleGenerativeAI \u7B49 AI SDK \u5DE5\u5382\u51FD\u6570\u3002\n *\n * 2. \u7981\u6B62\u5728 exports.* \u51FD\u6570\u5916\u90E8\u58F0\u660E\u79BB\u6563\u7684\u5168\u5927\u5199\u5E38\u91CF\n *    \u9519\u8BEF\u793A\u4F8B\uFF1Aconst API_URL = "https://..."; const MAX_RETRY = 3;\n *    \u5982\u679C\u786E\u5B9E\u9700\u8981\u53EF\u914D\u7F6E\u7684\u5E38\u91CF\u503C\uFF0C\u5FC5\u987B\u5C06\u5176\u58F0\u660E\u5728 vendor.inputValues \u4E2D\uFF0C\n *    \u901A\u8FC7 vendor.inputValues.xxx \u8BBF\u95EE\uFF0C\u8BA9\u7528\u6237\u53EF\u5728\u754C\u9762\u4E0A\u914D\u7F6E\u3002\n *    \u5982\u679C\u662F\u7EAF\u903B\u8F91\u5185\u90E8\u4F7F\u7528\u7684\u4E34\u65F6\u53D8\u91CF\uFF0C\u5E94\u5185\u8054\u5728\u5BF9\u5E94\u7684 exports.* \u51FD\u6570\u4F53\u5185\u90E8\uFF0C\u4F7F\u7528\u5C0F\u9A7C\u5CF0\u547D\u540D\u3002\n *\n * 3. \u903B\u8F91\u5C3D\u91CF\u805A\u5408\u5728 exports.* \u5BF9\u5E94\u7684\u51FD\u6570\u5185\u90E8\n *    \u6BCF\u4E2A\u9002\u914D\u51FD\u6570\uFF08textRequest / imageRequest / videoRequest / ttsRequest\uFF09\n *    \u5E94\u81EA\u5305\u542B\uFF0C\u5C06\u8BF7\u6C42\u6784\u9020\u3001\u53D1\u9001\u3001\u8F6E\u8BE2\u3001\u7ED3\u679C\u89E3\u6790\u7B49\u903B\u8F91\u5199\u5728\u51FD\u6570\u4F53\u5185\uFF0C\u907F\u514D\u62C6\u5206\u51FA\u5927\u91CF\u5916\u90E8\u8F85\u52A9\u51FD\u6570\u3002\n *    \u5982\u679C\u591A\u4E2A\u51FD\u6570\u786E\u5B9E\u5B58\u5728\u516C\u5171\u903B\u8F91\uFF08\u5982\u7B7E\u540D\u8BA1\u7B97\u3001Token \u751F\u6210\u3001\u8BF7\u6C42\u5934\u6784\u9020\uFF09\uFF0C\n *    \u53EF\u63D0\u53D6\u4E3A\u6587\u4EF6\u5185\u7684\u5C0F\u9A7C\u5CF0\u547D\u540D\u51FD\u6570\uFF0C\u653E\u5728\u300C\u9002\u914D\u5668\u51FD\u6570\u300D\u533A\u5757\u4E4B\u524D\u7684\u300C\u8F85\u52A9\u5DE5\u5177\u300D\u533A\u5757\u4E2D\uFF0C\n *    \u4E14\u4E0D\u53EF\u4F7F\u7528\u5168\u5927\u5199\u547D\u540D\u3002\n *\n * 4. \u547D\u540D\u89C4\u8303\n *    \u6240\u6709\u53D8\u91CF\u3001\u51FD\u6570\u4E00\u5F8B\u4F7F\u7528\u5C0F\u9A7C\u5CF0\u547D\u540D\uFF08camelCase\uFF09\uFF0C\u7981\u6B62\u4F7F\u7528 UPPER_SNAKE_CASE\u3002\n *\n * 5. \u4E0D\u9700\u8981\u91CD\u65B0\u58F0\u660E\u7C7B\u578B\n *    \u672C\u6587\u4EF6\u9876\u90E8\u5DF2\u5B8C\u6574\u5B9A\u4E49\u4E86\u6240\u6709\u63A5\u53E3\u548C\u7C7B\u578B\uFF08VendorConfig\u3001ImageConfig\u3001VideoConfig\u3001\n *    TTSConfig\u3001TextModel\u3001ImageModel\u3001VideoModel\u3001TTSModel\u3001ReferenceList\u3001PollResult \u7B49\uFF09\uFF0C\n *    AI \u751F\u6210\u4EE3\u7801\u65F6\u76F4\u63A5\u4F7F\u7528\u5373\u53EF\uFF0C\u4E0D\u8981\u91CD\u590D\u58F0\u660E\u3002\n *\n * 6. \u8FD4\u56DE\u503C\u89C4\u8303\n *    - textRequest(model)\uFF1A\u8FD4\u56DE AI SDK \u7684 chat model \u5B9E\u4F8B\uFF08\u901A\u8FC7 createOpenAI \u7B49\u5DE5\u5382\u51FD\u6570\u521B\u5EFA\uFF09\u3002\n *    - imageRequest(config, model)\uFF1A\u8FD4\u56DE\u6709\u5934 base64 \u5B57\u7B26\u4E32\uFF08\u5982 "data:image/png;base64,..."\uFF09\u3002\n *      config.referenceList \u4E3A Extract<ReferenceList, { type: "image" }>[] \u7C7B\u578B\uFF0C\n *      \u6BCF\u4E2A\u5F15\u7528\u6761\u76EE\u5747\u4E3A base64 \u5F62\u5F0F\uFF08sourceType \u56FA\u5B9A\u4E3A "base64"\uFF09\u3002\n *    - videoRequest(config, model)\uFF1A\u8FD4\u56DE\u6709\u5934 base64 \u5B57\u7B26\u4E32\uFF08\u5982 "data:video/mp4;base64,..."\uFF09\u3002\n *      config.referenceList \u4E3A ReferenceList[] \u7C7B\u578B\uFF0C\u53EF\u5305\u542B image / video / audio \u4E09\u79CD\u5F15\u7528\uFF0C\n *      \u6BCF\u4E2A\u5F15\u7528\u6761\u76EE\u5747\u4E3A base64 \u5F62\u5F0F\uFF08sourceType \u56FA\u5B9A\u4E3A "base64"\uFF09\u3002\n *      config.mode \u4E3A\u5F53\u524D\u6FC0\u6D3B\u7684\u89C6\u9891\u6A21\u5F0F\u6570\u7EC4\uFF0C\u9700\u6839\u636E mode \u51B3\u5B9A\u5982\u4F55\u4F7F\u7528 referenceList\u3002\n *    - ttsRequest(config, model)\uFF1A\u8FD4\u56DE\u6709\u5934 base64 \u5B57\u7B26\u4E32\uFF08\u5982 "data:audio/mp3;base64,..."\uFF09\u3002\n *      config.referenceList \u4E3A Extract<ReferenceList, { type: "audio" }>[] \u7C7B\u578B\uFF08\u97F3\u9891\u53C2\u8003\uFF09\u3002\n *    \u5F53 API \u8FD4\u56DE\u7684\u662F URL \u800C\u975E\u4E8C\u8FDB\u5236\u6570\u636E\u65F6\uFF0C\u4F7F\u7528 urlToBase64(url) \u8F6C\u6362\u3002\n *\n * 7. ReferenceList \u4E0E VideoMode \u8BF4\u660E\n *    ReferenceList \u662F\u7EDF\u4E00\u7684\u591A\u5A92\u4F53\u5F15\u7528\u7C7B\u578B\uFF0C\u6BCF\u4E2A\u6761\u76EE\u5305\u542B\uFF1A\n *      - type: "image" | "audio" | "video"\uFF08\u5A92\u4F53\u7C7B\u578B\uFF09\n *      - sourceType: "base64"\uFF08\u5F53\u524D\u6A21\u677F\u56FA\u5B9A\u4E3A base64\uFF09\n *      - base64\uFF08\u5BF9\u5E94\u7684\u6570\u636E\uFF09\n *\n *    VideoMode \u5B9A\u4E49\u4E86\u89C6\u9891\u6A21\u578B\u652F\u6301\u7684\u8F93\u5165\u6A21\u5F0F\uFF1A\n *      - "text"\uFF1A\u7EAF\u6587\u672C\u751F\u6210\u89C6\u9891\n *      - "singleImage"\uFF1A\u5355\u5F20\u9996\u5E27\u56FE\u7247\n *      - "startEndRequired"\uFF1A\u9996\u5C3E\u5E27\uFF08\u4E24\u5F20\u90FD\u5FC5\u987B\u63D0\u4F9B\uFF09\n *      - "endFrameOptional"\uFF1A\u9996\u5C3E\u5E27\uFF08\u5C3E\u5E27\u53EF\u9009\uFF09\n *      - "startFrameOptional"\uFF1A\u9996\u5C3E\u5E27\uFF08\u9996\u5E27\u53EF\u9009\uFF09\n *      - \u6570\u7EC4\u5F62\u5F0F\u5982 ["imageReference:9", "videoReference:3", "audioReference:3"]\uFF1A\n *        \u591A\u6A21\u6001\u53C2\u8003\u6A21\u5F0F\uFF0C\u6570\u5B57\u8868\u793A\u8BE5\u7C7B\u578B\u7684\u6700\u5927\u6570\u91CF\u9650\u5236\u3002\n *\n *    \u5728 videoRequest \u4E2D\uFF0Cconfig.mode \u8868\u793A\u5F53\u524D\u9009\u62E9\u7684\u6A21\u5F0F\uFF0C\u9700\u6839\u636E\u5176\u503C\u51B3\u5B9A\uFF1A\n *      - \u5982\u4F55\u4ECE config.referenceList \u4E2D\u63D0\u53D6\u5BF9\u5E94\u7C7B\u578B\u7684\u5F15\u7528\n *      - \u5982\u4F55\u6784\u9020 API \u8BF7\u6C42\u4F53\u4E2D\u7684\u56FE\u7247/\u89C6\u9891/\u97F3\u9891\u53C2\u6570\n *\n * 8. \u5F02\u6B65\u4EFB\u52A1\u5904\u7406\n *    \u5BF9\u4E8E\u89C6\u9891\u751F\u6210\u7B49\u9700\u8981\u8F6E\u8BE2\u7684\u5F02\u6B65\u4EFB\u52A1\uFF0C\u4F7F\u7528\u5168\u5C40\u7684 pollTask \u51FD\u6570\uFF1A\n *    const result = await pollTask(async () => {\n *      const resp = await axios.get(...);\n *      if (resp.data.status === "SUCCESS") return { completed: true, data: resp.data.url };\n *      if (resp.data.status === "FAILED") return { completed: true, error: resp.data.message };\n *      return { completed: false };\n *    }, 5000, 600000); // \u6BCF5\u79D2\u8F6E\u8BE2\uFF0C10\u5206\u949F\u8D85\u65F6\n *    if (result.error) throw new Error(result.error);\n *    return await urlToBase64(result.data!);\n *\n * 9. \u9519\u8BEF\u5904\u7406\n *    \u5728\u6BCF\u4E2A\u51FD\u6570\u5F00\u5934\u6821\u9A8C\u5FC5\u9700\u53C2\u6570\uFF08\u5982 API Key\uFF09\uFF0C\u7F3A\u5931\u65F6\u4F7F\u7528 throw new Error("...") \u629B\u51FA\u3002\n *    API \u8BF7\u6C42\u5931\u8D25\u65F6\uFF0C\u4ECE\u54CD\u5E94\u4E2D\u63D0\u53D6\u6709\u610F\u4E49\u7684\u9519\u8BEF\u4FE1\u606F\u629B\u51FA\uFF0C\u4E0D\u8981\u541E\u6389\u5F02\u5E38\u3002\n *\n * 10. \u65E5\u5FD7\u8F93\u51FA\n *     \u5728\u5173\u952E\u6B65\u9AA4\u4F7F\u7528 logger("...") \u8F93\u51FA\u65E5\u5FD7\uFF08\u5982"\u5F00\u59CB\u63D0\u4EA4\u4EFB\u52A1"\u3001"\u4EFB\u52A1ID: xxx"\u3001"\u8F6E\u8BE2\u4E2D..."\uFF09\uFF0C\n *     \u4FBF\u4E8E\u8C03\u8BD5\u3002\n *\n * 11. vendor \u914D\u7F6E\u586B\u5199\n *     - id\uFF1A\u7EAF\u82F1\u6587\u5C0F\u5199\uFF0C\u4F5C\u4E3A\u6587\u4EF6\u540D\u4F7F\u7528\uFF0C\u7981\u6B62\u7279\u6B8A\u7B26\u53F7\u548C\u7A7A\u683C\u3002\n *     - version\uFF1A\u8BED\u4E49\u5316\u7248\u672C\u683C\u5F0F "x.y"\u3002\n *     - inputs\uFF1A\u6839\u636E\u76EE\u6807 API \u6240\u9700\u7684\u8BA4\u8BC1\u4FE1\u606F\u914D\u7F6E\uFF08API Key\u3001Secret\u3001\u8BF7\u6C42\u5730\u5740\u7B49\uFF09\u3002\n *     - models\uFF1A\u6839\u636E\u76EE\u6807\u5E73\u53F0\u652F\u6301\u7684\u6A21\u578B\u5217\u8868\u586B\u5199\uFF0C\u6CE8\u610F\u6B63\u786E\u8BBE\u7F6E type \u548C\u5404\u6A21\u578B\u7279\u6709\u5B57\u6BB5\u3002\n *       - VideoModel \u7684 mode \u5BF9\u5E94 API \u652F\u6301\u7684\u8F93\u5165\u6A21\u5F0F\uFF08\u53C2\u89C1\u89C4\u5219 7 \u7684 VideoMode \u8BF4\u660E\uFF09\u3002\n *       - VideoModel \u7684 audio \u5B57\u6BB5\uFF1Atrue\uFF08\u59CB\u7EC8\u751F\u6210\u97F3\u9891\uFF09\u3001false\uFF08\u4E0D\u751F\u6210\uFF09\u3001"optional"\uFF08\u7528\u6237\u53EF\u9009\uFF09\u3002\n *       - VideoModel \u7684 durationResolutionMap \u5BF9\u5E94\u5404\u65F6\u957F\u4E0B\u53EF\u9009\u7684\u5206\u8FA8\u7387\u3002\n *       - VideoModel \u7684 associationSkills \u53EF\u9009\uFF0C\u7528\u4E8E\u63CF\u8FF0\u6A21\u578B\u7684\u7279\u6B8A\u80FD\u529B\u3002\n *       - ImageModel \u7684 mode \u5BF9\u5E94 API \u652F\u6301\u7684\u751F\u56FE\u6A21\u5F0F\uFF08"text" \u7EAF\u6587\u672C\u3001"singleImage" \u5355\u56FE\u53C2\u8003\u3001"multiReference" \u591A\u56FE\u53C2\u8003\uFF09\u3002\n *       - TTSModel \u7684 voices \u5BF9\u5E94\u53EF\u9009\u7684\u97F3\u8272\u5217\u8868\u3002\n *\n * 12. \u56FE\u7247\u5904\u7406\n *     - \u9700\u8981\u538B\u7F29\u56FE\u7247\u4F53\u79EF\u65F6\u4F7F\u7528 zipImage(base64, maxSizeKB)\u3002\n *     - \u9700\u8981\u8C03\u6574\u56FE\u7247\u5206\u8FA8\u7387\u65F6\u4F7F\u7528 zipImageResolution(base64, width, height)\u3002\n *     - \u9700\u8981\u5C06\u591A\u5F20\u56FE\u7247\u62FC\u5408\u4E3A\u4E00\u5F20\u65F6\u4F7F\u7528 mergeImages(base64Arr, maxSize)\u3002\n *     - \u4EE5\u4E0A\u51FD\u6570\u5747\u63A5\u6536\u548C\u8FD4\u56DE\u6709\u5934 base64 \u5B57\u7B26\u4E32\u3002\n *\n * 13. \u6587\u4EF6\u7ED3\u6784\n *     \u751F\u6210\u7684\u4EE3\u7801\u5FC5\u987B\u4FDD\u6301\u672C\u6A21\u677F\u7684\u6574\u4F53\u7ED3\u6784\uFF1A\n *     \u7C7B\u578B\u5B9A\u4E49\u533A \u2192 \u5168\u5C40\u58F0\u660E\u533A \u2192 \u4F9B\u5E94\u5546\u914D\u7F6E\u533A \u2192 [\u8F85\u52A9\u5DE5\u5177\u533A\uFF08\u53EF\u9009\uFF09] \u2192 \u9002\u914D\u5668\u51FD\u6570\u533A \u2192 \u5BFC\u51FA\u533A\n *     \u4E0D\u8981\u6253\u4E71\u987A\u5E8F\uFF0C\u4E0D\u8981\u5220\u9664\u5DF2\u6709\u7684\u7ED3\u6784\u6CE8\u91CA\u5206\u9694\u7EBF\u3002\n *     \u8F85\u52A9\u5DE5\u5177\u533A\u7528\u4E8E\u653E\u7F6E\u591A\u4E2A\u9002\u914D\u5668\u51FD\u6570\u5171\u4EAB\u7684\u5C0F\u9A7C\u5CF0\u547D\u540D\u8F85\u52A9\u51FD\u6570\uFF08\u5982 getHeaders\u3001getBaseUrl\uFF09\u3002\n *\n * 14. \u5BFC\u51FA\u89C4\u8303\n *     \u5FC5\u987B\u5BFC\u51FA\u4EE5\u4E0B\u5B57\u6BB5\uFF08\u901A\u8FC7 exports.xxx = xxx \u8D4B\u503C\uFF09\uFF1A\n *       - exports.vendor\uFF08\u5FC5\u987B\uFF09\n *       - exports.textRequest\uFF08\u5FC5\u987B\uFF09\n *       - exports.imageRequest\uFF08\u5FC5\u987B\uFF09\n *       - exports.videoRequest\uFF08\u5FC5\u987B\uFF09\n *       - exports.ttsRequest\uFF08\u5FC5\u987B\uFF09\n *       - exports.checkForUpdates\uFF08\u53EF\u9009\uFF09\n *       - exports.updateVendor\uFF08\u53EF\u9009\uFF09\n *     \u672A\u5B9E\u73B0\u7684\u9002\u914D\u5668\u51FD\u6570\u4FDD\u7559\u7A7A\u5B9E\u73B0\uFF08return ""\uFF09\uFF0C\u4E0D\u53EF\u7701\u7565\u5BFC\u51FA\u3002\n *     \u6587\u4EF6\u672B\u5C3E\u5FC5\u987B\u5305\u542B export {}; \u4EE5\u786E\u4FDD\u6587\u4EF6\u88AB\u8BC6\u522B\u4E3A\u6A21\u5757\u3002\n *\n * \u3010\u751F\u6210\u6D41\u7A0B\u3011\n * \u5F53\u7528\u6237\u8BF7\u6C42\u751F\u6210\u65B0\u7684\u4F9B\u5E94\u5546\u9002\u914D\u65F6\uFF1A\n *   1. \u786E\u8BA4\u7528\u6237\u5DF2\u63D0\u4F9B curl \u793A\u4F8B\u6216 API \u6587\u6863\u3002\n *   2. \u5206\u6790 API \u7684\u8BA4\u8BC1\u65B9\u5F0F\u3001\u7AEF\u70B9\u5730\u5740\u3001\u8BF7\u6C42/\u54CD\u5E94\u7ED3\u6784\u3002\n *   3. \u57FA\u4E8E\u672C\u6A21\u677F\u7ED3\u6784\uFF0C\u586B\u5145 vendor \u914D\u7F6E\u548C\u5BF9\u5E94\u7684\u9002\u914D\u5668\u51FD\u6570\u3002\n *   4. \u6839\u636E\u5F53\u524D\u6A21\u677F\u7684 ReferenceList \u5B9A\u4E49\uFF0C\u6309 base64 \u5F62\u5F0F\u6784\u9020\u548C\u6D88\u8D39 referenceList\u3002\n *   5. \u4EC5\u5B9E\u73B0\u7528\u6237\u9700\u8981\u7684\u6A21\u578B\u7C7B\u578B\uFF0C\u672A\u7528\u5230\u7684\u51FD\u6570\u4FDD\u7559\u7A7A\u5B9E\u73B0\uFF08return ""\uFF09\u3002\n *   6. \u751F\u6210\u5B8C\u6574\u53EF\u7528\u7684\u4EE3\u7801\uFF0C\u786E\u4FDD\u65E0\u8BED\u6CD5\u9519\u8BEF\u3001\u65E0\u9057\u6F0F\u5BFC\u51FA\u3002\n */\n',
+      "openai.ts": '/**\n * Toonflow AI\u4F9B\u5E94\u5546\u6A21\u677F\n * @version 2.0\n */\n// ============================================================\n// \u7C7B\u578B\u5B9A\u4E49\n// ============================================================\ntype VideoMode =\n  | "singleImage"\n  | "startEndRequired"\n  | "endFrameOptional"\n  | "startFrameOptional"\n  | "text"\n  | (`videoReference:${number}` | `imageReference:${number}` | `audioReference:${number}`)[];\ninterface TextModel {\n  name: string;\n  modelName: string;\n  type: "text";\n  think: boolean;\n}\ninterface ImageModel {\n  name: string;\n  modelName: string;\n  type: "image";\n  mode: ("text" | "singleImage" | "multiReference")[];\n  associationSkills?: string;\n}\ninterface VideoModel {\n  name: string;\n  modelName: string;\n  type: "video";\n  mode: VideoMode[];\n  associationSkills?: string;\n  audio: "optional" | false | true;\n  durationResolutionMap: { duration: number[]; resolution: string[] }[];\n}\ninterface TTSModel {\n  name: string;\n  modelName: string;\n  type: "tts";\n  voices: { title: string; voice: string }[];\n}\ninterface VendorConfig {\n  id: string;\n  version: string;\n  name: string;\n  author: string;\n  description?: string;\n  icon?: string;\n  inputs: { key: string; label: string; type: "text" | "password" | "url"; required: boolean; placeholder?: string }[];\n  inputValues: Record<string, string>;\n  models: (TextModel | ImageModel | VideoModel | TTSModel)[];\n}\ninterface ImageConfig {\n  prompt: string;\n  imageBase64: string[];\n  size: "1K" | "2K" | "4K";\n  aspectRatio: `${number}:${number}`;\n}\ninterface VideoConfig {\n  duration: number;\n  resolution: string;\n  aspectRatio: "16:9" | "9:16";\n  prompt: string;\n  imageBase64?: string[];\n  audio?: boolean;\n  mode: VideoMode[];\n}\ninterface TTSConfig {\n  text: string;\n  voice: string;\n  speechRate: number;\n  pitchRate: number;\n  volume: number;\n}\ninterface PollResult {\n  completed: boolean;\n  data?: string;\n  error?: string;\n}\n// ============================================================\n// \u5168\u5C40\u58F0\u660E\n// ============================================================\ndeclare const axios: any;\ndeclare const logger: (msg: string) => void;\ndeclare const jsonwebtoken: any;\ndeclare const zipImage: (base64: string, size: number) => Promise<string>;\ndeclare const zipImageResolution: (base64: string, w: number, h: number) => Promise<string>;\ndeclare const mergeImages: (base64Arr: string[], maxSize?: string) => Promise<string>;\ndeclare const urlToBase64: (url: string) => Promise<string>;\ndeclare const pollTask: (fn: () => Promise<PollResult>, interval?: number, timeout?: number) => Promise<PollResult>;\ndeclare const createOpenAI: any;\ndeclare const createDeepSeek: any;\ndeclare const createZhipu: any;\ndeclare const createQwen: any;\ndeclare const createAnthropic: any;\ndeclare const createOpenAICompatible: any;\ndeclare const createXai: any;\ndeclare const createMinimax: any;\ndeclare const createGoogleGenerativeAI: any;\ndeclare const exports: {\n  vendor: VendorConfig;\n  textRequest: (m: TextModel, t: boolean, tl: 0 | 1 | 2 | 3) => any;\n  imageRequest: (c: ImageConfig, m: ImageModel) => Promise<string>;\n  videoRequest: (c: VideoConfig, m: VideoModel) => Promise<string>;\n  ttsRequest: (c: TTSConfig, m: TTSModel) => Promise<string>;\n  checkForUpdates?: () => Promise<{ hasUpdate: boolean; latestVersion: string; notice: string }>;\n  updateVendor?: () => Promise<string>;\n};\n// ============================================================\n// \u4F9B\u5E94\u5546\u914D\u7F6E\n// ============================================================\nconst vendor: VendorConfig = {\n  id: "openai",\n  version: "2.0",\n  author: "Toonflow",\n  name: "OpenAI\u6807\u51C6\u63A5\u53E3",\n  description: "OpenAI\u6807\u51C6\u683C\u5F0F\u63A5\u53E3\uFF0C\u53EF\u4FEE\u6539\u8BF7\u6C42\u5730\u5740\u5E76\u624B\u52A8\u6DFB\u52A0\u6A21\u578B\u3002",\n  icon: "",\n  inputs: [\n    { key: "apiKey", label: "API\u5BC6\u94A5", type: "password", required: true },\n    { key: "baseUrl", label: "\u8BF7\u6C42\u5730\u5740", type: "url", required: true, placeholder: "\u4EE5v1\u7ED3\u675F\uFF0C\u793A\u4F8B\uFF1Ahttps://api.toonflow.net/v1" },\n  ],\n  inputValues: {\n    apiKey: "",\n    baseUrl: "https://api.toonflow.net/v1",\n  },\n  models: [\n    { name: "GPT-4o", modelName: "gpt-4o", type: "text", think: false },\n    { name: "GPT-4.1", modelName: "gpt-4.1", type: "text", think: false },\n    { name: "GPT-5.1", modelName: "gpt-5.1", type: "text", think: false },\n    { name: "GPT-5.2", modelName: "gpt-5.2", type: "text", think: false },\n    { name: "GPT-5.4", modelName: "gpt-5.4", type: "text", think: false },\n  ],\n};\n// ============================================================\n// \u9002\u914D\u5668\u51FD\u6570\n// ============================================================\nconst textRequest = (model: TextModel, think: boolean, thinkLevel: 0 | 1 | 2 | 3) => {\n  if (!vendor.inputValues.apiKey) throw new Error("\u7F3A\u5C11API Key");\n  const apiKey = vendor.inputValues.apiKey.replace(/^Bearer\\s+/i, "");\n  return createOpenAI({ baseURL: vendor.inputValues.baseUrl, apiKey }).chat(model.modelName);\n};\nconst imageRequest = async (config: ImageConfig, model: ImageModel): Promise<string> => {\n  return "";\n};\nconst videoRequest = async (config: VideoConfig, model: VideoModel): Promise<string> => {\n  return "";\n};\nconst ttsRequest = async (config: TTSConfig, model: TTSModel): Promise<string> => {\n  return "";\n};\nconst checkForUpdates = async (): Promise<{ hasUpdate: boolean; latestVersion: string; notice: string }> => {\n  return { hasUpdate: false, latestVersion: "2.0", notice: "" };\n};\nconst updateVendor = async (): Promise<string> => {\n  return "";\n};\n// ============================================================\n// \u5BFC\u51FA\n// ============================================================\nexports.vendor = vendor;\nexports.textRequest = textRequest;\nexports.imageRequest = imageRequest;\nexports.videoRequest = videoRequest;\nexports.ttsRequest = ttsRequest;\nexports.checkForUpdates = checkForUpdates;\nexports.updateVendor = updateVendor;\nexport {};',
+      "toonflow.ts": '/**\n * Toonflow\u5B98\u65B9\u4E2D\u8F6C\u5E73\u53F0 \u4F9B\u5E94\u5546\u9002\u914D\n * @version 2.0\n */\n\n// ============================================================\n// \u7C7B\u578B\u5B9A\u4E49\n// ============================================================\n\ntype VideoMode =\n  | "singleImage"\n  | "startEndRequired"\n  | "endFrameOptional"\n  | "startFrameOptional"\n  | "text"\n  | (`videoReference:${number}` | `imageReference:${number}` | `audioReference:${number}`)[];\n\ninterface TextModel {\n  name: string;\n  modelName: string;\n  type: "text";\n  think: boolean;\n}\n\ninterface ImageModel {\n  name: string;\n  modelName: string;\n  type: "image";\n  mode: ("text" | "singleImage" | "multiReference")[];\n  associationSkills?: string;\n}\n\ninterface VideoModel {\n  name: string;\n  modelName: string;\n  type: "video";\n  mode: VideoMode[];\n  associationSkills?: string;\n  audio: "optional" | false | true;\n  durationResolutionMap: { duration: number[]; resolution: string[] }[];\n}\n\ninterface TTSModel {\n  name: string;\n  modelName: string;\n  type: "tts";\n  voices: { title: string; voice: string }[];\n}\n\ninterface VendorConfig {\n  id: string;\n  version: string;\n  name: string;\n  author: string;\n  description?: string;\n  icon?: string;\n  inputs: { key: string; label: string; type: "text" | "password" | "url"; required: boolean; placeholder?: string }[];\n  inputValues: Record<string, string>;\n  models: (TextModel | ImageModel | VideoModel | TTSModel)[];\n}\n\ntype ReferenceList =\n  | { type: "image"; sourceType: "base64"; base64: string }\n  | { type: "audio"; sourceType: "base64"; base64: string }\n  | { type: "video"; sourceType: "base64"; base64: string };\n\ninterface ImageConfig {\n  prompt: string;\n  referenceList?: Extract<ReferenceList, { type: "image" }>[];\n  size: "1K" | "2K" | "4K";\n  aspectRatio: `${number}:${number}`;\n}\n\ninterface VideoConfig {\n  duration: number;\n  resolution: string;\n  aspectRatio: "16:9" | "9:16";\n  prompt: string;\n  referenceList?: ReferenceList[];\n  audio?: boolean;\n  mode: VideoMode[];\n}\n\ninterface TTSConfig {\n  text: string;\n  voice: string;\n  speechRate: number;\n  pitchRate: number;\n  volume: number;\n  referenceList?: Extract<ReferenceList, { type: "audio" }>[];\n}\n\ninterface PollResult {\n  completed: boolean;\n  data?: string;\n  error?: string;\n}\n\n// ============================================================\n// \u5168\u5C40\u58F0\u660E\n// ============================================================\n\ndeclare const axios: any;\ndeclare const logger: (msg: string) => void;\ndeclare const jsonwebtoken: any;\ndeclare const zipImage: (base64: string, size: number) => Promise<string>;\ndeclare const zipImageResolution: (base64: string, w: number, h: number) => Promise<string>;\ndeclare const mergeImages: (base64Arr: string[], maxSize?: string) => Promise<string>;\ndeclare const urlToBase64: (url: string) => Promise<string>;\ndeclare const pollTask: (fn: () => Promise<PollResult>, interval?: number, timeout?: number) => Promise<PollResult>;\ndeclare const createOpenAI: any;\ndeclare const createDeepSeek: any;\ndeclare const createZhipu: any;\ndeclare const createQwen: any;\ndeclare const createAnthropic: any;\ndeclare const createOpenAICompatible: any;\ndeclare const createXai: any;\ndeclare const createMinimax: any;\ndeclare const createGoogleGenerativeAI: any;\ndeclare const exports: {\n  vendor: VendorConfig;\n  textRequest: (m: TextModel, t: boolean, tl: 0 | 1 | 2 | 3) => any;\n  imageRequest: (c: ImageConfig, m: ImageModel) => Promise<string>;\n  videoRequest: (c: VideoConfig, m: VideoModel) => Promise<string>;\n  ttsRequest: (c: TTSConfig, m: TTSModel) => Promise<string>;\n  checkForUpdates?: () => Promise<{ hasUpdate: boolean; latestVersion: string; notice: string }>;\n  updateVendor?: () => Promise<string>;\n};\n\n// ============================================================\n// \u4F9B\u5E94\u5546\u914D\u7F6E\n// ============================================================\n\nconst vendor: VendorConfig = {\n  id: "toonflow",\n  version: "2.0",\n  author: "Toonflow",\n  name: "Toonflow\u5B98\u65B9\u4E2D\u8F6C\u5E73\u53F0",\n  description:\n    "## Toonflow\u5B98\u65B9\u4E2D\u8F6C\u5E73\u53F0\\n\\nToonflow\u5B98\u65B9\u4E2D\u8F6C\u5E73\u53F0\uFF0C\u63D0\u4F9B**\u6587\u672C\u3001\u56FE\u50CF\u3001\u89C6\u9891\u3001\u97F3\u9891**\u7B49\u591A\u6A21\u6001\u751F\u6210\u80FD\u529B\u7684\u4E2D\u8F6C\u670D\u52A1\uFF0C\u652F\u6301\u63A5\u5165\u591A\u4E2A\u5927\u6A21\u578B\u4F9B\u5E94\u5546\uFF0C\u65B9\u4FBF\u7528\u6237\u7EDF\u4E00\u7BA1\u7406\u548C\u8C03\u7528\u4E0D\u540C\u4F9B\u5E94\u5546\u7684\u751F\u6210\u80FD\u529B\u3002\\n\\n\u{1F517} [\u524D\u5F80\u4E2D\u8F6C\u5E73\u53F0](https://api.toonflow.net/)\\n\\n\u5982\u679C\u8FD9\u4E2A\u9879\u76EE\u5BF9\u4F60\u6709\u5E2E\u52A9\uFF0C\u53EF\u4EE5\u8003\u8651\u652F\u6301\u4E00\u4E0B\u6211\u4EEC\u7684\u5F00\u53D1\u5DE5\u4F5C \u2615",\n  icon: "",\n  inputs: [{ key: "apiKey", label: "API\u5BC6\u94A5", type: "password", required: true }],\n  inputValues: {\n    apiKey: "",\n    baseUrl: "https://api.toonflow.net/v1",\n  },\n  models: [\n    { name: "claude-sonnet-4-6", type: "text", modelName: "claude-sonnet-4-6", think: false },\n    { name: "claude-opus-4-6", type: "text", modelName: "claude-opus-4-6", think: false },\n    { name: "claude-sonnet-4-5-20250929", type: "text", modelName: "claude-sonnet-4-5-20250929", think: false },\n    { name: "claude-opus-4-5-20251101", type: "text", modelName: "claude-opus-4-5-20251101", think: false },\n    { name: "claude-haiku-4-5-20251001", type: "text", modelName: "claude-haiku-4-5-20251001", think: false },\n    { name: "gpt-5.4", type: "text", modelName: "gpt-5.4", think: false },\n    { name: "gpt-5.2", type: "text", modelName: "gpt-5.2", think: false },\n    { name: "MiniMax-M2.7", type: "text", modelName: "MiniMax-M2.7", think: true },\n    { name: "MiniMax-M2.5", type: "text", modelName: "MiniMax-M2.5", think: true },\n    {\n      name: "Wan2.6 I2V 1080P (\u652F\u6301\u771F\u4EBA)",\n      type: "video",\n      modelName: "Wan2.6-I2V-1080P",\n      mode: ["text", "startEndRequired"],\n      durationResolutionMap: [{ duration: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], resolution: ["1080p"] }],\n      audio: true,\n    },\n    {\n      name: "Wan2.6 I2V 720P (\u652F\u6301\u771F\u4EBA)",\n      type: "video",\n      modelName: "Wan2.6-I2V-720P",\n      mode: ["text", "startEndRequired"],\n      durationResolutionMap: [{ duration: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], resolution: ["720p"] }],\n      audio: true,\n    },\n    {\n      name: "Seedance 1.5 Pro",\n      type: "video",\n      modelName: "doubao-seedance-1-5-pro-251215",\n      mode: ["text", "endFrameOptional"],\n      durationResolutionMap: [{ duration: [4, 5, 6, 7, 8, 9, 10, 11, 12], resolution: ["480p", "720p", "1080p"] }],\n      audio: true,\n    },\n    {\n      name: "vidu2 turbo",\n      type: "video",\n      modelName: "ViduQ2-turbo",\n      mode: ["singleImage", "startEndRequired"],\n      durationResolutionMap: [{ duration: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], resolution: ["540p", "720p", "1080p"] }],\n      audio: false,\n    },\n    {\n      name: "ViduQ3 pro",\n      type: "video",\n      modelName: "ViduQ3-pro",\n      mode: ["singleImage", "startEndRequired"],\n      durationResolutionMap: [{ duration: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16], resolution: ["540p", "720p", "1080p"] }],\n      audio: false,\n    },\n    {\n      name: "ViduQ2 pro",\n      type: "video",\n      modelName: "ViduQ2-pro",\n      mode: ["singleImage", "startEndRequired"],\n      durationResolutionMap: [{ duration: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], resolution: ["540p", "720p", "1080p"] }],\n      audio: false,\n    },\n    {\n      name: "Doubao Seedream 5.0 Lite",\n      type: "image",\n      modelName: "Doubao-Seedream-5.0-Lite",\n      mode: ["text", "singleImage", "multiReference"],\n    },\n    {\n      name: "Doubao Seedream 4.5",\n      type: "image",\n      modelName: "doubao-seedream-4-5-251128",\n      mode: ["text", "singleImage", "multiReference"],\n    },\n  ],\n};\n\n// ============================================================\n// \u8F85\u52A9\u5DE5\u5177\n// ============================================================\n\n// \u4ECE markdown \u5185\u5BB9\u4E2D\u63D0\u53D6\u7B2C\u4E00\u5F20\u56FE\u7247\nfunction extractFirstImageFromMd(content: string) {\n  const regex = /!\\[([^\\]]*)\\]\\((data:image\\/[^;]+;base64,[A-Za-z0-9+/=]+|https?:\\/\\/[^\\s)]+|\\/\\/[^\\s)]+|[^\\s)]+)\\)/;\n  const match = content.match(regex);\n  if (!match) return null;\n  const raw = match[2].trim();\n  const url = raw.startsWith("data:") ? raw : raw.split(/\\s+/)[0];\n  return { alt: match[1], url, type: url.startsWith("data:image") ? "base64" : "url" };\n}\n\n// ============================================================\n// \u9002\u914D\u5668\u51FD\u6570\n// ============================================================\n\nconst textRequest = (model: TextModel, think: boolean, thinkLevel: 0 | 1 | 2 | 3) => {\n  if (!vendor.inputValues.apiKey) throw new Error("\u7F3A\u5C11API Key");\n  const apiKey = vendor.inputValues.apiKey.replace(/^Bearer\\s+/i, "");\n  return createOpenAI({ baseURL: vendor.inputValues.baseUrl, apiKey }).chat(model.modelName);\n};\n\nconst imageRequest = async (config: ImageConfig, model: ImageModel): Promise<string> => {\n  if (!vendor.inputValues.apiKey) throw new Error("\u7F3A\u5C11API Key");\n  const apiKey = vendor.inputValues.apiKey.replace(/^Bearer\\s+/i, "");\n  const baseUrl = vendor.inputValues.baseUrl;\n  const lowerName = model.modelName.toLowerCase();\n  const imageBase64List = (config.referenceList ?? []).map((r) => r.base64);\n\n  // Gemini / nano \u7CFB\u6A21\u578B\uFF1A\u8D70 chat/completions \u63A5\u53E3\uFF0C\u4ECE\u8FD4\u56DE\u7684 markdown \u4E2D\u63D0\u53D6\u56FE\u7247\n  if (lowerName.includes("gemini") || lowerName.includes("nano")) {\n    const imageConfigGoogle: Record<string, string> = {\n      aspect_ratio: config.aspectRatio,\n      image_size: config.size,\n    };\n    const messages: any[] = [];\n    if (imageBase64List.length) {\n      messages.push({\n        role: "user",\n        content: imageBase64List.map((b) => ({ type: "image_url", image_url: { url: b } })),\n      });\n    }\n    messages.push({ role: "user", content: config.prompt + "\u8BF7\u76F4\u63A5\u8F93\u51FA\u56FE\u7247" });\n    const body = {\n      model: model.modelName,\n      messages,\n      extra_body: { google: { image_config: imageConfigGoogle } },\n    };\n    logger(`[imageRequest] \u4F7F\u7528 gemini \u9002\u914D\u5668\uFF0C\u6A21\u578B: ${model.modelName}`);\n    const response = await fetch(`${baseUrl}/chat/completions`, {\n      method: "POST",\n      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },\n      body: JSON.stringify(body),\n    });\n    if (!response.ok) {\n      const errorText = await response.text();\n      throw new Error(`\u8BF7\u6C42\u5931\u8D25\uFF0C\u72B6\u6001\u7801: ${response.status}, \u9519\u8BEF\u4FE1\u606F: ${errorText}`);\n    }\n    const data = await response.json();\n    const imageResult = extractFirstImageFromMd(data.choices[0].message.content);\n    if (!imageResult) throw new Error("\u672A\u80FD\u4ECE\u54CD\u5E94\u4E2D\u63D0\u53D6\u56FE\u7247");\n    if (imageResult.type === "base64") return imageResult.url;\n    return await urlToBase64(imageResult.url);\n  }\n\n  // \u8C46\u5305 / seedream \u7CFB\u6A21\u578B\uFF1A\u8D70 images/generations \u63A5\u53E3\n  if (lowerName.includes("doubao") || lowerName.includes("seedream")) {\n    const effectiveSize = config.size === "1K" ? "2K" : config.size;\n    const sizeMap: Record<string, Record<string, string>> = {\n      "16:9": { "2K": "2848x1600", "4K": "4096x2304" },\n      "9:16": { "2K": "1600x2848", "4K": "2304x4096" },\n    };\n    const resolvedSize = sizeMap[config.aspectRatio]?.[effectiveSize];\n    const body: Record<string, any> = {\n      model: model.modelName,\n      prompt: config.prompt,\n      size: resolvedSize,\n      response_format: "url",\n      sequential_image_generation: "disabled",\n      stream: false,\n      watermark: false,\n      ...(imageBase64List.length && { image: imageBase64List }),\n    };\n    logger(`[imageRequest] \u4F7F\u7528 doubao \u9002\u914D\u5668\uFF0C\u6A21\u578B: ${model.modelName}`);\n    const response = await fetch(`${baseUrl}/images/generations`, {\n      method: "POST",\n      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },\n      body: JSON.stringify(body),\n    });\n    if (!response.ok) {\n      const errorText = await response.text();\n      throw new Error(`\u8BF7\u6C42\u5931\u8D25\uFF0C\u72B6\u6001\u7801: ${response.status}, \u9519\u8BEF\u4FE1\u606F: ${errorText}`);\n    }\n    const data = await response.json();\n    const resultUrl = data.data[0].url;\n    return await urlToBase64(resultUrl);\n  }\n\n  throw new Error(`\u4E0D\u652F\u6301\u7684\u56FE\u50CF\u6A21\u578B: ${model.modelName}`);\n};\n\nconst videoRequest = async (config: VideoConfig, model: VideoModel): Promise<string> => {\n  if (!vendor.inputValues.apiKey) throw new Error("\u7F3A\u5C11API Key");\n  const apiKey = vendor.inputValues.apiKey.replace(/^Bearer\\s+/i, "");\n  const baseUrl = vendor.inputValues.baseUrl;\n  const lowerName = model.modelName.toLowerCase();\n\n  // \u5F53\u524D\u6FC0\u6D3B\u7684\u5355\u4E00 VideoMode\uFF08\u53D6\u7B2C\u4E00\u4E2A\u975E\u6570\u7EC4\u6A21\u5F0F\uFF0C\u6216\u6570\u7EC4\u6A21\u5F0F\uFF09\n  const activeMode = config.mode;\n  const imageRefs = (config.referenceList ?? []).filter((r) => r.type === "image").map((r) => r.base64);\n  const videoRefs = (config.referenceList ?? []).filter((r) => r.type === "video").map((r) => r.base64);\n  const audioRefs = (config.referenceList ?? []).filter((r) => r.type === "audio").map((r) => r.base64);\n\n  // \u6784\u5EFA\u6A21\u578B\u4E13\u5C5E metadata\n  let metadata: Record<string, any> = {};\n\n  if (lowerName.includes("wan")) {\n    // \u4E07\u8C61\u7CFB\u5217\n    if ((activeMode === "startEndRequired" || activeMode === "endFrameOptional" || activeMode === "startFrameOptional") && imageRefs.length >= 2) {\n      if (imageRefs[0]) metadata.first_frame_url = imageRefs[0];\n      if (imageRefs[1]) metadata.last_frame_url = imageRefs[1];\n    } else if (imageRefs.length) {\n      metadata.img_url = imageRefs[0];\n    }\n    if (typeof config.audio === "boolean") metadata.audio = config.audio;\n\n    // \u4E07\u8C61\u9700\u8981\u989D\u5916\u4F20 size \u5B57\u6BB5\n    const wanSizeMap: Record<string, Record<string, string>> = {\n      "480p": { "16:9": "832*480", "9:16": "480*832" },\n      "720p": { "16:9": "1280*720", "9:16": "720*1280" },\n      "1080p": { "16:9": "1920*1080", "9:16": "1080*1920" },\n    };\n    const wanSize = wanSizeMap[config.resolution]?.[config.aspectRatio];\n    const body: Record<string, any> = {\n      model: model.modelName,\n      prompt: config.prompt,\n      duration: config.duration,\n      size: wanSize,\n      metadata,\n    };\n    logger(`[videoRequest] \u63D0\u4EA4\u4E07\u8C61\u89C6\u9891\u4EFB\u52A1\uFF0C\u6A21\u578B: ${model.modelName}`);\n    const response = await fetch(`${baseUrl}/video/generations`, {\n      method: "POST",\n      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },\n      body: JSON.stringify(body),\n    });\n    if (!response.ok) {\n      const errorText = await response.text();\n      throw new Error(`\u8BF7\u6C42\u5931\u8D25\uFF0C\u72B6\u6001\u7801: ${response.status}, \u9519\u8BEF\u4FE1\u606F: ${errorText}`);\n    }\n    const data = await response.json();\n    const taskId = data.id;\n    logger(`[videoRequest] \u4E07\u8C61\u4EFB\u52A1ID: ${taskId}`);\n    const res = await pollTask(async () => {\n      const queryResponse = await fetch(`${baseUrl}/video/generations/${taskId}`, {\n        method: "GET",\n        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },\n      });\n      if (!queryResponse.ok) {\n        const errorText = await queryResponse.text();\n        throw new Error(`\u8F6E\u8BE2\u5931\u8D25\uFF0C\u72B6\u6001\u7801: ${queryResponse.status}, \u9519\u8BEF\u4FE1\u606F: ${errorText}`);\n      }\n      const queryData = await queryResponse.json();\n      const status = queryData?.status ?? queryData?.data?.status;\n      switch (status) {\n        case "completed":\n        case "SUCCESS":\n        case "success":\n          return { completed: true, data: queryData.data.result_url };\n        case "FAILURE":\n        case "failed":\n          return { completed: true, error: queryData?.data?.fail_reason ?? "\u89C6\u9891\u751F\u6210\u5931\u8D25" };\n        default:\n          return { completed: false };\n      }\n    });\n    if (res.error) throw new Error(res.error);\n    return await urlToBase64(res.data!);\n  }\n\n  if (lowerName.includes("doubao") || lowerName.includes("seedance")) {\n    // \u8C46\u5305/Seedance \u7CFB\u5217\n    metadata = {\n      ...(typeof config.audio === "boolean" && { generate_audio: config.audio }),\n      ratio: config.aspectRatio,\n      image_roles: [] as string[],\n      references: [] as string[],\n    };\n    if (Array.isArray(activeMode)) {\n      // \u591A\u53C2\u8003\u6A21\u5F0F\n      imageRefs.forEach((b) => metadata.references.push(b));\n      videoRefs.forEach((b) => metadata.references.push(b));\n      audioRefs.forEach((b) => metadata.references.push(b));\n    } else if (activeMode === "startEndRequired" || activeMode === "endFrameOptional" || activeMode === "startFrameOptional") {\n      imageRefs.forEach((_, i) => (metadata.image_roles as string[]).push(i === 0 ? "first_frame" : "last_frame"));\n    } else if (activeMode === "singleImage") {\n      imageRefs.forEach(() => (metadata.image_roles as string[]).push("reference_image"));\n    }\n  } else if (lowerName.includes("vidu")) {\n    // Vidu \u7CFB\u5217\n    metadata = {\n      aspect_ratio: config.aspectRatio,\n      audio: config.audio ?? false,\n      off_peak: false,\n    };\n  } else if (lowerName.includes("kling")) {\n    // \u53EF\u7075\u7CFB\u5217\n    metadata = { aspect_ratio: config.aspectRatio };\n    if (Array.isArray(activeMode)) {\n      metadata.reference = [...imageRefs, ...videoRefs, ...audioRefs];\n    } else if (activeMode === "endFrameOptional" && imageRefs.length) {\n      metadata.image_tail = imageRefs[0];\n    } else if (activeMode === "startEndRequired" && imageRefs.length >= 2) {\n      metadata.image_list = [\n        { image_url: imageRefs[0], type: "first_frame" },\n        { image_url: imageRefs[1], type: "last_frame" },\n      ];\n    } else if (activeMode === "singleImage" && imageRefs.length) {\n      metadata.image = imageRefs[0];\n    }\n  }\n\n  // \u516C\u5171\u8BF7\u6C42\u4F53\uFF08\u975E\u4E07\u8C61\u901A\u7528\u8DEF\u5F84\uFF09\n  const publicBody: Record<string, any> = {\n    model: model.modelName,\n    ...(!Array.isArray(activeMode) && imageRefs.length ? { images: imageRefs } : {}),\n    prompt: config.prompt,\n    duration: config.duration,\n    metadata,\n  };\n\n  logger(`[videoRequest] \u63D0\u4EA4\u89C6\u9891\u4EFB\u52A1\uFF0C\u6A21\u578B: ${model.modelName}`);\n  const response = await fetch(`${baseUrl}/video/generations`, {\n    method: "POST",\n    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },\n    body: JSON.stringify(publicBody),\n  });\n  if (!response.ok) {\n    const errorText = await response.text();\n    throw new Error(`\u8BF7\u6C42\u5931\u8D25\uFF0C\u72B6\u6001\u7801: ${response.status}, \u9519\u8BEF\u4FE1\u606F: ${errorText}`);\n  }\n  const data = await response.json();\n  const taskId = data.id;\n  logger(`[videoRequest] \u4EFB\u52A1ID: ${taskId}`);\n\n  const res = await pollTask(async () => {\n    const queryResponse = await fetch(`${baseUrl}/video/generations/${taskId}`, {\n      method: "GET",\n      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },\n    });\n    if (!queryResponse.ok) {\n      const errorText = await queryResponse.text();\n      throw new Error(`\u8F6E\u8BE2\u5931\u8D25\uFF0C\u72B6\u6001\u7801: ${queryResponse.status}, \u9519\u8BEF\u4FE1\u606F: ${errorText}`);\n    }\n    const queryData = await queryResponse.json();\n    const status = queryData?.status ?? queryData?.data?.status;\n    switch (status) {\n      case "completed":\n      case "SUCCESS":\n      case "success":\n        return { completed: true, data: queryData.data.result_url };\n      case "FAILURE":\n      case "failed":\n        return { completed: true, error: queryData?.data?.fail_reason ?? "\u89C6\u9891\u751F\u6210\u5931\u8D25" };\n      default:\n        return { completed: false };\n    }\n  });\n\n  if (res.error) throw new Error(res.error);\n  return await urlToBase64(res.data!);\n};\n\nconst ttsRequest = async (config: TTSConfig, model: TTSModel): Promise<string> => {\n  return "";\n};\n\nconst checkForUpdates = async (): Promise<{ hasUpdate: boolean; latestVersion: string; notice: string }> => {\n  return { hasUpdate: false, latestVersion: "2.0", notice: "" };\n};\n\nconst updateVendor = async (): Promise<string> => {\n  return "";\n};\n\n// ============================================================\n// \u5BFC\u51FA\n// ============================================================\n\nexports.vendor = vendor;\nexports.textRequest = textRequest;\nexports.imageRequest = imageRequest;\nexports.videoRequest = videoRequest;\nexports.ttsRequest = ttsRequest;\nexports.checkForUpdates = checkForUpdates;\nexports.updateVendor = updateVendor;\n\nexport {};\n',
+      "toonflow2.ts": '/**\n * Toonflow\u5B98\u65B9\u4E2D\u8F6C\u5E73\u53F0 \u4F9B\u5E94\u5546\u9002\u914D\n * @version 2.0\n */\n\n// ============================================================\n// \u7C7B\u578B\u5B9A\u4E49\n// ============================================================\n\ntype VideoMode =\n  | "singleImage"\n  | "startEndRequired"\n  | "endFrameOptional"\n  | "startFrameOptional"\n  | "text"\n  | (`videoReference:${number}` | `imageReference:${number}` | `audioReference:${number}`)[];\n\ninterface TextModel {\n  name: string;\n  modelName: string;\n  type: "text";\n  think: boolean;\n}\n\ninterface ImageModel {\n  name: string;\n  modelName: string;\n  type: "image";\n  mode: ("text" | "singleImage" | "multiReference")[];\n  associationSkills?: string;\n}\n\ninterface VideoModel {\n  name: string;\n  modelName: string;\n  type: "video";\n  mode: VideoMode[];\n  associationSkills?: string;\n  audio: "optional" | false | true;\n  durationResolutionMap: { duration: number[]; resolution: string[] }[];\n}\n\ninterface TTSModel {\n  name: string;\n  modelName: string;\n  type: "tts";\n  voices: { title: string; voice: string }[];\n}\n\ninterface VendorConfig {\n  id: string;\n  version: string;\n  name: string;\n  author: string;\n  description?: string;\n  icon?: string;\n  inputs: { key: string; label: string; type: "text" | "password" | "url"; required: boolean; placeholder?: string }[];\n  inputValues: Record<string, string>;\n  models: (TextModel | ImageModel | VideoModel | TTSModel)[];\n}\n\ntype ReferenceList =\n  | { type: "image"; sourceType: "base64"; base64: string }\n  | { type: "audio"; sourceType: "base64"; base64: string }\n  | { type: "video"; sourceType: "base64"; base64: string };\n\ninterface ImageConfig {\n  prompt: string;\n  referenceList?: Extract<ReferenceList, { type: "image" }>[];\n  size: "1K" | "2K" | "4K";\n  aspectRatio: `${number}:${number}`;\n}\n\ninterface VideoConfig {\n  duration: number;\n  resolution: string;\n  aspectRatio: "16:9" | "9:16";\n  prompt: string;\n  referenceList?: ReferenceList[];\n  audio?: boolean;\n  mode: VideoMode[];\n}\n\ninterface TTSConfig {\n  text: string;\n  voice: string;\n  speechRate: number;\n  pitchRate: number;\n  volume: number;\n  referenceList?: Extract<ReferenceList, { type: "audio" }>[];\n}\n\ninterface PollResult {\n  completed: boolean;\n  data?: string;\n  error?: string;\n}\n\n// ============================================================\n// \u5168\u5C40\u58F0\u660E\n// ============================================================\n\ndeclare const axios: any;\ndeclare const logger: (msg: string) => void;\ndeclare const jsonwebtoken: any;\ndeclare const zipImage: (base64: string, size: number) => Promise<string>;\ndeclare const zipImageResolution: (base64: string, w: number, h: number) => Promise<string>;\ndeclare const mergeImages: (base64Arr: string[], maxSize?: string) => Promise<string>;\ndeclare const urlToBase64: (url: string) => Promise<string>;\ndeclare const pollTask: (fn: () => Promise<PollResult>, interval?: number, timeout?: number) => Promise<PollResult>;\ndeclare const createOpenAI: any;\ndeclare const createDeepSeek: any;\ndeclare const createZhipu: any;\ndeclare const createQwen: any;\ndeclare const createAnthropic: any;\ndeclare const createOpenAICompatible: any;\ndeclare const createXai: any;\ndeclare const createMinimax: any;\ndeclare const createGoogleGenerativeAI: any;\ndeclare const exports: {\n  vendor: VendorConfig;\n  textRequest: (m: TextModel, t: boolean, tl: 0 | 1 | 2 | 3) => any;\n  imageRequest: (c: ImageConfig, m: ImageModel) => Promise<string>;\n  videoRequest: (c: VideoConfig, m: VideoModel) => Promise<string>;\n  ttsRequest: (c: TTSConfig, m: TTSModel) => Promise<string>;\n  checkForUpdates?: () => Promise<{ hasUpdate: boolean; latestVersion: string; notice: string }>;\n  updateVendor?: () => Promise<string>;\n};\n\n// ============================================================\n// \u4F9B\u5E94\u5546\u914D\u7F6E\n// ============================================================\n\nconst vendor: VendorConfig = {\n  id: "toonflow",\n  version: "3.0",\n  author: "Toonflow",\n  name: "Toonflow\u5B98\u65B9\u4E2D\u8F6C\u5E73\u53F0",\n  description:\n    "## Toonflow\u5B98\u65B9\u4E2D\u8F6C\u5E73\u53F0\\n\\nToonflow\u5B98\u65B9\u4E2D\u8F6C\u5E73\u53F0\uFF0C\u63D0\u4F9B**\u6587\u672C\u3001\u56FE\u50CF\u3001\u89C6\u9891\u3001\u97F3\u9891**\u7B49\u591A\u6A21\u6001\u751F\u6210\u80FD\u529B\u7684\u4E2D\u8F6C\u670D\u52A1\uFF0C\u652F\u6301\u63A5\u5165\u591A\u4E2A\u5927\u6A21\u578B\u4F9B\u5E94\u5546\uFF0C\u65B9\u4FBF\u7528\u6237\u7EDF\u4E00\u7BA1\u7406\u548C\u8C03\u7528\u4E0D\u540C\u4F9B\u5E94\u5546\u7684\u751F\u6210\u80FD\u529B\u3002\\n\\n\u{1F517} [\u524D\u5F80\u4E2D\u8F6C\u5E73\u53F0](https://api.toonflow.net/)\\n\\n\u5982\u679C\u8FD9\u4E2A\u9879\u76EE\u5BF9\u4F60\u6709\u5E2E\u52A9\uFF0C\u53EF\u4EE5\u8003\u8651\u652F\u6301\u4E00\u4E0B\u6211\u4EEC\u7684\u5F00\u53D1\u5DE5\u4F5C \u2615",\n  icon: "",\n  inputs: [{ key: "apiKey", label: "API\u5BC6\u94A5", type: "password", required: true },{ key: "baseUrl", label: "baseUrl", type: "text", required: true }],\n  inputValues: {\n    apiKey: "",\n    baseUrl: "https://api.toonflow.net/v1",\n  },\n  models: [\n    {\n      name: "Wan2.6 (\u652F\u6301\u771F\u4EBA)",\n      type: "video",\n      modelName: "wan2.6",\n      mode: ["singleImage"],\n      durationResolutionMap: [{ duration: [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], resolution: ["720p", "1080p"] }],\n      audio: true,\n    },\n    {\n      name: "Seedance 1.5 Pro",\n      type: "video",\n      modelName: "doubao-seedance-1-5-pro",\n      mode: ["text", "endFrameOptional"],\n      durationResolutionMap: [{ duration: [4, 5, 6, 7, 8, 9, 10, 11, 12], resolution: ["480p", "720p", "1080p"] }],\n      audio: true,\n    },\n    {\n      name: "Seedance-2.0",\n      modelName: "Seedance 2.0",\n      type: "video",\n      mode: ["text", "startFrameOptional", ["imageReference:9", "videoReference:3", "audioReference:3"]],\n      audio: "optional",\n      durationResolutionMap: [{ duration: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], resolution: ["480p", "720p"] }],\n    },\n    {\n      name: "ViduQ3 pro",\n      type: "video",\n      modelName: "ViduQ3-pro",\n      mode: ["singleImage", "startEndRequired"],\n      durationResolutionMap: [{ duration: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16], resolution: ["540p", "720p", "1080p"] }],\n      audio: false,\n    },\n    {\n      name: "Kling-Video-O1",\n      modelName: "Kling-Video-O1",\n      type: "video",\n      mode: ["startFrameOptional", ["imageReference:7", "videoReference:1"]],\n      audio: "optional",\n      durationResolutionMap: [{ duration: [5, 10, 15], resolution: ["720p", "1080p"] }],\n    },\n    {\n      name: "Kling-V3-Omni",\n      modelName: "Kling-V3-Omni",\n      type: "video",\n      mode: ["startFrameOptional", ["imageReference:7", "videoReference:1"]],\n      audio: "optional",\n      durationResolutionMap: [{ duration: [5, 10, 15], resolution: ["720p", "1080p"] }],\n    },\n    {\n      name: "Doubao Seedream 5.0 Lite",\n      type: "image",\n      modelName: "doubao-seedream-5.0-Lite",\n      mode: ["text", "singleImage", "multiReference"],\n    },\n    {\n      name: "Doubao Seedream 4.5",\n      type: "image",\n      modelName: "doubao-seedream-4-5",\n      mode: ["text", "singleImage", "multiReference"],\n    },\n    {\n      name: "\u5168\u80FD\u56FE\u7247G-2.0",\n      type: "image",\n      modelName: "\u5168\u80FD\u56FE\u7247G-2.0",\n      mode: ["text", "singleImage", "multiReference"],\n    },\n  ],\n};\n\n// ============================================================\n// \u8F85\u52A9\u5DE5\u5177\n// ============================================================\n\n// \u4ECE markdown \u5185\u5BB9\u4E2D\u63D0\u53D6\u7B2C\u4E00\u5F20\u56FE\u7247\nfunction extractFirstImageFromMd(content: string) {\n  const regex = /!\\[([^\\]]*)\\]\\((data:image\\/[^;]+;base64,[A-Za-z0-9+/=]+|https?:\\/\\/[^\\s)]+|\\/\\/[^\\s)]+|[^\\s)]+)\\)/;\n  const match = content.match(regex);\n  if (!match) return null;\n  const raw = match[2].trim();\n  const url = raw.startsWith("data:") ? raw : raw.split(/\\s+/)[0];\n  return { alt: match[1], url, type: url.startsWith("data:image") ? "base64" : "url" };\n}\n\n// ============================================================\n// \u9002\u914D\u5668\u51FD\u6570\n// ============================================================\n\nconst textRequest = (model: TextModel, think: boolean, thinkLevel: 0 | 1 | 2 | 3) => {\n  if (!vendor.inputValues.apiKey) throw new Error("\u7F3A\u5C11API Key");\n  const apiKey = vendor.inputValues.apiKey.replace(/^Bearer\\s+/i, "");\n  const lowerName = model.modelName.toLowerCase();\n  if (lowerName.includes("deepseek")) {\n    logger("\u4F7F\u7528deepseek");\n    // DeepSeek \u601D\u8003\u5F3A\u5EA6\u4EC5\u652F\u6301 high / max\uFF08low\u3001medium \u4F1A\u88AB\u6620\u5C04\u4E3A high\uFF0Cxhigh \u4F1A\u88AB\u6620\u5C04\u4E3A max\uFF09\n    // thinkLevel: 0/1/2 \u2192 high, 3 \u2192 max\n    const effortMap: Record<0 | 1 | 2 | 3, "high" | "max"> = {\n      0: "high",\n      1: "high",\n      2: "high",\n      3: "max",\n    };\n\n    const enableThinking = model.think && think;\n    const extraBody: Record<string, any> = {\n      thinking: { type: enableThinking ? "enabled" : "disabled" },\n    };\n    if (enableThinking) {\n      extraBody.reasoning_effort = effortMap[thinkLevel];\n    }\n\n    return createDeepSeek({\n      baseURL: vendor.inputValues.baseUrl,\n      apiKey,\n      extraBody,\n    }).chat(model.modelName);\n  }\n  return createOpenAI({ baseURL: vendor.inputValues.baseUrl, apiKey }).chat(model.modelName);\n};\n\nconst imageRequest = async (config: ImageConfig, model: ImageModel): Promise<string> => {\n  if (!vendor.inputValues.apiKey) throw new Error("\u7F3A\u5C11API Key");\n  const apiKey = vendor.inputValues.apiKey.replace(/^Bearer\\s+/i, "");\n  const baseUrl = vendor.inputValues.baseUrl;\n  const lowerName = model.modelName.toLowerCase();\n  const imageBase64List = (config.referenceList ?? []).map((r) => r.base64).filter(Boolean);\n\n  // Gemini / nano \u7CFB\u6A21\u578B\uFF1A\u8D70 chat/completions \u63A5\u53E3\uFF0C\u4ECE\u8FD4\u56DE\u7684 markdown \u4E2D\u63D0\u53D6\u56FE\u7247\n  if (lowerName.includes("gemini") || lowerName.includes("nano")) {\n    const imageConfigGoogle: Record<string, string> = {\n      aspect_ratio: config.aspectRatio,\n      image_size: config.size,\n    };\n    const messages: any[] = [];\n    if (imageBase64List.length) {\n      messages.push({\n        role: "user",\n        content: imageBase64List.map((b) => ({ type: "image_url", image_url: { url: b } })),\n      });\n    }\n    messages.push({ role: "user", content: config.prompt + "\u8BF7\u76F4\u63A5\u8F93\u51FA\u56FE\u7247" });\n    const body = {\n      model: model.modelName,\n      messages,\n      extra_body: { google: { image_config: imageConfigGoogle } },\n    };\n    logger(`[imageRequest] \u4F7F\u7528 gemini \u9002\u914D\u5668\uFF0C\u6A21\u578B: ${model.modelName}`);\n    const response = await fetch(`${baseUrl}/chat/completions`, {\n      method: "POST",\n      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },\n      body: JSON.stringify(body),\n    });\n    if (!response.ok) {\n      const errorText = await response.text();\n      throw new Error(`\u8BF7\u6C42\u5931\u8D25\uFF0C\u72B6\u6001\u7801: ${response.status}, \u9519\u8BEF\u4FE1\u606F: ${errorText}`);\n    }\n    const data = await response.json();\n    const imageResult = extractFirstImageFromMd(data.choices[0].message.content);\n    if (!imageResult) throw new Error("\u672A\u80FD\u4ECE\u54CD\u5E94\u4E2D\u63D0\u53D6\u56FE\u7247");\n    if (imageResult.type === "base64") return imageResult.url;\n    return await urlToBase64(imageResult.url);\n  }\n\n  // \u8C46\u5305 / seedream \u7CFB\u6A21\u578B\uFF1A\u8D70 images/generations \u63A5\u53E3\n  if (lowerName.includes("doubao") || lowerName.includes("seedream")) {\n    const effectiveSize = config.size === "1K" ? "2K" : config.size;\n    const sizeMap: Record<string, Record<string, string>> = {\n      "16:9": { "2K": "2848x1600", "4K": "4096x2304" },\n      "9:16": { "2K": "1600x2848", "4K": "2304x4096" },\n    };\n    const resolvedSize = sizeMap[config.aspectRatio]?.[effectiveSize];\n    const body: Record<string, any> = {\n      model: model.modelName,\n      prompt: config.prompt,\n      size: resolvedSize,\n      metadata: {\n        response_format: "url",\n        sequential_image_generation: "disabled",\n        stream: false,\n        watermark: false,\n      },\n      ...(imageBase64List.length && { images: imageBase64List }),\n    };\n    logger(`[imageRequest] \u4F7F\u7528 doubao \u9002\u914D\u5668\uFF0C\u6A21\u578B: ${model.modelName}`);\n    const response = await fetch(`${baseUrl}/image/generateImage`, {\n      method: "POST",\n      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },\n      body: JSON.stringify(body),\n    });\n    if (!response.ok) {\n      const errorText = await response.text();\n      throw new Error(`\u8BF7\u6C42\u5931\u8D25\uFF0C\u72B6\u6001\u7801: ${response.status}, \u9519\u8BEF\u4FE1\u606F: ${errorText}`);\n    }\n    const data = await response.json();\n    const taskId = data.data;\n    logger(`[imageRequest] \u4EFB\u52A1ID: ${taskId}`);\n    const res = await pollTask(async () => {\n      const queryResponse = await fetch(`${baseUrl}/image/getImageStatus`, {\n        method: "POST",\n        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },\n        body: JSON.stringify({\n          taskICode: taskId,\n        }),\n      });\n      if (!queryResponse.ok) {\n        const errorText = await queryResponse.text();\n        throw new Error(`\u8F6E\u8BE2\u5931\u8D25\uFF0C\u72B6\u6001\u7801: ${queryResponse.status}, \u9519\u8BEF\u4FE1\u606F: ${errorText}`);\n      }\n      const queryData = await queryResponse.json();\n      logger(queryData);\n      const status = queryData?.status ?? queryData?.data?.status;\n      logger(status);\n      switch (status) {\n        case "success":\n          return { completed: true, data: queryData.data.data };\n        case "failed":\n          return { completed: true, error: queryData?.data?.failReason ?? "\u89C6\u9891\u751F\u6210\u5931\u8D25" };\n        default:\n          return { completed: false };\n      }\n    });\n    return res.data!;\n  }\n  if (lowerName.includes("gpt") || lowerName.includes("\u5168\u80FD\u56FE\u7247")) {\n    const normalizedSize = config.size === "1K" ? "1k" : config.size === "2K" ? "2k" : config.size === "4K" ? "4k" : config.size;\n\n    const sizeMap: Record<string, Record<string, string>> = {\n      "16:9": { "1K": "1792x1008", "2K": "2048x1152", "4K": "3840x2160" },\n      "9:16": { "1K": "1008x1792", "2K": "1152x2048", "4K": "2160x3840" },\n    };\n    const resolvedSize = sizeMap[config.aspectRatio]?.[normalizedSize];\n    const body: Record<string, any> = {\n      model: model.modelName,\n      prompt: config.prompt,\n      size: normalizedSize,\n      ...(imageBase64List.length && { images: imageBase64List }),\n      metadata: {\n        aspectRatio: config.aspectRatio,\n      },\n    };\n    logger(`[imageRequest] \u4F7F\u7528 doubao \u9002\u914D\u5668\uFF0C\u6A21\u578B: ${model.modelName}`);\n    const response = await fetch(`${baseUrl}/image/generateImage`, {\n      method: "POST",\n      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },\n      body: JSON.stringify(body),\n    });\n    if (!response.ok) {\n      const errorText = await response.text();\n      throw new Error(`\u8BF7\u6C42\u5931\u8D25\uFF0C\u72B6\u6001\u7801: ${response.status}, \u9519\u8BEF\u4FE1\u606F: ${errorText}`);\n    }\n    const data = await response.json();\n    const taskId = data.data;\n    logger(`[imageRequest] \u4EFB\u52A1ID: ${taskId}`);\n    const res = await pollTask(async () => {\n      const queryResponse = await fetch(`${baseUrl}/image/getImageStatus`, {\n        method: "POST",\n        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },\n        body: JSON.stringify({\n          taskICode: taskId,\n        }),\n      });\n      if (!queryResponse.ok) {\n        const errorText = await queryResponse.text();\n        throw new Error(`\u8F6E\u8BE2\u5931\u8D25\uFF0C\u72B6\u6001\u7801: ${queryResponse.status}, \u9519\u8BEF\u4FE1\u606F: ${errorText}`);\n      }\n      const queryData = await queryResponse.json();\n      logger(queryData);\n      const status = queryData?.status ?? queryData?.data?.status;\n      logger(status);\n      switch (status) {\n        case "success":\n          return { completed: true, data: queryData.data.data };\n        case "failed":\n          return { completed: true, error: queryData?.data?.failReason ?? "\u89C6\u9891\u751F\u6210\u5931\u8D25" };\n        default:\n          return { completed: false };\n      }\n    });\n    return res.data!;\n  }\n\n  throw new Error(`\u4E0D\u652F\u6301\u7684\u56FE\u50CF\u6A21\u578B: ${model.modelName}`);\n};\n\nconst videoRequest = async (config: VideoConfig, model: VideoModel): Promise<string> => {\n  if (!vendor.inputValues.apiKey) throw new Error("\u7F3A\u5C11API Key");\n  const apiKey = vendor.inputValues.apiKey.replace(/^Bearer\\s+/i, "");\n  const baseUrl = vendor.inputValues.baseUrl;\n  const lowerName = model.modelName.toLowerCase();\n\n  // \u5F53\u524D\u6FC0\u6D3B\u7684\u5355\u4E00 VideoMode\uFF08\u53D6\u7B2C\u4E00\u4E2A\u975E\u6570\u7EC4\u6A21\u5F0F\uFF0C\u6216\u6570\u7EC4\u6A21\u5F0F\uFF09\n  const activeMode = config.mode as string | string[];\n  const imageRefs = (config.referenceList ?? []).filter((r) => r.type === "image").map((r) => r.base64);\n  const videoRefs = (config.referenceList ?? []).filter((r) => r.type === "video").map((r) => r.base64);\n  const audioRefs = (config.referenceList ?? []).filter((r) => r.type === "audio").map((r) => r.base64);\n\n  // \u6784\u5EFA\u6A21\u578B\u4E13\u5C5E metadata\n  let metadata: Record<string, any> = {};\n\n  if (lowerName.includes("wan")) {\n    // \u4E07\u8C61\u7CFB\u5217\n    if ((activeMode === "startEndRequired" || activeMode === "endFrameOptional" || activeMode === "startFrameOptional") && imageRefs.length >= 2) {\n      if (imageRefs[0]) metadata.first_frame_url = imageRefs[0];\n      if (imageRefs[1]) metadata.last_frame_url = imageRefs[1];\n    } else if (imageRefs.length) {\n      metadata.img_url = imageRefs[0];\n    }\n    if (typeof config.audio === "boolean") metadata.audio = config.audio;\n\n    const body: Record<string, any> = {\n      model: model.modelName,\n      prompt: config.prompt,\n      duration: config.duration,\n      resolution: config.resolution,\n      images: imageRefs,\n      metadata,\n    };\n    logger(`[videoRequest] \u63D0\u4EA4\u4E07\u8C61\u89C6\u9891\u4EFB\u52A1\uFF0C\u6A21\u578B: ${model.modelName}`);\n    const response = await fetch(`${baseUrl}/video/generateVideo`, {\n      method: "POST",\n      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },\n      body: JSON.stringify(body),\n    });\n    if (!response.ok) {\n      const errorText = await response.text();\n      throw new Error(`\u8BF7\u6C42\u5931\u8D25\uFF0C\u72B6\u6001\u7801: ${response.status}, \u9519\u8BEF\u4FE1\u606F: ${errorText}`);\n    }\n    const data = await response.json();\n    const taskId = data.data;\n    logger(`[videoRequest] \u4E07\u8C61\u4EFB\u52A1ID: ${taskId}`);\n    const res = await pollTask(async () => {\n      const queryResponse = await fetch(`${baseUrl}/video/getVideoStatus`, {\n        method: "POST",\n        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },\n        body: JSON.stringify({\n          taskICode: taskId,\n        }),\n      });\n      if (!queryResponse.ok) {\n        const errorText = await queryResponse.text();\n        throw new Error(`\u8F6E\u8BE2\u5931\u8D25\uFF0C\u72B6\u6001\u7801: ${queryResponse.status}, \u9519\u8BEF\u4FE1\u606F: ${errorText}`);\n      }\n      const queryData = await queryResponse.json();\n      logger(queryData)\n      const status = queryData?.status ?? queryData?.data?.status;\n      logger(status)\n      switch (status) {\n        case "completed":\n        case "SUCCESS":\n        case "success":\n          return { completed: true, data: queryData.data.data };\n        case "FAILURE":\n        case "failed":\n          return { completed: true, error: queryData?.data?.failReason ?? "\u89C6\u9891\u751F\u6210\u5931\u8D25" };\n        default:\n          return { completed: false };\n      }\n    });\n    logger(res)\n    if (res.error) throw new Error(res.error);\n    return res.data!;\n  }\n\n  if (lowerName.includes("doubao") || lowerName.includes("seedance")) {\n    // \u8C46\u5305/Seedance \u7CFB\u5217\n    metadata = {\n      ...(typeof config.audio === "boolean" && { generate_audio: config.audio }),\n      ratio: config.aspectRatio,\n      references: [],\n      resolution: config.resolution,\n    };\n    if (Array.isArray(activeMode)) {\n      // \u591A\u53C2\u8003\u6A21\u5F0F\n      imageRefs.forEach((item) => {\n        metadata.references.push({\n          role: "reference_image",\n          type: "image_url",\n          image_url: {\n            url: item,\n          },\n        });\n      });\n      videoRefs.forEach((item) => {\n        metadata.references.push({\n          role: "reference_video",\n          type: "video_url",\n          video_url: {\n            url: item,\n          },\n        });\n      });\n      audioRefs.forEach((item) => {\n        metadata.references.push({\n          role: "reference_audio",\n          type: "audio_url",\n          audio_url: {\n            url: item,\n          },\n        });\n      });\n    } else if (activeMode === "startEndRequired" || activeMode === "endFrameOptional" || activeMode === "startFrameOptional") {\n      imageRefs.forEach((item, i) => {\n        metadata.references.push({\n          type: "image_url",\n          image_url: {\n            url: item,\n          },\n          role: i == 0 ? "first_frame" : "last_frame",\n        });\n      });\n    } else if (activeMode === "singleImage") {\n      imageRefs.forEach((item, i) => {\n        metadata.references.push({\n          role: "reference_image",\n          type: "image_url",\n          image_url: {\n            url: item,\n          },\n        });\n      });\n    }\n  } else if (lowerName.includes("vidu")) {\n    // Vidu \u7CFB\u5217\n    metadata = {\n      aspect_ratio: config.aspectRatio,\n      audio: config.audio ?? false,\n      off_peak: false,\n    };\n  } else if (lowerName.includes("kling")) {\n    const videoRefs = (config.referenceList ?? []).filter((r) => r.type === "video").map((r) => ({ video_url: r.base64 }));\n\n    metadata = {\n      aspect_ratio: config.aspectRatio,\n      sound: typeof config?.audio == "boolean" ? (config?.audio ? "on" : "off") : "off",\n      video_list: videoRefs,\n      image_list: [],\n    };\n\n    // \u56FE\u7247\u6709\u6548\u6027\u68C0\u67E5\u51FD\u6570\n    const isValidImage = (imageUrl: any) => {\n      return imageUrl && typeof imageUrl === "string" && imageUrl.trim().length > 0;\n    };\n\n    if (activeMode === "singleImage") {\n      if (lowerName.includes("omni") || lowerName.includes("o1")) {\n        // \u53EA\u5728\u56FE\u7247\u6709\u6548\u65F6\u624D\u6DFB\u52A0\n        if (isValidImage(imageRefs[0])) {\n          metadata.image_list = [{ image_url: imageRefs[0] }];\n        }\n      } else {\n        if (isValidImage(imageRefs[0])) {\n          metadata.image = imageRefs[0];\n        }\n      }\n    } else if (activeMode === "startEndRequired" || activeMode === "endFrameOptional" || activeMode === "startFrameOptional") {\n      if (lowerName.includes("omni") || lowerName.includes("o1")) {\n        imageRefs.forEach((item, index) => {\n          if (isValidImage(item)) {\n            if (!metadata.image_list || !Array.isArray(metadata.image_list)) metadata.image_list = [];\n            metadata.image_list.push({\n              image_url: item,\n              type: index == 0 ? "first_frame" : "end_frame",\n            });\n          }\n        });\n      } else {\n        if (isValidImage(imageRefs[0])) {\n          metadata.image_tail = imageRefs[0];\n        }\n      }\n    } else if (Array.isArray(activeMode)) {\n      imageRefs.forEach((item) => {\n        if (isValidImage(item)) {\n          if (!metadata.image_list || !Array.isArray(metadata.image_list)) metadata.image_list = [];\n          metadata.image_list.push({\n            image_url: item,\n          });\n        }\n      });\n    }\n  } else if (lowerName.includes("grok")) {\n    metadata = {\n      aspectRatio: config.aspectRatio,\n    };\n  }\n\n  // \u516C\u5171\u8BF7\u6C42\u4F53\uFF08\u975E\u4E07\u8C61\u901A\u7528\u8DEF\u5F84\uFF09\n  const publicBody: Record<string, any> = {\n    model: model.modelName,\n    ...(imageRefs.length ? { images: imageRefs } : {}),\n    prompt: config.prompt,\n    duration: config.duration,\n    resolution: config.resolution,\n    metadata,\n  };\n\n  logger(`[videoRequest] \u63D0\u4EA4\u89C6\u9891\u4EFB\u52A1\uFF0C\u6A21\u578B: ${model.modelName}`);\n  const response = await fetch(`${baseUrl}/video/generateVideo`, {\n    method: "POST",\n    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },\n    body: JSON.stringify(publicBody),\n  });\n  if (!response.ok) {\n    const errorText = await response.text();\n    throw new Error(`\u8BF7\u6C42\u5931\u8D25\uFF0C\u72B6\u6001\u7801: ${response.status}, \u9519\u8BEF\u4FE1\u606F: ${errorText}`);\n  }\n  const data = await response.json();\n  const taskId = data.data;\n  logger(`[videoRequest] \u4EFB\u52A1ID: ${taskId}`);\n\n  const res = await pollTask(async () => {\n    const queryResponse = await fetch(`${baseUrl}/video/getVideoStatus`, {\n      method: "POST",\n      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },\n      body: JSON.stringify({\n        taskICode: taskId,\n      }),\n    });\n    if (!queryResponse.ok) {\n      const errorText = await queryResponse.text();\n      throw new Error(`\u8F6E\u8BE2\u5931\u8D25\uFF0C\u72B6\u6001\u7801: ${queryResponse.status}, \u9519\u8BEF\u4FE1\u606F: ${errorText}`);\n    }\n    const queryData = await queryResponse.json();\n    logger(queryData);\n    const status = queryData?.status ?? queryData?.data?.status;\n    switch (status) {\n      case "completed":\n      case "SUCCESS":\n      case "success":\n        return { completed: true, data: queryData.data.data };\n      case "FAILURE":\n      case "failed":\n        return { completed: true, error: queryData?.data?.failReason ?? "\u89C6\u9891\u751F\u6210\u5931\u8D25" };\n      default:\n        return { completed: false };\n    }\n  });\n\n  if (res.error) throw new Error(res.error);\n  return await urlToBase64(res.data!);\n};\n\nconst ttsRequest = async (config: TTSConfig, model: TTSModel): Promise<string> => {\n  return "";\n};\n\nconst checkForUpdates = async (): Promise<{ hasUpdate: boolean; latestVersion: string; notice: string }> => {\n  const apiKey = vendor.inputValues.apiKey.replace(/^Bearer\\s+/i, "");\n  const baseUrl = vendor.inputValues.baseUrl;\n  const res = await fetch(`${baseUrl}/vendor/vendorCheck`, {\n    method: "POST",\n    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },\n    body: JSON.stringify({\n      version: vendor.version,\n    }),\n  });\n  if (!res.ok) {\n    const errorReason = await res.text();\n    throw new Error(`\u68C0\u67E5\u66F4\u65B0\u5931\u8D25\uFF0C${errorReason}`);\n  }\n  const { data } = await res.json();\n  if (data?.hasUpdate && data?.latestVersion) {\n    return {\n      hasUpdate: data?.hasUpdate ?? false,\n      latestVersion: data?.latestVersion ?? null,\n      notice: data?.notice ? data?.notice : "\u4F5C\u8005\u6709\u70B9\u61D2\uFF0C\u6CA1\u6709\u586B\u5199\u66F4\u65B0\u5185\u5BB9",\n    };\n  }\n  return { hasUpdate: false, latestVersion: "", notice: "" };\n};\n\nconst updateVendor = async (): Promise<string> => {\n  const apiKey = vendor.inputValues.apiKey.replace(/^Bearer\\s+/i, "");\n  const baseUrl = vendor.inputValues.baseUrl;\n  const response = await fetch(`${baseUrl}/vendor/downloadVendor`, {\n    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },\n  });\n  if (!response.ok) {\n    const errorReason = await response.text();\n    throw new Error(`\u8BF7\u6C42\u5931\u8D25: ${response.status} ${errorReason}`);\n  }\n  const { data } = await response.json();\n  logger(data);\n  return data;\n};\n\n// ============================================================\n// \u5BFC\u51FA\n// ============================================================\n\nexports.vendor = vendor;\nexports.textRequest = textRequest;\nexports.imageRequest = imageRequest;\nexports.videoRequest = videoRequest;\nexports.ttsRequest = ttsRequest;\nexports.checkForUpdates = checkForUpdates;\nexports.updateVendor = updateVendor;\n\nexport {};\n',
+      "vidu.ts": '//\u5982\u9700\u9065\u6D4BAI\u8BF7\u4F7F\u7528\u5728toonflow\u5B89\u88C5\u76EE\u5F55\u8FD0\u884Cnpx @ai-sdk/devtools \uFF08\u8981\u6C42\u5728\u5176\u4ED6\u8BBE\u7F6E\u4E2D\u6253\u5F00\u9065\u6D4B\u529F\u80FD\uFF0C\u4E14toonflow\u6709\u6743\u9650\u5728\u5B89\u88C5\u76EE\u5F55\u521B\u5EFA.devtools\u6587\u4EF6\u5939\uFF09\n// ==================== \u7C7B\u578B\u5B9A\u4E49 ====================\n// \u6587\u672C\u6A21\u578B\ninterface TextModel {\n  name: string; // \u663E\u793A\u540D\u79F0\n  modelName: string;\n  type: "text";\n  think: boolean; // \u524D\u7AEF\u663E\u793A\u7528\n}\n\n// \u56FE\u50CF\u6A21\u578B\ninterface ImageModel {\n  name: string; // \u663E\u793A\u540D\u79F0\n  modelName: string;\n  type: "image";\n  mode: ("text" | "singleImage" | "multiReference")[];\n  associationSkills?: string; // \u5173\u8054\u6280\u80FD\uFF0C\u591A\u4E2A\u6280\u80FD\u7528\u9017\u53F7\u5206\u9694\n}\n// \u89C6\u9891\u6A21\u578B\ninterface VideoModel {\n  name: string; // \u663E\u793A\u540D\u79F0\n  modelName: string; //\u5168\u5C40\u552F\u4E00\n  type: "video";\n  mode: (\n    | "singleImage" // \u5355\u56FE\n    | "startEndRequired" // \u9996\u5C3E\u5E27\uFF08\u4E24\u5F20\u90FD\u5F97\u6709\uFF09\n    | "endFrameOptional" // \u9996\u5C3E\u5E27\uFF08\u5C3E\u5E27\u53EF\u9009\uFF09\n    | "startFrameOptional" // \u9996\u5C3E\u5E27\uFF08\u9996\u5E27\u53EF\u9009\uFF09\n    | "text" // \u6587\u672C\u751F\u89C6\u9891\n    | ("videoReference" | "imageReference" | "audioReference" | "textReference")[] // \u6DF7\u5408\u53C2\u8003\n  )[];\n  associationSkills?: string; // \u5173\u8054\u6280\u80FD\uFF0C\u591A\u4E2A\u6280\u80FD\u7528\u9017\u53F7\u5206\u9694\n  audio: "optional" | false | true; // \u97F3\u9891\u914D\u7F6E\n  durationResolutionMap: { duration: number[]; resolution: string[] }[];\n}\n\ninterface TTSModel {\n  name: string; // \u663E\u793A\u540D\u79F0\n  modelName: string;\n  type: "tts";\n  voices: {\n    title: string; //\u663E\u793A\u540D\u79F0\n    voice: string; //\u8BF4\u8BDD\u4EBA\n  }[];\n}\n// \u4F9B\u5E94\u5546\u914D\u7F6E\ninterface VendorConfig {\n  id: string; //\u4F9B\u5E94\u5546\u552F\u4E00\u6807\u8BC6\uFF0C\u5FC5\u987B\u5168\u5C40\u552F\u4E00\n  author: string;\n  description?: string; //md5\u683C\u5F0F\n  name: string;\n  icon?: string; //\u4EC5\u652F\u6301base64\u683C\u5F0F\n  inputs: {\n    key: string;\n    label: string;\n    type: "text" | "password" | "url";\n    required: boolean;\n    placeholder?: string;\n  }[];\n  inputValues: Record<string, string>;\n  models: (TextModel | ImageModel | VideoModel)[];\n}\n// ==================== \u5168\u5C40\u5DE5\u5177\u51FD\u6570 ====================\n//Axios\u5B9E\u4F8B\n//\u538B\u7F29\u56FE\u7247\u5927\u5C0F(1MB = 1 * 1024 * 1024)\ndeclare const zipImage: (completeBase64: string, size: number) => Promise<string>;\n//\u538B\u7F29\u56FE\u7247\u5206\u8FA8\u7387\ndeclare const zipImageResolution: (completeBase64: string, width: number, height: number) => Promise<string>;\n//\u591A\u56FE\u62FC\u63A5\u4E58\u5355\u56FE maxSize  \u6700\u5927\u8F93\u51FA\u5927\u5C0F\uFF0C\u9ED8\u8BA4\u4E3A 10mb\ndeclare const mergeImages: (completeBase64: string[], maxSize?: string) => Promise<string>;\n//Url\u8F6CBase64\ndeclare const urlToBase64: (url: string) => Promise<string>;\n//\u8F6E\u8BE2\u51FD\u6570\ndeclare const pollTask: (\n  fn: () => Promise<{ completed: boolean; data?: string; error?: string }>,\n  interval?: number,\n  timeout?: number,\n) => Promise<{ completed: boolean; data?: string; error?: string }>;\ndeclare const axios: any;\ndeclare const createOpenAI: any;\ndeclare const createDeepSeek: any;\ndeclare const createZhipu: any;\ndeclare const createQwen: any;\ndeclare const createAnthropic: any;\ndeclare const createOpenAICompatible: any;\ndeclare const createXai: any;\ndeclare const createMinimax: any;\ndeclare const createGoogleGenerativeAI: any;\ndeclare const logger: (logstring: string) => void;\ndeclare const jsonwebtoken: any;\n// ==================== \u4F9B\u5E94\u5546\u6570\u636E ====================\nconst vendor: VendorConfig = {\n  id: "vidu",\n  author: "\u642C\u7816\u7684Coder",\n  description:\n    "Vidu \u5B98\u65B9\u89C6\u9891\u751F\u6210\u5E73\u53F0\u3002 [\u524D\u5F80\u5E73\u53F0](https://platform.vidu.cn/login/)",\n  name: "Vidu \u5F00\u653E\u5E73\u53F0",\n  inputs: [\n    { key: "apiKey", label: "API\u5BC6\u94A5", type: "password", required: true, placeholder: "\u8BF7\u5230Vidu\u5B98\u65B9\u7533\u8BF7" },\n    { key: "baseUrl", label: "\u63A5\u53E3\u8DEF\u5F84", type: "url", required: true, placeholder: "https://api.toonflow.net/v1" },\n  ],\n  inputValues: {\n    apiKey: "",\n    baseUrl: "https://api.toonflow.net/v1",\n  },\n  models: [\n    {\n      name: "ViduQ3 turbo",\n      type: "video",\n      modelName: "ViduQ3-turbo",\n      durationResolutionMap: [{ duration: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16], resolution: ["540p", "720p", "1080p"] }],\n      mode: ["singleImage", "startEndRequired", "text"],\n      audio: true,\n    },\n    {\n      name: "ViduQ3 pro",\n      type: "video",\n      modelName: "ViduQ3-pro",\n      durationResolutionMap: [{ duration: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16], resolution: ["540p", "720p", "1080p"] }],\n      mode: ["singleImage", "startEndRequired", "text"],\n      audio: true,\n    },\n    {\n      name: "ViduQ2 pro fast",\n      type: "video",\n      modelName: "ViduQ2-pro-fast",\n      durationResolutionMap: [{ duration: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], resolution: ["720p", "1080p"] }],\n      mode: ["singleImage", "startEndRequired"],\n      audio: true,\n    },\n    {\n      name: "viduQ2 turbo",\n      type: "video",\n      modelName: "ViduQ2-turbo",\n      durationResolutionMap: [{ duration: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], resolution: ["540p", "720p", "1080p"] }],\n      mode: ["singleImage", "startEndRequired"],\n      audio: true,\n    },\n    {\n      name: "ViduQ2 pro",\n      type: "video",\n      modelName: "ViduQ2-pro",\n      durationResolutionMap: [{ duration: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], resolution: ["540p", "720p", "1080p"] }],\n      mode: ["singleImage", "startEndRequired"], //\u53C2\u8003\u751F\u89C6\u9891\u65E0\u6709\u6548\u8BBE\u7F6E\u503C\n      audio: true,\n    },\n    {\n      name: "ViduQ2",\n      type: "video",\n      modelName: "ViduQ2",\n      durationResolutionMap: [{ duration: [5], resolution: ["1080p"] }],\n      mode: ["text"],\n      audio: true,\n    },\n    {\n      name: "ViduQ1",\n      type: "video",\n      modelName: "ViduQ1",\n      durationResolutionMap: [{ duration: [5], resolution: ["1080p"] }],\n      mode: ["singleImage", "startEndRequired", "text"],\n      audio: true,\n    },\n    {\n      name: "ViduQ1 classic",\n      type: "video",\n      modelName: "viduQ1-classic",\n      durationResolutionMap: [{ duration: [5], resolution: ["1080p"] }],\n      mode: ["singleImage", "startEndRequired"],\n      audio: true,\n    },\n    {\n      name: "Vidu2.0",\n      type: "video",\n      modelName: "vidu2.0",\n      durationResolutionMap: [{ duration: [4, 8], resolution: ["360p", "720p", "1080p"] }],\n      mode: ["singleImage", "startEndRequired"],\n      audio: true,\n    },\n    {\n      name: "viduq1 for image",\n      type: "image",\n      modelName: "viduq1",\n      mode: ["text"],\n    },\n    {\n      name: "viduq2 for image",\n      type: "image",\n      modelName: "viduq2",\n      mode: ["text", "singleImage", "multiReference"],\n    },\n  ],\n};\nexports.vendor = vendor;\n\n// ==================== \u9002\u914D\u5668\u51FD\u6570 ====================\n\n// \u6587\u672C\u8BF7\u6C42\u51FD\u6570\nconst textRequest: (textModel: TextModel) => { url: string; model: string } = (textModel) => {\n  throw new Error("\u5F53\u524D\u4F9B\u5E94\u5546\u4EC5\u652F\u6301\u89C6\u9891\u5927\u6A21\u578B\uFF0C\u8C22\u8C22\uFF01");\n};\nexports.textRequest = textRequest;\n\n//\u56FE\u7247\u8BF7\u6C42\u51FD\u6570\ninterface ImageConfig {\n  prompt: string; //\u56FE\u7247\u63D0\u793A\u8BCD\n  imageBase64: string[]; //\u8F93\u5165\u7684\u56FE\u7247\u63D0\u793A\u8BCD\n  size: "1K" | "2K" | "4K"; // \u56FE\u7247\u5C3A\u5BF8\n  aspectRatio: `${number}:${number}`; // \u957F\u5BBD\u6BD4\n}\nconst imageRequest = async (imageConfig: ImageConfig, imageModel: ImageModel) => {\n  if (!vendor.inputValues.apiKey) throw new Error("\u7F3A\u5C11API Key");\n  const apiKey = vendor.inputValues.apiKey.replace("Token ", "");\n\n  const size = imageConfig.size === "1K" ? "2K" : imageConfig.size;\n  const sizeMap: Record<string, Record<string, string>> = {\n    "16:9": {\n      "1k": "1920x1080",\n      "2K": "2848x1600",\n      "4K": "4096x2304",\n    },\n    "9:16": {\n      "1k": "1920x1080",\n      "2K": "1600x2848",\n      "4K": "2304x4096",\n    },\n  };\n\n  const body: Record<string, any> = {\n    model: imageModel.modelName,\n    prompt: imageConfig.prompt,\n    aspect_ratio: sizeMap[imageConfig.aspectRatio][size],\n    seed: 0,\n    resolution: size,\n    ...(imageConfig.imageBase64 && { image: imageConfig.imageBase64 }),\n  };\n\n  const createImageUrl = vendor.inputValues.baseUrl + "/reference2image";\n  const response = await fetch(createImageUrl, {\n    method: "POST",\n    headers: { Authorization: `Token ${apiKey}`, "Content-Type": "application/json" },\n    body: JSON.stringify(body),\n  });\n  if (!response.ok) {\n    const errorText = await response.text(); // \u83B7\u53D6\u9519\u8BEF\u4FE1\u606F\n    console.error("\u8BF7\u6C42\u5931\u8D25\uFF0C\u72B6\u6001\u7801:", response.status, ", \u9519\u8BEF\u4FE1\u606F:", errorText);\n    throw new Error(`\u8BF7\u6C42\u5931\u8D25\uFF0C\u72B6\u6001\u7801: ${response.status}, \u9519\u8BEF\u4FE1\u606F: ${errorText}`);\n  }\n  const data = await response.json();\n  const res = await checkTaskResult(data.task_id);\n  if (!res.data) {\n    throw new Error("\u56FE\u7247\u672A\u80FD\u751F\u6210");\n  }\n  const list = JSON.parse(JSON.stringify(res.data));\n  return list[0].url;\n};\nexports.imageRequest = imageRequest;\n\ninterface VideoConfig {\n  duration: number;\n  resolution: string;\n  aspectRatio: "16:9" | "9:16";\n  prompt: string;\n  imageBase64?: string[];\n  audio?: boolean;\n  mode:\n    | "singleImage" // \u5355\u56FE\n    | "multiImage" // \u591A\u56FE\u6A21\u5F0F\n    | "gridImage" // \u7F51\u683C\u5355\u56FE\uFF08\u4F20\u5165\u4E00\u5F20\u56FE\u7247\uFF0C\u4F46\u8BE5\u56FE\u7247\u662F\u7F51\u683C\u56FE\uFF09\n    | "startEndRequired" // \u9996\u5C3E\u5E27\uFF08\u4E24\u5F20\u90FD\u5F97\u6709\uFF09\n    | "endFrameOptional" // \u9996\u5C3E\u5E27\uFF08\u5C3E\u5E27\u53EF\u9009\uFF09\n    | "startFrameOptional" // \u9996\u5C3E\u5E27\uFF08\u9996\u5E27\u53EF\u9009\uFF09\n    | "text" // \u6587\u672C\u751F\u89C6\u9891\n    | ("video" | "image" | "audio" | "text")[]; // \u6DF7\u5408\u53C2\u8003\n}\n\n// \u6784\u5EFA \u5404\u4E2A\u5E73\u53F0\u7684metadata\u53C2\u6570\n\nconst buildViduMetadata = (videoConfig: VideoConfig) => ({\n  aspect_ratio: videoConfig.aspectRatio,\n  audio: videoConfig.audio ?? false,\n  off_peak: false,\n});\n\ntype MetadataBuilder = (config: VideoConfig) => Record<string, any>;\nconst METADATA_BUILDERS: Array<[string, MetadataBuilder]> = [["vidu", buildViduMetadata]];\nconst buildModelMetadata = (modelName: string, videoConfig: VideoConfig) => {\n  const lowerName = modelName.toLowerCase();\n  const match = METADATA_BUILDERS.find(([key]) => lowerName.includes(key));\n  return match ? match[1](videoConfig) : {};\n};\n// \u68C0\u67E5\u751F\u6210\u7269\u7ED3\u679C\nconst checkTaskResult = async (taskId: string) => {\n  const queryUrl = vendor.inputValues.baseUrl + "/tasks/{id}/creations";\n  const apiKey = vendor.inputValues.apiKey;\n  const res = await pollTask(async () => {\n    const queryResponse = await fetch(queryUrl.replace("{id}", taskId), {\n      method: "GET",\n      headers: { Authorization: `Token ${apiKey}`, "Content-Type": "application/json" },\n    });\n    if (!queryResponse.ok) {\n      const errorText = await queryResponse.text(); // \u83B7\u53D6\u9519\u8BEF\u4FE1\u606F\n      console.error("\u8BF7\u6C42\u5931\u8D25\uFF0C\u72B6\u6001\u7801:", queryResponse.status, ", \u9519\u8BEF\u4FE1\u606F:", errorText);\n      throw new Error(`\u8BF7\u6C42\u5931\u8D25\uFF0C\u72B6\u6001\u7801: ${queryResponse.status}, \u9519\u8BEF\u4FE1\u606F: ${errorText}`);\n    }\n    const queryData = await queryResponse.json();\n    const status = queryData?.state ?? queryData?.data?.state;\n    const fail_reason = queryData?.data?.err_code ?? queryData?.data;\n    switch (status) {\n      case "completed":\n      case "SUCCESS":\n      case "success":\n        return { completed: true, data: queryData.creations };\n      case "FAILURE":\n      case "failed":\n        return { completed: false, error: fail_reason || "\u751F\u6210\u5931\u8D25" };\n      default:\n        return { completed: false };\n    }\n  });\n  if (res.error) throw new Error(res.error);\n  return res;\n};\n\nconst videoRequest = async (videoConfig: VideoConfig, videoModel: VideoModel) => {\n  if (!vendor.inputValues.apiKey) throw new Error("\u7F3A\u5C11API Key");\n  const apiKey = vendor.inputValues.apiKey.replace("Token ", "");\n\n  // \u6784\u5EFA\u6BCF\u4E2A\u6A21\u578B\u5BF9\u5E94\u7684\u9644\u52A0\u53C2\u6570\n  const metadata = buildModelMetadata(videoModel.modelName, videoConfig);\n\n  //\u516C\u5171\u8BF7\u6C42\u53C2\u6570\n  const publicBody = {\n    model: videoModel.modelName,\n    ...(videoConfig.imageBase64 && videoConfig.imageBase64.length ? { images: videoConfig.imageBase64 } : {}),\n    prompt: videoConfig.prompt,\n    size: videoConfig.resolution,\n    duration: videoConfig.duration,\n    metadata: metadata,\n  };\n\n  const requestUrl = vendor.inputValues.baseUrl + "/start-end2video";\n  const response = await fetch(requestUrl, {\n    method: "POST",\n    headers: { Authorization: `Token ${apiKey}`, "Content-Type": "application/json" },\n    body: JSON.stringify(publicBody),\n  });\n  if (!response.ok) {\n    const errorText = await response.text(); // \u83B7\u53D6\u9519\u8BEF\u4FE1\u606F\n    console.error("\u8BF7\u6C42\u5931\u8D25\uFF0C\u72B6\u6001\u7801:", response.status, ", \u9519\u8BEF\u4FE1\u606F:", errorText);\n    throw new Error(`\u8BF7\u6C42\u5931\u8D25\uFF0C\u72B6\u6001\u7801: ${response.status}, \u9519\u8BEF\u4FE1\u606F: ${errorText}`);\n  }\n  const data = await response.json();\n  const taskId = data.id;\n  const result = await checkTaskResult(taskId);\n  return result.data;\n};\nexports.videoRequest = videoRequest;\n\ninterface TTSConfig {\n  text: string;\n  voice: string;\n  speechRate: number;\n  pitchRate: number;\n  volume: number;\n}\nconst ttsRequest = async (ttsConfig: TTSConfig, ttsModel: TTSModel) => {\n  throw new Error("Vidu \u6682\u4E0D\u652F\u6301\u8BED\u97F3\u5408\u6210\uFF08TTS\uFF09");\n};\n',
+      "volcengine.ts": '/**\n * Toonflow AI\u4F9B\u5E94\u5546\u6A21\u677F - \u706B\u5C71\u5F15\u64CE(\u8C46\u5305)\n * @version 2.0\n */\n\n// ============================================================\n// \u7C7B\u578B\u5B9A\u4E49\n// ============================================================\n\ntype VideoMode =\n  | "singleImage"\n  | "startEndRequired"\n  | "endFrameOptional"\n  | "startFrameOptional"\n  | "text"\n  | (`videoReference:${number}` | `imageReference:${number}` | `audioReference:${number}`)[];\n\ninterface TextModel {\n  name: string;\n  modelName: string;\n  type: "text";\n  think: boolean;\n}\n\ninterface ImageModel {\n  name: string;\n  modelName: string;\n  type: "image";\n  mode: ("text" | "singleImage" | "multiReference")[];\n  associationSkills?: string;\n}\n\ninterface VideoModel {\n  name: string;\n  modelName: string;\n  type: "video";\n  mode: VideoMode[];\n  associationSkills?: string;\n  audio: "optional" | false | true;\n  durationResolutionMap: { duration: number[]; resolution: string[] }[];\n}\n\ninterface TTSModel {\n  name: string;\n  modelName: string;\n  type: "tts";\n  voices: { title: string; voice: string }[];\n}\n\ninterface VendorConfig {\n  id: string;\n  version: string;\n  name: string;\n  author: string;\n  description?: string;\n  icon?: string;\n  inputs: { key: string; label: string; type: "text" | "password" | "url"; required: boolean; placeholder?: string }[];\n  inputValues: Record<string, string>;\n  models: (TextModel | ImageModel | VideoModel | TTSModel)[];\n}\n\ntype ReferenceList =\n  | { type: "image"; sourceType: "base64"; base64: string }\n  | { type: "audio"; sourceType: "base64"; base64: string }\n  | { type: "video"; sourceType: "base64"; base64: string };\n\ninterface ImageConfig {\n  prompt: string;\n  referenceList?: Extract<ReferenceList, { type: "image" }>[];\n  size: "1K" | "2K" | "4K";\n  aspectRatio: `${number}:${number}`;\n}\n\ninterface VideoConfig {\n  duration: number;\n  resolution: string;\n  aspectRatio: "16:9" | "9:16";\n  prompt: string;\n  referenceList?: ReferenceList[];\n  audio?: boolean;\n  mode: VideoMode[];\n}\n\ninterface TTSConfig {\n  text: string;\n  voice: string;\n  speechRate: number;\n  pitchRate: number;\n  volume: number;\n  referenceList?: Extract<ReferenceList, { type: "audio" }>[];\n}\n\ninterface PollResult {\n  completed: boolean;\n  data?: string;\n  error?: string;\n}\n\n// ============================================================\n// \u5168\u5C40\u58F0\u660E\n// ============================================================\n\ndeclare const axios: any;\ndeclare const logger: (msg: string) => void;\ndeclare const jsonwebtoken: any;\ndeclare const zipImage: (base64: string, size: number) => Promise<string>;\ndeclare const zipImageResolution: (base64: string, w: number, h: number) => Promise<string>;\ndeclare const mergeImages: (base64Arr: string[], maxSize?: string) => Promise<string>;\ndeclare const urlToBase64: (url: string) => Promise<string>;\ndeclare const pollTask: (fn: () => Promise<PollResult>, interval?: number, timeout?: number) => Promise<PollResult>;\ndeclare const createOpenAI: any;\ndeclare const createDeepSeek: any;\ndeclare const createZhipu: any;\ndeclare const createQwen: any;\ndeclare const createAnthropic: any;\ndeclare const createOpenAICompatible: any;\ndeclare const createXai: any;\ndeclare const createMinimax: any;\ndeclare const createGoogleGenerativeAI: any;\ndeclare const exports: {\n  vendor: VendorConfig;\n  textRequest: (m: TextModel, t: boolean, tl: 0 | 1 | 2 | 3) => any;\n  imageRequest: (c: ImageConfig, m: ImageModel) => Promise<string>;\n  videoRequest: (c: VideoConfig, m: VideoModel) => Promise<string>;\n  ttsRequest: (c: TTSConfig, m: TTSModel) => Promise<string>;\n  checkForUpdates?: () => Promise<{ hasUpdate: boolean; latestVersion: string; notice: string }>;\n  updateVendor?: () => Promise<string>;\n};\n\n// ============================================================\n// \u4F9B\u5E94\u5546\u914D\u7F6E\n// ============================================================\n\nconst vendor: VendorConfig = {\n  id: "volcengine",\n  version: "2.3",\n  author: "leeqi",\n  name: "\u706B\u5C71\u5F15\u64CE(\u8C46\u5305)",\n  description: "\u706B\u5C71\u5F15\u64CE\u8C46\u5305\u5927\u6A21\u578B\uFF0C\u652F\u6301\u6587\u672C\u3001\u56FE\u7247\u751F\u6210\u3001\u89C6\u9891\u751F\u6210\u7B49\u80FD\u529B\u3002\\n\\n\u9700\u8981\u5728[\u706B\u5C71\u5F15\u64CE\u63A7\u5236\u53F0](https://console.volcengine.com/ark)\u83B7\u53D6API\u5BC6\u94A5\u3002",\n  icon: "",\n  inputs: [\n    { key: "apiKey", label: "API\u5BC6\u94A5", type: "password", required: true, placeholder: "\u706B\u5C71\u5F15\u64CEAPI Key" },\n    { key: "baseUrl", label: "\u8BF7\u6C42\u5730\u5740", type: "url", required: true, placeholder: "\u4EE5v3\u7ED3\u675F\uFF0C\u793A\u4F8B\uFF1Ahttps://api.toonflow.net/v1" },\n  ],\n  inputValues: {\n    apiKey: "",\n    baseUrl: "https://api.toonflow.net/v1",\n  },\n  models: [\n    // ===================== \u6587\u672C\u6A21\u578B - \u63A8\u8350 =====================\n    { name: "Doubao-Seed-2.0-Pro", modelName: "doubao-seed-2-0-pro-260215", type: "text", think: true },\n    { name: "Doubao-Seed-2.0-Lite", modelName: "doubao-seed-2-0-lite-260215", type: "text", think: true },\n    { name: "Doubao-Seed-2.0-Mini", modelName: "doubao-seed-2-0-mini-260215", type: "text", think: true },\n    { name: "Doubao-Seed-2.0-Code-Preview", modelName: "doubao-seed-2-0-code-preview-260215", type: "text", think: true },\n    { name: "Doubao-Seed-Character", modelName: "doubao-seed-character-251128", type: "text", think: false },\n    // ===================== \u6587\u672C\u6A21\u578B - \u5F80\u671F =====================\n    { name: "Doubao-Seed-1.8", modelName: "doubao-seed-1-8-251228", type: "text", think: true },\n    { name: "Doubao-Seed-Code-Preview", modelName: "doubao-seed-code-preview-251028", type: "text", think: true },\n    { name: "Doubao-Seed-1.6-Lite", modelName: "doubao-seed-1-6-lite-251015", type: "text", think: true },\n    { name: "Doubao-Seed-1.6-Flash(0828)", modelName: "doubao-seed-1-6-flash-250828", type: "text", think: true },\n    { name: "Doubao-Seed-1.6-Vision", modelName: "doubao-seed-1-6-vision-250815", type: "text", think: true },\n    { name: "Doubao-Seed-1.6(1015)", modelName: "doubao-seed-1-6-251015", type: "text", think: true },\n    { name: "Doubao-Seed-1.6(0615)", modelName: "doubao-seed-1-6-250615", type: "text", think: true },\n    { name: "Doubao-Seed-1.6-Flash(0615)", modelName: "doubao-seed-1-6-flash-250615", type: "text", think: true },\n    { name: "Doubao-Seed-Translation", modelName: "doubao-seed-translation-250915", type: "text", think: false },\n    { name: "Doubao-1.5-Pro-32K", modelName: "doubao-1-5-pro-32k-250115", type: "text", think: false },\n    { name: "Doubao-1.5-Pro-32K-Character(0715)", modelName: "doubao-1-5-pro-32k-character-250715", type: "text", think: false },\n    { name: "Doubao-1.5-Pro-32K-Character(0228)", modelName: "doubao-1-5-pro-32k-character-250228", type: "text", think: false },\n    { name: "Doubao-1.5-Lite-32K", modelName: "doubao-1-5-lite-32k-250115", type: "text", think: false },\n    { name: "Doubao-1.5-Vision-Pro-32K", modelName: "doubao-1-5-vision-pro-32k-250115", type: "text", think: false },\n    // ===================== \u6587\u672C\u6A21\u578B - \u7B2C\u4E09\u65B9(\u706B\u5C71\u5F15\u64CE\u6258\u7BA1) =====================\n    { name: "GLM-4-7", modelName: "glm-4-7-251222", type: "text", think: true },\n    { name: "DeepSeek-V3-2", modelName: "deepseek-v3-2-251201", type: "text", think: true },\n    { name: "DeepSeek-V3-1-Terminus", modelName: "deepseek-v3-1-terminus", type: "text", think: true },\n    { name: "DeepSeek-V3(0324)", modelName: "deepseek-v3-250324", type: "text", think: false },\n    { name: "DeepSeek-R1(0528)", modelName: "deepseek-r1-250528", type: "text", think: true },\n    { name: "Qwen3-32B", modelName: "qwen3-32b-20250429", type: "text", think: false },\n    { name: "Qwen3-14B", modelName: "qwen3-14b-20250429", type: "text", think: false },\n    { name: "Qwen3-8B", modelName: "qwen3-8b-20250429", type: "text", think: false },\n    { name: "Qwen3-0.6B", modelName: "qwen3-0-6b-20250429", type: "text", think: false },\n    { name: "Qwen2.5-72B", modelName: "qwen2-5-72b-20240919", type: "text", think: false },\n    { name: "GLM-4.5-Air", modelName: "glm-4-5-air", type: "text", think: false },\n    // ===================== \u56FE\u7247\u751F\u6210\u6A21\u578B =====================\n    {\n      name: "Seedream-5.0",\n      modelName: "doubao-seedream-5-0-260128",\n      type: "image",\n      mode: ["text", "singleImage", "multiReference"],\n    },\n    {\n      name: "Seedream-5.0-Lite",\n      modelName: "doubao-seedream-5-0-lite-260128",\n      type: "image",\n      mode: ["text", "singleImage", "multiReference"],\n    },\n    {\n      name: "Seedream-4.5",\n      modelName: "doubao-seedream-4-5-251128",\n      type: "image",\n      mode: ["text", "singleImage", "multiReference"],\n    },\n    {\n      name: "Seedream-4.0",\n      modelName: "doubao-seedream-4-0-250828",\n      type: "image",\n      mode: ["text", "singleImage", "multiReference"],\n    },\n    {\n      name: "Seedream-3.0-T2I",\n      modelName: "doubao-seedream-3-0-t2i-250415",\n      type: "image",\n      mode: ["text"],\n    },\n    // ===================== \u89C6\u9891\u751F\u6210\u6A21\u578B =====================\n    {\n      name: "Seedance-2.0(\u97F3\u753B\u540C\u751F)",\n      modelName: "doubao-seedance-2-0-260128",\n      type: "video",\n      mode: ["text", "startFrameOptional", ["imageReference:9", "videoReference:3", "audioReference:3"]],\n      audio: "optional",\n      durationResolutionMap: [{ duration: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], resolution: ["480p", "720p"] }],\n    },\n    {\n      name: "Seedance-2.0-Fast(\u97F3\u753B\u540C\u751F)",\n      modelName: "doubao-seedance-2-0-fast-260128",\n      type: "video",\n      mode: ["text", "startFrameOptional", ["imageReference:9", "videoReference:3", "audioReference:3"]],\n      audio: "optional",\n      durationResolutionMap: [{ duration: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], resolution: ["480p", "720p"] }],\n    },\n    {\n      name: "Seedance-1.5-Pro(\u97F3\u753B\u540C\u751F)",\n      modelName: "doubao-seedance-1-5-pro-251215",\n      type: "video",\n      mode: ["text", "startFrameOptional"],\n      audio: "optional",\n      durationResolutionMap: [{ duration: [4, 5, 6, 7, 8, 9, 10, 11, 12], resolution: ["480p", "720p", "1080p"] }],\n    },\n    {\n      name: "Seedance-1.0-Pro",\n      modelName: "doubao-seedance-1-0-pro-250528",\n      type: "video",\n      mode: ["text", "startFrameOptional"],\n      audio: false,\n      durationResolutionMap: [{ duration: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], resolution: ["480p", "720p", "1080p"] }],\n    },\n    {\n      name: "Seedance-1.0-Pro-Fast",\n      modelName: "doubao-seedance-1-0-pro-fast-251015",\n      type: "video",\n      mode: ["text", "singleImage"],\n      audio: false,\n      durationResolutionMap: [{ duration: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], resolution: ["480p", "720p", "1080p"] }],\n    },\n    {\n      name: "Seedance-1.0-Lite-T2V",\n      modelName: "doubao-seedance-1-0-lite-t2v-250428",\n      type: "video",\n      mode: ["text"],\n      audio: false,\n      durationResolutionMap: [{ duration: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], resolution: ["480p", "720p", "1080p"] }],\n    },\n    {\n      name: "Seedance-1.0-Lite-I2V",\n      modelName: "doubao-seedance-1-0-lite-i2v-250428",\n      type: "video",\n      mode: ["startFrameOptional", ["imageReference:4"]],\n      audio: false,\n      durationResolutionMap: [{ duration: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], resolution: ["480p", "720p", "1080p"] }],\n    },\n  ],\n};\n\n// ============================================================\n// \u8F85\u52A9\u5DE5\u5177\n// ============================================================\n\nconst getHeaders = () => {\n  if (!vendor.inputValues.apiKey) throw new Error("\u7F3A\u5C11API Key");\n  return {\n    "Content-Type": "application/json",\n    Authorization: `Bearer ${vendor.inputValues.apiKey.replace(/^Bearer\\s+/i, "")}`,\n  };\n};\n\nconst getBaseUrl = () => vendor.inputValues.baseUrl.replace(/\\/+$/, "");\n\n// ============================================================\n// \u9002\u914D\u5668\u51FD\u6570\n// ============================================================\n\nconst textRequest = (model: TextModel, think: boolean, thinkLevel: 0 | 1 | 2 | 3) => {\n  if (!vendor.inputValues.apiKey) throw new Error("\u7F3A\u5C11API Key");\n  const apiKey = vendor.inputValues.apiKey.replace(/^Bearer\\s+/i, "");\n\n  const effortMap: Record<number, string> = {\n    0: "minimal",\n    1: "low",\n    2: "medium",\n    3: "high",\n  };\n\n  return createOpenAICompatible({\n    name: "volcengine",\n    baseURL: getBaseUrl(),\n    apiKey,\n    fetch: async (url: string, options?: RequestInit) => {\n      const rawBody = JSON.parse((options?.body as string) ?? "{}");\n      const modifiedBody = {\n        ...rawBody,\n        thinking: {\n          type: "enabled",\n        },\n        reasoning_effort: effortMap[thinkLevel],\n      };\n      return await fetch(url, {\n        ...options,\n        body: JSON.stringify(modifiedBody),\n      });\n    },\n  }).chatModel(model.modelName);\n};\n\nconst imageRequest = async (config: ImageConfig, model: ImageModel): Promise<string> => {\n  const baseUrl = getBaseUrl();\n  const headers = getHeaders();\n\n  const body: any = {\n    model: model.modelName,\n    prompt: config.prompt || "",\n    response_format: "url",\n    watermark: false,\n  };\n\n  const isOldModel = model.modelName.includes("seedream-3-0");\n  const is5Lite = model.modelName.includes("seedream-5-0-lite");\n\n  // sequential_image_generation \u4EC5 seedream 5.0-lite/4.5/4.0 \u652F\u6301\n  if (!isOldModel) {\n    body.sequential_image_generation = "disabled";\n  }\n\n  // \u53C2\u8003\u56FE\u7247\uFF1A\u5355\u56FE\u4E3A string\uFF0C\u591A\u56FE\u4E3A array\uFF08seedream-3.0-t2i \u4E0D\u652F\u6301 image \u53C2\u6570\uFF09\n  if (!isOldModel && config.referenceList && config.referenceList.length > 0) {\n    const images = config.referenceList.map((ref) => ref.base64);\n    body.image = images.length === 1 ? images[0] : images;\n  }\n\n  // \u5C3A\u5BF8\u5904\u7406\uFF1A\u4F18\u5148\u4F7F\u7528\u63A8\u8350\u50CF\u7D20\u503C\uFF0C\u672A\u5339\u914D\u5219\u76F4\u63A5\u4F20\u5206\u8FA8\u7387\u5B57\u7B26\u4E32\u8BA9\u6A21\u578B\u81EA\u884C\u51B3\u5B9A\n  const [w, h] = config.aspectRatio.split(":").map(Number);\n  const sizeTable: Record<string, Record<string, string>> = {\n    "1K": {\n      "1:1": "1024x1024",\n      "4:3": "1152x864",\n      "3:4": "864x1152",\n      "16:9": "1280x720",\n      "9:16": "720x1280",\n      "3:2": "1248x832",\n      "2:3": "832x1248",\n      "21:9": "1512x648",\n    },\n    "2K": {\n      "1:1": "2048x2048",\n      "4:3": "2304x1728",\n      "3:4": "1728x2304",\n      "16:9": "2848x1600",\n      "9:16": "1600x2848",\n      "3:2": "2496x1664",\n      "2:3": "1664x2496",\n      "21:9": "3136x1344",\n    },\n    "4K": {\n      "1:1": "4096x4096",\n      "4:3": "4704x3520",\n      "3:4": "3520x4704",\n      "16:9": "5504x3040",\n      "9:16": "3040x5504",\n      "3:2": "4992x3328",\n      "2:3": "3328x4992",\n      "21:9": "6240x2656",\n    },\n  };\n\n  const sizeKey = config.size || "2K";\n  const ratioKey = config.aspectRatio;\n  const table = sizeTable[sizeKey];\n\n  if (table && table[ratioKey]) {\n    // \u63A8\u8350\u50CF\u7D20\u503C\u5339\u914D\u5230\u4E86\uFF0C\u4F46\u9700\u8981\u68C0\u67E5\u662F\u5426\u6EE1\u8DB3\u6A21\u578B\u6700\u4F4E\u50CF\u7D20\u8981\u6C42\n    const [pw, ph] = table[ratioKey].split("x").map(Number);\n    const totalPixels = pw * ph;\n    if (isOldModel) {\n      // seedream-3.0-t2i: \u50CF\u7D20\u8303\u56F4 [512x512, 2048x2048]\n      body.size = table[ratioKey];\n    } else if (totalPixels < 3686400) {\n      // 1K \u50CF\u7D20\u503C\u4E0D\u6EE1\u8DB3\u65B0\u6A21\u578B\u6700\u4F4E\u8981\u6C42\uFF0C\u76F4\u63A5\u4F20 "2K" \u8BA9\u6A21\u578B\u81EA\u884C\u51B3\u5B9A\n      body.size = "2K";\n    } else if (is5Lite && totalPixels > 10404496) {\n      // seedream-5.0-lite \u6700\u9AD8 10404496\uFF0C4K \u8D85\u9650\uFF0C\u56DE\u9000\u4F20 "2K"\n      body.size = "2K";\n    } else {\n      body.size = table[ratioKey];\n    }\n  } else if (isOldModel) {\n    // seedream-3.0-t2i: \u50CF\u7D20\u8303\u56F4 [512x512, 2048x2048]\uFF0C\u76F4\u63A5\u6309\u6BD4\u4F8B\u8BA1\u7B97\n    const base = sizeKey === "1K" ? 1024 : 2048;\n    const calcW = Math.min(2048, Math.round(base * Math.sqrt(w / h)));\n    const calcH = Math.min(2048, Math.round(base * Math.sqrt(h / w)));\n    body.size = `${Math.max(512, calcW)}x${Math.max(512, calcH)}`;\n  } else {\n    // \u65B0\u6A21\u578B\u672A\u5339\u914D\u63A8\u8350\u503C\u65F6\uFF0C\u76F4\u63A5\u4F20\u5206\u8FA8\u7387\u5B57\u7B26\u4E32\uFF08\u65B9\u5F0F1\uFF09\uFF0C\u7531\u6A21\u578B\u6839\u636E prompt \u81EA\u884C\u51B3\u5B9A\u5C3A\u5BF8\n    // seedream 5.0-lite \u652F\u6301 "2K"/"3K"\uFF0Cseedream 4.5 \u652F\u6301 "2K"/"4K"\uFF0Cseedream 4.0 \u652F\u6301 "1K"/"2K"/"4K"\n    if (is5Lite) {\n      body.size = sizeKey === "4K" ? "3K" : sizeKey === "1K" ? "2K" : sizeKey;\n    } else {\n      body.size = sizeKey === "1K" ? "2K" : sizeKey;\n    }\n  }\n\n  logger(`[\u56FE\u7247\u751F\u6210] \u8BF7\u6C42\u6A21\u578B: ${model.modelName}, \u5C3A\u5BF8: ${body.size}`);\n\n  const response = await axios.post(`${baseUrl}/images/generations`, body, { headers });\n  const data = response.data;\n\n  if (data?.error) {\n    throw new Error(`\u56FE\u7247\u751F\u6210\u5931\u8D25\uFF1A${data.error.message || data.error.code}`);\n  }\n\n  // \u4ECE data \u6570\u7EC4\u4E2D\u63D0\u53D6\u7B2C\u4E00\u5F20\u6210\u529F\u7684\u56FE\u7247\n  if (data?.data && data.data.length > 0) {\n    for (const item of data.data) {\n      if (item.url) {\n        return await urlToBase64(item.url);\n      }\n      if (item.b64_json) {\n        return item.b64_json;\n      }\n      if (item.error) {\n        throw new Error(`\u56FE\u7247\u751F\u6210\u5931\u8D25\uFF1A${item.error.message || item.error.code}`);\n      }\n    }\n  }\n\n  throw new Error("\u56FE\u7247\u751F\u6210\u5931\u8D25\uFF1A\u672A\u8FD4\u56DE\u6709\u6548\u7ED3\u679C");\n};\n\nconst videoRequest = async (config: VideoConfig, model: VideoModel): Promise<string> => {\n  const baseUrl = getBaseUrl();\n  const headers = getHeaders();\n\n  const content: any[] = [];\n\n  if (config.prompt) {\n    content.push({ type: "text", text: config.prompt });\n  }\n\n  if (typeof config.mode === "string") {\n    switch (config.mode) {\n      case "singleImage": {\n        const firstImage = config.referenceList?.find((r) => r.type === "image");\n        if (firstImage) {\n          content.push({\n            type: "image_url",\n            image_url: { url: firstImage.base64 },\n            role: "first_frame",\n          });\n        }\n        break;\n      }\n      case "startFrameOptional": {\n        const images = config.referenceList?.filter((r) => r.type === "image") ?? [];\n        if (images.length > 0) {\n          content.push({\n            type: "image_url",\n            image_url: { url: images[0].base64 },\n            role: "first_frame",\n          });\n          if (images.length > 1) {\n            content.push({\n              type: "image_url",\n              image_url: { url: images[1].base64 },\n              role: "last_frame",\n            });\n          }\n        }\n        break;\n      }\n      case "startEndRequired": {\n        const images = config.referenceList?.filter((r) => r.type === "image") ?? [];\n        if (images.length >= 2) {\n          content.push({\n            type: "image_url",\n            image_url: { url: images[0].base64 },\n            role: "first_frame",\n          });\n          content.push({\n            type: "image_url",\n            image_url: { url: images[1].base64 },\n            role: "last_frame",\n          });\n        }\n        break;\n      }\n      case "endFrameOptional": {\n        const images = config.referenceList?.filter((r) => r.type === "image") ?? [];\n        if (images.length > 0) {\n          content.push({\n            type: "image_url",\n            image_url: { url: images[0].base64 },\n            role: "first_frame",\n          });\n          if (images.length > 1) {\n            content.push({\n              type: "image_url",\n              image_url: { url: images[1].base64 },\n              role: "last_frame",\n            });\n          }\n        }\n        break;\n      }\n      case "text":\n      default:\n        break;\n    }\n  } else if (Array.isArray(config.mode)) {\n    // \u591A\u6A21\u6001\u53C2\u8003\u6A21\u5F0F\uFF1A\u6309\u7C7B\u578B\u5206\u522B\u63D0\u53D6\u5E76\u6DFB\u52A0\n    const imageRefs = config.referenceList?.filter((r) => r.type === "image") ?? [];\n    const videoRefs = config.referenceList?.filter((r) => r.type === "video") ?? [];\n    const audioRefs = config.referenceList?.filter((r) => r.type === "audio") ?? [];\n\n    for (const refDef of config.mode) {\n      if (typeof refDef === "string") {\n        if (refDef.startsWith("imageReference:")) {\n          const maxCount = parseInt(refDef.split(":")[1], 10);\n          for (const ref of imageRefs.slice(0, maxCount)) {\n            content.push({\n              type: "image_url",\n              image_url: { url: ref.base64 },\n              role: "reference_image",\n            });\n          }\n        } else if (refDef.startsWith("videoReference:")) {\n          const maxCount = parseInt(refDef.split(":")[1], 10);\n          for (const ref of videoRefs.slice(0, maxCount)) {\n            content.push({\n              type: "video_url",\n              video_url: { url: ref.base64 },\n              role: "reference_video",\n            });\n          }\n        } else if (refDef.startsWith("audioReference:")) {\n          const maxCount = parseInt(refDef.split(":")[1], 10);\n          for (const ref of audioRefs.slice(0, maxCount)) {\n            content.push({\n              type: "audio_url",\n              audio_url: { url: ref.base64 },\n              role: "reference_audio",\n            });\n          }\n        }\n      }\n    }\n  }\n\n  const body: any = {\n    model: model.modelName,\n    content,\n    ratio: config.aspectRatio,\n    duration: config.duration,\n    resolution: config.resolution || "720p",\n    watermark: false,\n  };\n\n  if (model.audio === "optional") {\n    body.generate_audio = config.audio !== false;\n  } else if (model.audio === true) {\n    body.generate_audio = true;\n  } else {\n    body.generate_audio = false;\n  }\n\n  logger(`[\u89C6\u9891\u751F\u6210] \u63D0\u4EA4\u4EFB\u52A1, \u6A21\u578B: ${model.modelName}, \u65F6\u957F: ${config.duration}s, \u5206\u8FA8\u7387: ${config.resolution}`);\n\n  const createResponse = await axios.post(`${baseUrl}/contents/generations/tasks`, body, { headers });\n  const taskId = createResponse.data?.id;\n\n  if (!taskId) {\n    throw new Error("\u89C6\u9891\u751F\u6210\u4EFB\u52A1\u521B\u5EFA\u5931\u8D25\uFF1A\u672A\u8FD4\u56DE\u4EFB\u52A1ID");\n  }\n\n  logger(`[\u89C6\u9891\u751F\u6210] \u4EFB\u52A1\u5DF2\u521B\u5EFA, ID: ${taskId}`);\n\n  const result = await pollTask(\n    async (): Promise<PollResult> => {\n      const queryResponse = await axios.get(`${baseUrl}/contents/generations/tasks/${taskId}`, { headers });\n      const task = queryResponse.data;\n\n      logger(`[\u89C6\u9891\u751F\u6210] \u4EFB\u52A1\u72B6\u6001: ${task.status}`);\n\n      switch (task.status) {\n        case "succeeded":\n          if (task.content?.video_url) {\n            return { completed: true, data: task.content.video_url };\n          }\n          return { completed: true, error: "\u4EFB\u52A1\u6210\u529F\u4F46\u672A\u8FD4\u56DE\u89C6\u9891URL" };\n        case "failed":\n          return { completed: true, error: task.error?.message || "\u89C6\u9891\u751F\u6210\u5931\u8D25" };\n        case "expired":\n          return { completed: true, error: "\u89C6\u9891\u751F\u6210\u4EFB\u52A1\u8D85\u65F6" };\n        case "cancelled":\n          return { completed: true, error: "\u89C6\u9891\u751F\u6210\u4EFB\u52A1\u5DF2\u53D6\u6D88" };\n        default:\n          return { completed: false };\n      }\n    },\n    10000,\n    600000 * 3,\n  );\n\n  if (result.error) {\n    throw new Error(result.error);\n  }\n\n  return await urlToBase64(result.data!);\n};\n\nconst ttsRequest = async (config: TTSConfig, model: TTSModel): Promise<string> => {\n  return "";\n};\n\nconst checkForUpdates = async (): Promise<{ hasUpdate: boolean; latestVersion: string; notice: string }> => {\n  return { hasUpdate: false, latestVersion: "2.0", notice: "" };\n};\n\nconst updateVendor = async (): Promise<string> => {\n  return "";\n};\n\n// ============================================================\n// \u5BFC\u51FA\n// ============================================================\n\nexports.vendor = vendor;\nexports.textRequest = textRequest;\nexports.imageRequest = imageRequest;\nexports.videoRequest = videoRequest;\nexports.ttsRequest = ttsRequest;\nexports.checkForUpdates = checkForUpdates;\nexports.updateVendor = updateVendor;\n\nexport {};\n'
     };
   }
 });
@@ -106420,11 +106421,26 @@ var init_vendor = __esm({
 function isHiddenBuiltInVendorId(id) {
   return typeof id === "string" && hiddenBuiltInVendorIdSet.has(id);
 }
-var INTERNAL_ROUTER_VENDOR_ID, HIDDEN_BUILT_IN_VENDOR_IDS, hiddenBuiltInVendorIdSet;
+function toPublicVendorId(id) {
+  return id === INTERNAL_ROUTER_VENDOR_ID ? PUBLIC_ROUTER_VENDOR_ID : id || "";
+}
+function toInternalVendorId(id) {
+  return id === PUBLIC_ROUTER_VENDOR_ID ? INTERNAL_ROUTER_VENDOR_ID : id || "";
+}
+function toPublicModelId(modelId) {
+  if (!modelId) return "";
+  return modelId.replace(new RegExp(`^${INTERNAL_ROUTER_VENDOR_ID}:`), `${PUBLIC_ROUTER_VENDOR_ID}:`);
+}
+function toInternalModelId(modelId) {
+  if (!modelId) return "";
+  return modelId.replace(new RegExp(`^${PUBLIC_ROUTER_VENDOR_ID}:`), `${INTERNAL_ROUTER_VENDOR_ID}:`);
+}
+var INTERNAL_ROUTER_VENDOR_ID, PUBLIC_ROUTER_VENDOR_ID, HIDDEN_BUILT_IN_VENDOR_IDS, hiddenBuiltInVendorIdSet;
 var init_vendorVisibility = __esm({
   "src/utils/vendorVisibility.ts"() {
     "use strict";
     INTERNAL_ROUTER_VENDOR_ID = "subrouter";
+    PUBLIC_ROUTER_VENDOR_ID = "model-service";
     HIDDEN_BUILT_IN_VENDOR_IDS = [
       "toonflow",
       "toonflow2",
@@ -236867,8 +236883,21 @@ __export(subrouter_exports, {
   loginAndPrepareSubrouter: () => loginAndPrepareSubrouter,
   loginWithDefaultSubrouterProviders: () => loginWithDefaultSubrouterProviders,
   refreshStoredModels: () => refreshStoredModels,
-  selectSubrouterModel: () => selectSubrouterModel
+  selectSubrouterModel: () => selectSubrouterModel,
+  toPublicSubrouterAccount: () => toPublicSubrouterAccount
 });
+function toPublicSubrouterAccount(account) {
+  if (!account) return null;
+  return {
+    username: account.username,
+    email: account.email,
+    displayName: account.displayName,
+    distributorId: account.distributorId,
+    distributorName: account.distributorName,
+    apiKeyReady: Boolean(account.apiKey),
+    updatedTime: account.updatedTime
+  };
+}
 function signToken(payload, expiresIn, secret) {
   return import_jsonwebtoken2.default.sign(payload, secret, { expiresIn });
 }
@@ -237024,7 +237053,7 @@ function extractSubrouterAIDistributor(data) {
   const belongs = rawBelongs == null ? id > 0 : Boolean(rawBelongs);
   if (!belongs) return void 0;
   const slug = String(rawDist.slug || body.distributor_slug || body.distributorSlug || "").trim();
-  if (!id || !slug) throw new Error("\u7528\u6237\u5C5E\u4E8E\u5206\u7AD9\uFF0C\u4F46 SubRouterAI \u672A\u8FD4\u56DE\u5206\u7AD9 slug");
+  if (!id || !slug) throw new Error("\u7528\u6237\u5C5E\u4E8E\u5206\u7AD9\uFF0C\u4F46 \u6A21\u578B\u670D\u52A1\u672A\u8FD4\u56DE\u5206\u7AD9 slug");
   return {
     id,
     slug,
@@ -237060,9 +237089,9 @@ function findReusableKey(items) {
 async function loginSubrouterAI(baseUrl, username, password, timeoutMs) {
   const client = getAxios(baseUrl, {}, timeoutMs);
   const res = await client.post("/api/user/login", { username, password });
-  if (res.data?.success === false) throw new Error(res.data?.message || "\u5185\u7F6E\u667A\u80FD\u8DEF\u7531\u767B\u5F55\u5931\u8D25");
+  if (res.data?.success === false) throw new Error(res.data?.message || "\u6A21\u578B\u8D26\u53F7\u767B\u5F55\u5931\u8D25");
   const cookie = buildCookie(res.headers["set-cookie"]);
-  if (!cookie) throw new Error("\u5185\u7F6E\u667A\u80FD\u8DEF\u7531\u767B\u5F55\u6210\u529F\u4F46\u672A\u8FD4\u56DE\u4F1A\u8BDD\u4FE1\u606F");
+  if (!cookie) throw new Error("\u6A21\u578B\u8D26\u53F7\u767B\u5F55\u6210\u529F\u4F46\u672A\u8FD4\u56DE\u4F1A\u8BDD\u4FE1\u606F");
   const user = extractUser(res.data);
   const externalUserId = user.id != null ? String(user.id) : void 0;
   const distributor = extractSubrouterAIDistributor(res.data);
@@ -237082,11 +237111,11 @@ async function loginSubrouterAI(baseUrl, username, password, timeoutMs) {
 async function loginSub2API(baseUrl, email4, password, timeoutMs) {
   const client = getAxios(baseUrl, {}, timeoutMs);
   const res = await client.post("/api/v1/auth/login", { email: email4, password });
-  if (res.data?.code && res.data.code !== 0) throw new Error(res.data?.message || "\u5185\u7F6E\u667A\u80FD\u8DEF\u7531\u767B\u5F55\u5931\u8D25");
+  if (res.data?.code && res.data.code !== 0) throw new Error(res.data?.message || "\u6A21\u578B\u8D26\u53F7\u767B\u5F55\u5931\u8D25");
   const data = res.data?.data || {};
   const user = data.user || {};
   const accessToken = data.access_token || data.accessToken;
-  if (!accessToken) throw new Error("\u5185\u7F6E\u667A\u80FD\u8DEF\u7531\u767B\u5F55\u6210\u529F\u4F46\u672A\u8FD4\u56DE\u8BBF\u95EE\u4EE4\u724C");
+  if (!accessToken) throw new Error("\u6A21\u578B\u8D26\u53F7\u767B\u5F55\u6210\u529F\u4F46\u672A\u8FD4\u56DE\u8BBF\u95EE\u4EE4\u724C");
   return {
     provider: "sub2api",
     baseUrl: normalizeBaseUrl(baseUrl),
@@ -237106,7 +237135,7 @@ async function listSubrouterAIKeys(account) {
     return extractItems(res2.data);
   }
   const res = await client.get("/api/token/");
-  if (res.data?.success === false) throw new Error(res.data?.message || "\u83B7\u53D6\u5185\u7F6E\u667A\u80FD\u8DEF\u7531\u8BBF\u95EE\u5BC6\u94A5\u5217\u8868\u5931\u8D25");
+  if (res.data?.success === false) throw new Error(res.data?.message || "\u83B7\u53D6\u6A21\u578B\u670D\u52A1\u8BBF\u95EE\u5BC6\u94A5\u5217\u8868\u5931\u8D25");
   return extractItems(res.data);
 }
 async function ensureSubrouterAIKey(account) {
@@ -237123,11 +237152,11 @@ async function ensureSubrouterAIKey(account) {
     unlimited_quota: true,
     model_limits_enabled: false
   });
-  if (res.data?.success === false) throw new Error(res.data?.message || "\u521B\u5EFA\u5185\u7F6E\u667A\u80FD\u8DEF\u7531\u8BBF\u95EE\u5BC6\u94A5\u5931\u8D25");
+  if (res.data?.success === false) throw new Error(res.data?.message || "\u521B\u5EFA\u6A21\u578B\u670D\u52A1\u8BBF\u95EE\u5BC6\u94A5\u5931\u8D25");
   const created = extractKey(res.data);
   if (created.key) return { key: normalizeSubrouterAIKey(created.key), id: created.id };
   const createdFromList = findReusableKey((await listSubrouterAIKeys(account)).filter((item) => item.name === name28));
-  if (!createdFromList) throw new Error("\u5185\u7F6E\u667A\u80FD\u8DEF\u7531\u8BBF\u95EE\u5BC6\u94A5\u5DF2\u521B\u5EFA\u4F46\u672A\u80FD\u4ECE\u5217\u8868\u4E2D\u8BFB\u53D6");
+  if (!createdFromList) throw new Error("\u6A21\u578B\u670D\u52A1\u8BBF\u95EE\u5BC6\u94A5\u5DF2\u521B\u5EFA\u4F46\u672A\u80FD\u4ECE\u5217\u8868\u4E2D\u8BFB\u53D6");
   return createdFromList;
 }
 async function ensureSubrouterAISelfDistributorKey(account) {
@@ -237162,7 +237191,7 @@ async function ensureSub2APIKey(account) {
   if (subrouterGroup?.id != null) body.group_id = Number(subrouterGroup.id);
   const createRes = await client.post("/api/v1/keys", body);
   const created = extractKey(createRes.data);
-  if (!created.key) throw new Error("\u5185\u7F6E\u667A\u80FD\u8DEF\u7531\u8BBF\u95EE\u5BC6\u94A5\u5DF2\u521B\u5EFA\u4F46\u54CD\u5E94\u4E2D\u6CA1\u6709\u8FD4\u56DE\u5BC6\u94A5");
+  if (!created.key) throw new Error("\u6A21\u578B\u670D\u52A1\u8BBF\u95EE\u5BC6\u94A5\u5DF2\u521B\u5EFA\u4F46\u54CD\u5E94\u4E2D\u6CA1\u6709\u8FD4\u56DE\u5BC6\u94A5");
   return { key: created.key, id: created.id };
 }
 async function fetchSubrouterAIModels(account) {
@@ -237264,10 +237293,10 @@ async function autoSelectDefaultTextAgentModels(userId, models) {
 }
 function buildModelNotice(result, defaultTextModel) {
   if (result.models.length === 0) {
-    return "\u672A\u68C0\u6D4B\u5230\u53EF\u7528\u6A21\u578B\uFF0C\u8BF7\u5728\u5185\u7F6E\u667A\u80FD\u8DEF\u7531\u8BA2\u9605\u5546\u5BB6\uFF0C\u6216\u786E\u8BA4\u5206\u7AD9\u5DF2\u4E0A\u67B6\u53EF\u7528\u6A21\u578B\u540E\u5237\u65B0\u6A21\u578B\u3002";
+    return "\u672A\u68C0\u6D4B\u5230\u53EF\u7528\u6A21\u578B\uFF0C\u8BF7\u5728\u6A21\u578B\u670D\u52A1\u8BA2\u9605\u5546\u5BB6\uFF0C\u6216\u786E\u8BA4\u5206\u7AD9\u5DF2\u4E0A\u67B6\u53EF\u7528\u6A21\u578B\u540E\u5237\u65B0\u6A21\u578B\u3002";
   }
   if (!defaultTextModel) {
-    return "\u5DF2\u68C0\u6D4B\u5230\u5185\u7F6E\u667A\u80FD\u8DEF\u7531\u53EF\u7528\u6A21\u578B\uFF0C\u4F46\u6CA1\u6709\u53EF\u7528\u4E8E ToonFlow Agent \u7684\u6587\u672C\u6A21\u578B\uFF1B\u56FE\u7247/\u89C6\u9891\u6A21\u578B\u4ECD\u53EF\u5728\u9879\u76EE\u521B\u5EFA\u65F6\u9009\u62E9\u3002";
+    return "\u5DF2\u68C0\u6D4B\u5230\u6A21\u578B\u670D\u52A1\u53EF\u7528\u6A21\u578B\uFF0C\u4F46\u6CA1\u6709\u53EF\u7528\u4E8E ToonFlow Agent \u7684\u6587\u672C\u6A21\u578B\uFF1B\u56FE\u7247/\u89C6\u9891\u6A21\u578B\u4ECD\u53EF\u5728\u9879\u76EE\u521B\u5EFA\u65F6\u9009\u62E9\u3002";
   }
   if (result.source === "dist-site") {
     return void 0;
@@ -237300,8 +237329,8 @@ const vendor: VendorConfig = {
   id: "subrouter",
   version: "${SUBROUTER_VENDOR_VERSION}",
   author: "ToonFlow",
-  name: "\u5185\u7F6E\u667A\u80FD\u8DEF\u7531",
-  description: "\u4F7F\u7528\u5185\u7F6E\u667A\u80FD\u8DEF\u7531\u81EA\u52A8\u521B\u5EFA\u7684\u7528\u6237\u7EA7\u8BBF\u95EE\u5BC6\u94A5\uFF0C\u652F\u6301\u6587\u672C\u3001\u56FE\u7247\u3001\u89C6\u9891\u6A21\u578B\u3002",
+  name: "\u6A21\u578B\u670D\u52A1",
+  description: "\u4F7F\u7528\u6A21\u578B\u670D\u52A1\u81EA\u52A8\u521B\u5EFA\u7684\u7528\u6237\u7EA7\u8BBF\u95EE\u5BC6\u94A5\uFF0C\u652F\u6301\u6587\u672C\u3001\u56FE\u7247\u3001\u89C6\u9891\u6A21\u578B\u3002",
   inputs: [
     { key: "apiKey", label: "API\u5BC6\u94A5", type: "password", required: true },
     { key: "baseUrl", label: "API\u57FA\u5730\u5740", type: "password", required: true },
@@ -237492,12 +237521,12 @@ const openAIVideoSize = (resolution: unknown, aspectRatio: unknown): string => {
 };
 
 const textRequest = (model: TextModel, think: boolean, thinkLevel: 0 | 1 | 2 | 3) => {
-  if (!vendor.inputValues.apiKey) throw new Error("\u7F3A\u5C11\u5185\u7F6E\u667A\u80FD\u8DEF\u7531 API Key");
+  if (!vendor.inputValues.apiKey) throw new Error("\u7F3A\u5C11\u6A21\u578B\u670D\u52A1 API Key");
   return createOpenAICompatible({ name: "subrouter", baseURL: baseUrl(), apiKey: apiKey() }).chatModel(model.modelName);
 };
 
 const imageRequest = async (config: ImageConfig, model: ImageModel): Promise<string> => {
-  if (!vendor.inputValues.apiKey) throw new Error("\u7F3A\u5C11\u5185\u7F6E\u667A\u80FD\u8DEF\u7531 API Key");
+  if (!vendor.inputValues.apiKey) throw new Error("\u7F3A\u5C11\u6A21\u578B\u670D\u52A1 API Key");
   const body: any = {
     model: model.modelName,
     prompt: config.prompt,
@@ -237515,7 +237544,7 @@ const imageRequest = async (config: ImageConfig, model: ImageModel): Promise<str
 };
 
 const videoRequest = async (config: VideoConfig, model: VideoModel): Promise<string> => {
-  if (!vendor.inputValues.apiKey) throw new Error("\u7F3A\u5C11\u5185\u7F6E\u667A\u80FD\u8DEF\u7531 API Key");
+  if (!vendor.inputValues.apiKey) throw new Error("\u7F3A\u5C11\u6A21\u578B\u670D\u52A1 API Key");
   const imageRefs = (config.referenceList || []).filter((r) => r.type === "image").map((r) => r.base64);
   const body: any = {
     model: model.modelName,
@@ -237530,7 +237559,7 @@ const videoRequest = async (config: VideoConfig, model: VideoModel): Promise<str
   });
   const taskId = pickTaskId(data);
   const direct = pickUrl(data);
-  console.info("[\u5185\u7F6E\u667A\u80FD\u8DEF\u7531\u89C6\u9891] \u521B\u5EFA\u8FD4\u56DE", {
+  console.info("[\u6A21\u578B\u670D\u52A1\u89C6\u9891] \u521B\u5EFA\u8FD4\u56DE", {
     model: model.modelName,
     taskId,
     hasDirectUrl: Boolean(direct),
@@ -237545,7 +237574,7 @@ const videoRequest = async (config: VideoConfig, model: VideoModel): Promise<str
     });
     const status = pickStatus(queryData);
     const url = pickUrl(queryData);
-    console.info("[\u5185\u7F6E\u667A\u80FD\u8DEF\u7531\u89C6\u9891] \u8F6E\u8BE2\u8FD4\u56DE", {
+    console.info("[\u6A21\u578B\u670D\u52A1\u89C6\u9891] \u8F6E\u8BE2\u8FD4\u56DE", {
       model: model.modelName,
       taskId,
       status,
@@ -237585,7 +237614,7 @@ async function ensureSubrouterVendor() {
     await db_default("o_vendorConfig").insert({ id: SUBROUTER_VENDOR_ID, inputValues: "{}", models: "[]", enable: 0 });
   }
   const code = getCode(SUBROUTER_VENDOR_ID);
-  const isAutoSubrouterVendor = !code || code.includes("SubRouter \u667A\u80FD\u8DEF\u7531") || code.includes("\u5185\u7F6E\u667A\u80FD\u8DEF\u7531");
+  const isAutoSubrouterVendor = !code || code.includes("\u6A21\u578B\u670D\u52A1") || code.includes("\u6A21\u578B\u670D\u52A1");
   const versionMatch = code.match(/version:\s*["']([^"']+)["']/);
   const currentVersion = versionMatch ? Number.parseFloat(versionMatch[1]) : 0;
   if (isAutoSubrouterVendor && (!code || !Number.isFinite(currentVersion) || currentVersion < Number.parseFloat(SUBROUTER_VENDOR_VERSION))) {
@@ -237691,7 +237720,7 @@ async function ensureLocalUser(name28, fallbackPassword) {
 }
 async function refreshStoredModels(userId, provider, baseUrl) {
   const account = await getStoredSubrouterAccount(userId, provider, baseUrl);
-  if (!account) throw new Error("\u672A\u7ED1\u5B9A\u5185\u7F6E\u667A\u80FD\u8DEF\u7531\u8D26\u6237");
+  if (!account) throw new Error("\u672A\u7ED1\u5B9A\u6A21\u578B\u8D26\u53F7");
   const modelResult = account.provider === "subrouterai" ? await fetchSubrouterAIModels(account) : await fetchSub2APIModels(account);
   const models = modelResult.models;
   await saveAccount({ ...account, models: JSON.stringify(models) });
@@ -237716,7 +237745,7 @@ async function selectSubrouterModel(userId, modelName, targets) {
   const vendorId = SUBROUTER_VENDOR_ID;
   const model = modelName.includes(":") ? modelName.split(/:(.+)/)[1] : modelName;
   const account = await getStoredSubrouterAccount(userId);
-  if (!account) throw new Error("\u672A\u7ED1\u5B9A\u5185\u7F6E\u667A\u80FD\u8DEF\u7531\u8D26\u6237");
+  if (!account) throw new Error("\u672A\u7ED1\u5B9A\u6A21\u578B\u8D26\u53F7");
   const availableModel = parseStoredModels(account.models).find((item) => item.modelName === model);
   if (!availableModel) throw new Error("\u5F53\u524D\u8D26\u53F7\u6A21\u578B\u5217\u8868\u4E2D\u672A\u627E\u5230\u8BE5\u6A21\u578B\uFF0C\u8BF7\u5237\u65B0\u6A21\u578B\u540E\u91CD\u8BD5");
   if (availableModel.type !== "text") throw new Error("Agent \u53EA\u80FD\u9009\u62E9\u6587\u672C\u6A21\u578B");
@@ -237739,7 +237768,7 @@ async function selectSubrouterModel(userId, modelName, targets) {
   }
 }
 function formatSubrouterError(err) {
-  return getErrorMessage6(err);
+  return getErrorMessage6(err).replace(/subrouterai/gi, "\u6A21\u578B\u670D\u52A1").replace(/subrouter/gi, "\u6A21\u578B\u670D\u52A1").replace(/sub2api/gi, "\u6A21\u578B\u8D26\u53F7\u670D\u52A1");
 }
 var import_jsonwebtoken2, SUBROUTER_VENDOR_ID, SUBROUTER_VENDOR_VERSION, AUTO_KEY_PREFIX, INTERNAL_SUBROUTER_BASE_URL, SUBROUTER_LOGIN_PROVIDERS_SETTING_KEY, DEFAULT_TEXT_AGENT_TARGETS;
 var init_subrouter = __esm({
@@ -237834,7 +237863,8 @@ async function getModelConfig(value) {
   return null;
 }
 async function getVendorTemplateFn(fnName, modelName) {
-  const [id, name28] = modelName.split(/:(.+)/);
+  const [rawId, name28] = toInternalModelId(modelName).split(/:(.+)/);
+  const id = toInternalVendorId(rawId);
   if (id === "subrouter") {
     const { ensureSubrouterVendor: ensureSubrouterVendor2 } = await Promise.resolve().then(() => (init_subrouter(), subrouter_exports));
     await ensureSubrouterVendor2();
@@ -237962,6 +237992,7 @@ var init_ai = __esm({
     import_sucrase3 = __toESM(require_dist6());
     init_utils3();
     init_userConfig();
+    init_vendorVisibility();
     AiTypeValues = [
       "scriptAgent",
       "productionAgent",
@@ -245905,6 +245936,7 @@ var init_getSingleProject = __esm({
     init_responseFormat();
     init_middleware();
     init_requestContext();
+    init_vendorVisibility();
     router37 = import_express37.default.Router();
     getSingleProject_default = router37.post(
       "/",
@@ -245917,7 +245949,15 @@ var init_getSingleProject = __esm({
         const query = utils_default.db("o_project").where("id", id).select("*");
         if (userId) query.andWhere("userId", userId);
         const data = await query;
-        res.status(200).send(success3(data));
+        res.status(200).send(
+          success3(
+            data.map((item) => ({
+              ...item,
+              imageModel: toPublicModelId(item.imageModel),
+              videoModel: toPublicModelId(item.videoModel)
+            }))
+          )
+        );
       }
     );
   }
@@ -246072,6 +246112,9 @@ function setToken(payload, expiresIn, secret) {
   }
   return import_jsonwebtoken5.default.sign(payload, secret, { expiresIn });
 }
+function normalizeLoginProvider(value) {
+  return value === "subrouterai" || value === "sub2api" ? value : void 0;
+}
 var import_express42, import_jsonwebtoken5, router42, login_default;
 var init_login = __esm({
   "src/routes/login/login.ts"() {
@@ -246089,37 +246132,29 @@ var init_login = __esm({
       validateFields({
         username: external_exports.string(),
         password: external_exports.string(),
-        provider: external_exports.enum(["subrouterai", "sub2api"]).optional(),
+        provider: external_exports.string().optional(),
         baseUrl: external_exports.string().optional()
       }),
       async (req, res) => {
         const { username, password, provider, baseUrl } = req.body;
         if (provider && baseUrl) {
+          const loginProvider = normalizeLoginProvider(provider);
+          if (!loginProvider) return res.status(400).send(error53("\u6A21\u578B\u8D26\u53F7\u767B\u5F55\u65B9\u5F0F\u4E0D\u53EF\u7528"));
           try {
-            const result = await loginAndPrepareSubrouter({ provider, baseUrl, username, password });
+            const result = await loginAndPrepareSubrouter({ provider: loginProvider, baseUrl, username, password });
             return res.status(200).send(
               success3(
                 {
                   token: result.token,
                   name: result.toonflowUser.name,
                   id: result.toonflowUser.id,
-                  account: {
-                    provider: result.account.provider,
-                    baseUrl: result.account.baseUrl,
-                    username: result.account.username,
-                    email: result.account.email,
-                    displayName: result.account.displayName,
-                    distributorId: result.account.distributorId,
-                    distributorSlug: result.account.distributorSlug,
-                    distributorName: result.account.distributorName,
-                    apiKeyReady: Boolean(result.account.apiKey)
-                  },
+                  account: toPublicSubrouterAccount(result.account),
                   models: result.models,
                   modelsSource: result.modelsSource,
                   defaultTextModel: result.defaultTextModel,
                   notice: result.notice
                 },
-                "\u5185\u7F6E\u667A\u80FD\u8DEF\u7531\u767B\u5F55\u6210\u529F"
+                "\u6A21\u578B\u8D26\u53F7\u767B\u5F55\u6210\u529F"
               )
             );
           } catch (err) {
@@ -246149,23 +246184,13 @@ var init_login = __esm({
                   token: result.token,
                   name: result.toonflowUser.name,
                   id: result.toonflowUser.id,
-                  account: {
-                    provider: result.account.provider,
-                    baseUrl: result.account.baseUrl,
-                    username: result.account.username,
-                    email: result.account.email,
-                    displayName: result.account.displayName,
-                    distributorId: result.account.distributorId,
-                    distributorSlug: result.account.distributorSlug,
-                    distributorName: result.account.distributorName,
-                    apiKeyReady: Boolean(result.account.apiKey)
-                  },
+                  account: toPublicSubrouterAccount(result.account),
                   models: result.models,
                   modelsSource: result.modelsSource,
                   defaultTextModel: result.defaultTextModel,
                   notice: result.notice
                 },
-                "\u5185\u7F6E\u667A\u80FD\u8DEF\u7531\u767B\u5F55\u6210\u529F"
+                "\u6A21\u578B\u8D26\u53F7\u767B\u5F55\u6210\u529F"
               )
             );
           }
@@ -246178,18 +246203,415 @@ var init_login = __esm({
   }
 });
 
+// src/routes/subrouter/login.ts
+function normalizeLoginProvider2(value) {
+  return value === "subrouterai" || value === "sub2api" ? value : void 0;
+}
+var import_express43, router43, login_default2;
+var init_login2 = __esm({
+  "src/routes/subrouter/login.ts"() {
+    "use strict";
+    import_express43 = __toESM(require_express2());
+    init_zod();
+    init_responseFormat();
+    init_middleware();
+    init_subrouter();
+    router43 = import_express43.default.Router();
+    login_default2 = router43.post(
+      "/",
+      validateFields({
+        provider: external_exports.string().min(1),
+        baseUrl: external_exports.string().min(1),
+        username: external_exports.string().min(1),
+        password: external_exports.string().min(1)
+      }),
+      async (req, res) => {
+        const provider = normalizeLoginProvider2(req.body.provider);
+        if (!provider) return res.status(400).send(error53("\u6A21\u578B\u8D26\u53F7\u767B\u5F55\u65B9\u5F0F\u4E0D\u53EF\u7528"));
+        try {
+          const result = await loginAndPrepareSubrouter({ ...req.body, provider });
+          res.status(200).send(
+            success3(
+              {
+                token: result.token,
+                name: result.toonflowUser.name,
+                id: result.toonflowUser.id,
+                account: toPublicSubrouterAccount(result.account),
+                models: result.models,
+                modelsSource: result.modelsSource,
+                defaultTextModel: result.defaultTextModel,
+                notice: result.notice
+              },
+              "\u6A21\u578B\u8D26\u53F7\u767B\u5F55\u6210\u529F"
+            )
+          );
+        } catch (err) {
+          res.status(400).send(error53(formatSubrouterError(err)));
+        }
+      }
+    );
+  }
+});
+
+// src/routes/model-service/login.ts
+var init_login3 = __esm({
+  "src/routes/model-service/login.ts"() {
+    "use strict";
+    init_login2();
+  }
+});
+
+// src/routes/subrouter/models.ts
+function parseModels(value) {
+  if (typeof value !== "string" || !value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+var import_express44, router44, models_default;
+var init_models = __esm({
+  "src/routes/subrouter/models.ts"() {
+    "use strict";
+    import_express44 = __toESM(require_express2());
+    init_zod();
+    init_responseFormat();
+    init_middleware();
+    init_requestContext();
+    init_subrouter();
+    router44 = import_express44.default.Router();
+    models_default = router44.post(
+      "/",
+      validateFields({
+        provider: external_exports.string().optional(),
+        baseUrl: external_exports.string().optional(),
+        refresh: external_exports.boolean().optional()
+      }),
+      async (req, res) => {
+        const userId = getCurrentUserId();
+        if (!userId) return res.status(401).send({ message: "\u672A\u63D0\u4F9Btoken" });
+        try {
+          const models = req.body.refresh ? await refreshStoredModels(userId, req.body.provider, req.body.baseUrl) : parseModels((await getStoredSubrouterAccount(userId, req.body.provider, req.body.baseUrl))?.models);
+          res.status(200).send(success3(models));
+        } catch (err) {
+          res.status(400).send(error53(formatSubrouterError(err)));
+        }
+      }
+    );
+  }
+});
+
+// src/routes/model-service/models.ts
+var init_models2 = __esm({
+  "src/routes/model-service/models.ts"() {
+    "use strict";
+    init_models();
+  }
+});
+
+// src/routes/subrouter/selectModel.ts
+var import_express45, router45, selectModel_default;
+var init_selectModel = __esm({
+  "src/routes/subrouter/selectModel.ts"() {
+    "use strict";
+    import_express45 = __toESM(require_express2());
+    init_zod();
+    init_responseFormat();
+    init_middleware();
+    init_requestContext();
+    init_subrouter();
+    init_vendorVisibility();
+    router45 = import_express45.default.Router();
+    selectModel_default = router45.post(
+      "/",
+      validateFields({
+        modelName: external_exports.string().min(1),
+        targets: external_exports.array(external_exports.string()).optional()
+      }),
+      async (req, res) => {
+        const userId = getCurrentUserId();
+        if (!userId) return res.status(401).send({ message: "\u672A\u63D0\u4F9Btoken" });
+        try {
+          const targets = req.body.targets || [];
+          await selectSubrouterModel(userId, req.body.modelName, targets);
+          res.status(200).send(success3({ modelName: toPublicModelId(req.body.modelName), targets }, "\u6A21\u578B\u5DF2\u8BBE\u7F6E\u5230\u5F53\u524D\u7528\u6237"));
+        } catch (err) {
+          res.status(400).send(error53(formatSubrouterError(err)));
+        }
+      }
+    );
+  }
+});
+
+// src/routes/model-service/selectModel.ts
+var init_selectModel2 = __esm({
+  "src/routes/model-service/selectModel.ts"() {
+    "use strict";
+    init_selectModel();
+  }
+});
+
+// src/routes/subrouter/status.ts
+function parseModels2(value) {
+  if (typeof value !== "string" || !value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+function countModelsByType(models) {
+  return models.reduce(
+    (acc, model) => {
+      const type = model.type === "image" || model.type === "video" || model.type === "text" ? model.type : "other";
+      acc[type] += 1;
+      return acc;
+    },
+    { text: 0, image: 0, video: 0, other: 0 }
+  );
+}
+var import_express46, router46, status_default;
+var init_status2 = __esm({
+  "src/routes/subrouter/status.ts"() {
+    "use strict";
+    import_express46 = __toESM(require_express2());
+    init_responseFormat();
+    init_requestContext();
+    init_subrouter();
+    router46 = import_express46.default.Router();
+    status_default = router46.post("/", async (req, res) => {
+      const user = getCurrentUser();
+      const userId = getCurrentUserId();
+      if (!userId) return res.status(401).send({ message: "\u672A\u63D0\u4F9Btoken" });
+      const account = await getStoredSubrouterAccount(userId, req.body?.provider, req.body?.baseUrl);
+      const models = parseModels2(account?.models);
+      res.status(200).send(
+        success3({
+          user,
+          connected: Boolean(account),
+          account: toPublicSubrouterAccount(account),
+          modelCount: models.length,
+          modelStats: countModelsByType(models)
+        })
+      );
+    });
+  }
+});
+
+// src/routes/model-service/status.ts
+var init_status3 = __esm({
+  "src/routes/model-service/status.ts"() {
+    "use strict";
+    init_status2();
+  }
+});
+
+// src/routes/subrouter/summary.ts
+function parseModels3(value) {
+  if (typeof value !== "string" || !value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.filter((item) => item && typeof item === "object") : [];
+  } catch {
+    return [];
+  }
+}
+function normalizeModelType(value) {
+  return value === "text" || value === "image" || value === "video" ? value : "other";
+}
+function countModelsByType2(models) {
+  return models.reduce(
+    (acc, model) => {
+      acc[normalizeModelType(model.type)] += 1;
+      return acc;
+    },
+    { text: 0, image: 0, video: 0, other: 0 }
+  );
+}
+function splitModelName(modelName) {
+  if (!modelName) return { vendorId: "", model: "" };
+  const [vendorId, model] = modelName.split(/:(.+)/);
+  return { vendorId: vendorId || "", model: model || "" };
+}
+function summarizeAgents(rows, models) {
+  const modelNames = new Set(models.map((model) => model.modelName).filter(Boolean));
+  return rows.filter((row) => DEFAULT_TARGETS.has(row.key || row.agentKey || "")).map((row) => {
+    const key = row.key || row.agentKey || "";
+    const parsed = splitModelName(row.modelName);
+    const effectiveVendorId = row.vendorId || parsed.vendorId;
+    return {
+      key,
+      name: row.name || key,
+      desc: row.desc || "",
+      model: row.model || parsed.model,
+      modelName: toPublicModelId(row.modelName || ""),
+      vendorId: toPublicVendorId(effectiveVendorId),
+      usingModelService: effectiveVendorId === INTERNAL_ROUTER_VENDOR_ID,
+      available: effectiveVendorId === INTERNAL_ROUTER_VENDOR_ID ? modelNames.has(row.model || parsed.model) : null
+    };
+  });
+}
+function pickSelectedTextModel(agents) {
+  const selected = agents.find((agent) => agent.key === "scriptAgent" && agent.usingModelService && agent.model);
+  if (selected) return selected.model;
+  return agents.find((agent) => agent.usingModelService && agent.model)?.model || "";
+}
+var import_express47, router47, DEFAULT_TARGETS, summary_default;
+var init_summary = __esm({
+  "src/routes/subrouter/summary.ts"() {
+    "use strict";
+    import_express47 = __toESM(require_express2());
+    init_responseFormat();
+    init_requestContext();
+    init_userConfig();
+    init_subrouter();
+    init_vendorVisibility();
+    router47 = import_express47.default.Router();
+    DEFAULT_TARGETS = /* @__PURE__ */ new Set(["scriptAgent", "productionAgent", "universalAi"]);
+    summary_default = router47.post("/", async (req, res) => {
+      const user = getCurrentUser();
+      const userId = getCurrentUserId();
+      if (!userId) return res.status(401).send({ message: "\u672A\u63D0\u4F9Btoken" });
+      const account = await getStoredSubrouterAccount(userId, req.body?.provider, req.body?.baseUrl);
+      const models = parseModels3(account?.models);
+      const modelStats = countModelsByType2(models);
+      const agents = summarizeAgents(await getEffectiveAgentDeployList(userId), models);
+      const selectedTextModel = pickSelectedTextModel(agents);
+      const diagnostics = [
+        !account ? "\u672A\u7ED1\u5B9A\u6A21\u578B\u8D26\u53F7" : "",
+        account && !account.apiKey ? "\u81EA\u52A8 API Key \u672A\u751F\u6210" : "",
+        account && models.length === 0 ? "\u5F53\u524D\u8D26\u53F7\u6CA1\u6709\u53EF\u7528\u6A21\u578B\uFF0C\u8BF7\u5237\u65B0\u6216\u68C0\u67E5\u8BA2\u9605/\u5206\u7AD9\u4E0A\u67B6" : "",
+        account && modelStats.text === 0 ? "\u672A\u53D1\u73B0\u6587\u672C\u6A21\u578B\uFF0CAgent \u6682\u4E0D\u80FD\u4F7F\u7528\u6A21\u578B\u670D\u52A1" : "",
+        account && modelStats.text > 0 && !selectedTextModel ? "\u5C1A\u672A\u4E3A\u5F53\u524D\u7528\u6237\u9009\u62E9 Agent \u6587\u672C\u6A21\u578B" : ""
+      ].filter(Boolean);
+      res.status(200).send(
+        success3({
+          user,
+          connected: Boolean(account),
+          account: toPublicSubrouterAccount(account),
+          models,
+          modelStats,
+          selectedTextModel,
+          agentUseMode: await getUserSetting("agentUseMode", "0"),
+          agents,
+          diagnostics
+        })
+      );
+    });
+  }
+});
+
+// src/routes/model-service/summary.ts
+var init_summary2 = __esm({
+  "src/routes/model-service/summary.ts"() {
+    "use strict";
+    init_summary();
+  }
+});
+
+// src/routes/subrouter/testModel.ts
+function parseModels4(value) {
+  if (typeof value !== "string" || !value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.filter((item) => item && typeof item === "object") : [];
+  } catch {
+    return [];
+  }
+}
+var import_express48, router48, testModel_default;
+var init_testModel = __esm({
+  "src/routes/subrouter/testModel.ts"() {
+    "use strict";
+    import_express48 = __toESM(require_express2());
+    init_zod();
+    init_responseFormat();
+    init_middleware();
+    init_requestContext();
+    init_subrouter();
+    init_utils3();
+    router48 = import_express48.default.Router();
+    testModel_default = router48.post(
+      "/",
+      validateFields({
+        modelName: external_exports.string().min(1),
+        prompt: external_exports.string().optional()
+      }),
+      async (req, res) => {
+        const userId = getCurrentUserId();
+        if (!userId) return res.status(401).send({ message: "\u672A\u63D0\u4F9Btoken" });
+        const account = await getStoredSubrouterAccount(userId);
+        if (!account) return res.status(400).send(error53("\u672A\u7ED1\u5B9A\u6A21\u578B\u8D26\u53F7"));
+        const modelName = String(req.body.modelName).includes(":") ? String(req.body.modelName).split(/:(.+)/)[1] : String(req.body.modelName);
+        const model = parseModels4(account.models).find((item) => item.modelName === modelName);
+        if (!model) return res.status(400).send(error53("\u5F53\u524D\u8D26\u53F7\u6A21\u578B\u5217\u8868\u4E2D\u672A\u627E\u5230\u8BE5\u6A21\u578B\uFF0C\u8BF7\u5237\u65B0\u6A21\u578B\u540E\u91CD\u8BD5"));
+        if (model.type !== "text") {
+          return res.status(200).send(
+            success3({
+              available: true,
+              checked: false,
+              modelName,
+              message: "\u6A21\u578B\u5728\u5F53\u524D\u8D26\u53F7\u5217\u8868\u4E2D\uFF1B\u975E\u6587\u672C\u6A21\u578B\u4E0D\u5728\u8BBE\u7F6E\u9875\u53D1\u8D77\u751F\u6210\u6D4B\u8BD5"
+            })
+          );
+        }
+        const started = Date.now();
+        try {
+          const result = await utils_default.Ai.Text(`subrouter:${modelName}`).invoke({
+            prompt: req.body.prompt || "\u8BF7\u53EA\u56DE\u590D OK",
+            temperature: 0,
+            maxOutputTokens: 16
+          });
+          const output = String(result.text || "").trim();
+          if (!output) return res.status(500).send(error53("\u6A21\u578B\u672A\u8FD4\u56DE\u5185\u5BB9"));
+          res.status(200).send(
+            success3({
+              available: true,
+              checked: true,
+              modelName,
+              latencyMs: Date.now() - started,
+              output: output.slice(0, 200)
+            })
+          );
+        } catch (err) {
+          res.status(500).send(
+            error53(formatSubrouterError(err), {
+              available: false,
+              checked: true,
+              modelName,
+              latencyMs: Date.now() - started
+            })
+          );
+        }
+      }
+    );
+  }
+});
+
+// src/routes/model-service/testModel.ts
+var init_testModel2 = __esm({
+  "src/routes/model-service/testModel.ts"() {
+    "use strict";
+    init_testModel();
+  }
+});
+
 // src/routes/modelSelect/getModelDetail.ts
-var import_express43, router43, getModelDetail_default;
+var import_express49, router49, getModelDetail_default;
 var init_getModelDetail = __esm({
   "src/routes/modelSelect/getModelDetail.ts"() {
     "use strict";
-    import_express43 = __toESM(require_express2());
+    import_express49 = __toESM(require_express2());
     init_utils3();
     init_zod();
     init_responseFormat();
     init_middleware();
-    router43 = import_express43.default.Router();
-    getModelDetail_default = router43.post(
+    init_vendorVisibility();
+    router49 = import_express49.default.Router();
+    getModelDetail_default = router49.post(
       "/",
       validateFields({
         modelId: external_exports.string()
@@ -246197,7 +246619,7 @@ var init_getModelDetail = __esm({
       async (req, res) => {
         const { modelId } = req.body;
         const [id, name28] = modelId.split(/:(.+)/);
-        const models = await utils_default.vendor.getModelList(id);
+        const models = await utils_default.vendor.getModelList(toInternalVendorId(id));
         const findData = models.find((i) => i.modelName == name28);
         res.status(200).send(success3(findData));
       }
@@ -246206,18 +246628,19 @@ var init_getModelDetail = __esm({
 });
 
 // src/routes/modelSelect/getModelList.ts
-var import_express44, router44, getModelList_default;
+var import_express50, router50, getModelList_default;
 var init_getModelList = __esm({
   "src/routes/modelSelect/getModelList.ts"() {
     "use strict";
-    import_express44 = __toESM(require_express2());
+    import_express50 = __toESM(require_express2());
     init_utils3();
     init_zod();
     init_responseFormat();
     init_middleware();
     init_userConfig();
-    router44 = import_express44.default.Router();
-    getModelList_default = router44.post(
+    init_vendorVisibility();
+    router50 = import_express50.default.Router();
+    getModelList_default = router50.post(
       "/",
       validateFields({
         type: external_exports.enum(["text", "image", "video", "all"])
@@ -246235,7 +246658,7 @@ var init_getModelList = __esm({
             const models = modelList[index];
             const filtered = type === "all" ? models.filter((item) => item.type !== "video") : models.filter((item) => item.type === type);
             return filtered.map((item) => ({
-              id: data.id,
+              id: toPublicVendorId(data.id),
               label: item.name,
               value: item.modelName,
               type: item.type,
@@ -246250,17 +246673,17 @@ var init_getModelList = __esm({
 });
 
 // src/routes/novel/addNovel.ts
-var import_express45, router45, addNovel_default;
+var import_express51, router51, addNovel_default;
 var init_addNovel = __esm({
   "src/routes/novel/addNovel.ts"() {
     "use strict";
-    import_express45 = __toESM(require_express2());
+    import_express51 = __toESM(require_express2());
     init_utils3();
     init_zod();
     init_responseFormat();
     init_middleware();
-    router45 = import_express45.default.Router();
-    addNovel_default = router45.post(
+    router51 = import_express51.default.Router();
+    addNovel_default = router51.post(
       "/",
       validateFields({
         projectId: external_exports.number(),
@@ -246306,17 +246729,17 @@ var init_addNovel = __esm({
 });
 
 // src/routes/novel/batchDeleteNovel.ts
-var import_express46, router46, batchDeleteNovel_default;
+var import_express52, router52, batchDeleteNovel_default;
 var init_batchDeleteNovel = __esm({
   "src/routes/novel/batchDeleteNovel.ts"() {
     "use strict";
-    import_express46 = __toESM(require_express2());
+    import_express52 = __toESM(require_express2());
     init_utils3();
     init_zod();
     init_responseFormat();
     init_middleware();
-    router46 = import_express46.default.Router();
-    batchDeleteNovel_default = router46.post(
+    router52 = import_express52.default.Router();
+    batchDeleteNovel_default = router52.post(
       "/",
       validateFields({
         ids: external_exports.array(external_exports.number())
@@ -246338,17 +246761,17 @@ var init_batchDeleteNovel = __esm({
 });
 
 // src/routes/novel/delNovel.ts
-var import_express47, router47, delNovel_default;
+var import_express53, router53, delNovel_default;
 var init_delNovel = __esm({
   "src/routes/novel/delNovel.ts"() {
     "use strict";
-    import_express47 = __toESM(require_express2());
+    import_express53 = __toESM(require_express2());
     init_utils3();
     init_zod();
     init_responseFormat();
     init_middleware();
-    router47 = import_express47.default.Router();
-    delNovel_default = router47.post(
+    router53 = import_express53.default.Router();
+    delNovel_default = router53.post(
       "/",
       validateFields({
         id: external_exports.number()
@@ -246367,17 +246790,17 @@ var init_delNovel = __esm({
 });
 
 // src/routes/novel/event/batchDeleteEvent.ts
-var import_express48, router48, batchDeleteEvent_default;
+var import_express54, router54, batchDeleteEvent_default;
 var init_batchDeleteEvent = __esm({
   "src/routes/novel/event/batchDeleteEvent.ts"() {
     "use strict";
-    import_express48 = __toESM(require_express2());
+    import_express54 = __toESM(require_express2());
     init_utils3();
     init_zod();
     init_responseFormat();
     init_middleware();
-    router48 = import_express48.default.Router();
-    batchDeleteEvent_default = router48.post(
+    router54 = import_express54.default.Router();
+    batchDeleteEvent_default = router54.post(
       "/",
       validateFields({
         ids: external_exports.array(external_exports.number())
@@ -246393,17 +246816,17 @@ var init_batchDeleteEvent = __esm({
 });
 
 // src/routes/novel/event/deletEvent.ts
-var import_express49, router49, deletEvent_default;
+var import_express55, router55, deletEvent_default;
 var init_deletEvent = __esm({
   "src/routes/novel/event/deletEvent.ts"() {
     "use strict";
-    import_express49 = __toESM(require_express2());
+    import_express55 = __toESM(require_express2());
     init_utils3();
     init_zod();
     init_responseFormat();
     init_middleware();
-    router49 = import_express49.default.Router();
-    deletEvent_default = router49.post(
+    router55 = import_express55.default.Router();
+    deletEvent_default = router55.post(
       "/",
       validateFields({
         id: external_exports.number()
@@ -246419,17 +246842,17 @@ var init_deletEvent = __esm({
 });
 
 // src/routes/novel/event/generateEvents.ts
-var import_express50, router50, generateEvents_default;
+var import_express56, router56, generateEvents_default;
 var init_generateEvents = __esm({
   "src/routes/novel/event/generateEvents.ts"() {
     "use strict";
-    import_express50 = __toESM(require_express2());
+    import_express56 = __toESM(require_express2());
     init_utils3();
     init_zod();
     init_responseFormat();
     init_middleware();
-    router50 = import_express50.default.Router();
-    generateEvents_default = router50.post(
+    router56 = import_express56.default.Router();
+    generateEvents_default = router56.post(
       "/",
       validateFields({
         projectId: external_exports.number(),
@@ -246457,18 +246880,18 @@ var init_generateEvents = __esm({
 });
 
 // src/routes/novel/event/getEvent.ts
-var import_express51, router51, getEvent_default;
+var import_express57, router57, getEvent_default;
 var init_getEvent = __esm({
   "src/routes/novel/event/getEvent.ts"() {
     "use strict";
-    import_express51 = __toESM(require_express2());
+    import_express57 = __toESM(require_express2());
     init_utils3();
     init_db();
     init_zod();
     init_responseFormat();
     init_middleware();
-    router51 = import_express51.default.Router();
-    getEvent_default = router51.post(
+    router57 = import_express57.default.Router();
+    getEvent_default = router57.post(
       "/",
       validateFields({
         projectId: external_exports.number(),
@@ -246502,17 +246925,17 @@ var init_getEvent = __esm({
 });
 
 // src/routes/novel/getNovel.ts
-var import_express52, router52, getNovel_default;
+var import_express58, router58, getNovel_default;
 var init_getNovel = __esm({
   "src/routes/novel/getNovel.ts"() {
     "use strict";
-    import_express52 = __toESM(require_express2());
+    import_express58 = __toESM(require_express2());
     init_utils3();
     init_zod();
     init_responseFormat();
     init_middleware();
-    router52 = import_express52.default.Router();
-    getNovel_default = router52.post(
+    router58 = import_express58.default.Router();
+    getNovel_default = router58.post(
       "/",
       validateFields({
         projectId: external_exports.number(),
@@ -246540,17 +246963,17 @@ var init_getNovel = __esm({
 });
 
 // src/routes/novel/getNovelData.ts
-var import_express53, router53, getNovelData_default;
+var import_express59, router59, getNovelData_default;
 var init_getNovelData = __esm({
   "src/routes/novel/getNovelData.ts"() {
     "use strict";
-    import_express53 = __toESM(require_express2());
+    import_express59 = __toESM(require_express2());
     init_utils3();
     init_zod();
     init_responseFormat();
     init_middleware();
-    router53 = import_express53.default.Router();
-    getNovelData_default = router53.post(
+    router59 = import_express59.default.Router();
+    getNovelData_default = router59.post(
       "/",
       validateFields({
         projectId: external_exports.number()
@@ -246565,17 +246988,17 @@ var init_getNovelData = __esm({
 });
 
 // src/routes/novel/getNovelEventState.ts
-var import_express54, router54, getNovelEventState_default;
+var import_express60, router60, getNovelEventState_default;
 var init_getNovelEventState = __esm({
   "src/routes/novel/getNovelEventState.ts"() {
     "use strict";
-    import_express54 = __toESM(require_express2());
+    import_express60 = __toESM(require_express2());
     init_utils3();
     init_zod();
     init_responseFormat();
     init_middleware();
-    router54 = import_express54.default.Router();
-    getNovelEventState_default = router54.post(
+    router60 = import_express60.default.Router();
+    getNovelEventState_default = router60.post(
       "/",
       validateFields({
         ids: external_exports.array(external_exports.number())
@@ -246590,17 +247013,17 @@ var init_getNovelEventState = __esm({
 });
 
 // src/routes/novel/getNovelIndex.ts
-var import_express55, router55, getNovelIndex_default;
+var import_express61, router61, getNovelIndex_default;
 var init_getNovelIndex = __esm({
   "src/routes/novel/getNovelIndex.ts"() {
     "use strict";
-    import_express55 = __toESM(require_express2());
+    import_express61 = __toESM(require_express2());
     init_utils3();
     init_zod();
     init_responseFormat();
     init_middleware();
-    router55 = import_express55.default.Router();
-    getNovelIndex_default = router55.post(
+    router61 = import_express61.default.Router();
+    getNovelIndex_default = router61.post(
       "/",
       validateFields({
         projectId: external_exports.number()
@@ -246615,17 +247038,17 @@ var init_getNovelIndex = __esm({
 });
 
 // src/routes/novel/updateNovel.ts
-var import_express56, router56, updateNovel_default;
+var import_express62, router62, updateNovel_default;
 var init_updateNovel = __esm({
   "src/routes/novel/updateNovel.ts"() {
     "use strict";
-    import_express56 = __toESM(require_express2());
+    import_express62 = __toESM(require_express2());
     init_utils3();
     init_zod();
     init_responseFormat();
     init_middleware();
-    router56 = import_express56.default.Router();
-    updateNovel_default = router56.post(
+    router62 = import_express62.default.Router();
+    updateNovel_default = router62.post(
       "/",
       validateFields({
         id: external_exports.number(),
@@ -246651,16 +247074,16 @@ var init_updateNovel = __esm({
 });
 
 // src/routes/other/deleteAllData.ts
-var import_express57, router57, deleteAllData_default;
+var import_express63, router63, deleteAllData_default;
 var init_deleteAllData = __esm({
   "src/routes/other/deleteAllData.ts"() {
     "use strict";
-    import_express57 = __toESM(require_express2());
+    import_express63 = __toESM(require_express2());
     init_initDB();
     init_db();
     init_responseFormat();
-    router57 = import_express57.default.Router();
-    deleteAllData_default = router57.post(
+    router63 = import_express63.default.Router();
+    deleteAllData_default = router63.post(
       "/",
       async (req, res) => {
         await initDB_default(db, true);
@@ -246671,15 +247094,15 @@ var init_deleteAllData = __esm({
 });
 
 // src/routes/other/getVersion.ts
-var import_express58, router58, getVersion_default;
+var import_express64, router64, getVersion_default;
 var init_getVersion = __esm({
   "src/routes/other/getVersion.ts"() {
     "use strict";
-    import_express58 = __toESM(require_express2());
+    import_express64 = __toESM(require_express2());
     init_responseFormat();
     init_writeVersion();
-    router58 = import_express58.default.Router();
-    getVersion_default = router58.get("/", async (req, res) => {
+    router64 = import_express64.default.Router();
+    getVersion_default = router64.get("/", async (req, res) => {
       const version3 = await getVersion();
       res.status(200).send(success3(version3));
     });
@@ -252355,16 +252778,16 @@ var init_pluginDB = __esm({
 });
 
 // src/routes/plugin/ai.ts
-var import_express59, router59, ai_default2;
+var import_express65, router65, ai_default2;
 var init_ai2 = __esm({
   "src/routes/plugin/ai.ts"() {
     "use strict";
-    import_express59 = __toESM(require_express2());
+    import_express65 = __toESM(require_express2());
     init_zod();
     init_middleware();
     init_pluginDB();
-    router59 = import_express59.default.Router();
-    ai_default2 = router59.post(
+    router65 = import_express65.default.Router();
+    ai_default2 = router65.post(
       "/",
       validateFields({
         table: external_exports.string().optional(),
@@ -252399,17 +252822,17 @@ var init_ai2 = __esm({
 });
 
 // src/routes/plugin/file.ts
-var import_express60, router60, file_default;
+var import_express66, router66, file_default;
 var init_file = __esm({
   "src/routes/plugin/file.ts"() {
     "use strict";
-    import_express60 = __toESM(require_express2());
+    import_express66 = __toESM(require_express2());
     init_utils3();
     init_zod();
     init_middleware();
     init_responseFormat();
-    router60 = import_express60.default.Router();
-    file_default = router60.post(
+    router66 = import_express66.default.Router();
+    file_default = router66.post(
       "/",
       validateFields({
         type: external_exports.enum(["get", "write", "delete"]).default("get"),
@@ -252440,16 +252863,16 @@ var init_file = __esm({
 });
 
 // src/routes/plugin/tRPC.ts
-var import_express61, router61, tRPC_default;
+var import_express67, router67, tRPC_default;
 var init_tRPC = __esm({
   "src/routes/plugin/tRPC.ts"() {
     "use strict";
-    import_express61 = __toESM(require_express2());
+    import_express67 = __toESM(require_express2());
     init_zod();
     init_middleware();
     init_pluginDB();
-    router61 = import_express61.default.Router();
-    tRPC_default = router61.post(
+    router67 = import_express67.default.Router();
+    tRPC_default = router67.post(
       "/",
       validateFields({
         table: external_exports.string().optional(),
@@ -252484,17 +252907,17 @@ var init_tRPC = __esm({
 });
 
 // src/routes/production/assets/batchGenerateAssetsImage.ts
-var import_express62, router62, batchGenerateAssetsImage_default;
+var import_express68, router68, batchGenerateAssetsImage_default;
 var init_batchGenerateAssetsImage = __esm({
   "src/routes/production/assets/batchGenerateAssetsImage.ts"() {
     "use strict";
-    import_express62 = __toESM(require_express2());
+    import_express68 = __toESM(require_express2());
     init_utils3();
     init_zod();
     init_responseFormat();
     init_middleware();
-    router62 = import_express62.default.Router();
-    batchGenerateAssetsImage_default = router62.post(
+    router68 = import_express68.default.Router();
+    batchGenerateAssetsImage_default = router68.post(
       "/",
       validateFields({
         assetIds: external_exports.array(external_exports.number()),
@@ -252608,17 +253031,17 @@ var init_batchGenerateAssetsImage = __esm({
 });
 
 // src/routes/production/assets/deleteAssetsDireve.ts
-var import_express63, router63, deleteAssetsDireve_default;
+var import_express69, router69, deleteAssetsDireve_default;
 var init_deleteAssetsDireve = __esm({
   "src/routes/production/assets/deleteAssetsDireve.ts"() {
     "use strict";
-    import_express63 = __toESM(require_express2());
+    import_express69 = __toESM(require_express2());
     init_utils3();
     init_zod();
     init_responseFormat();
     init_middleware();
-    router63 = import_express63.default.Router();
-    deleteAssetsDireve_default = router63.post(
+    router69 = import_express69.default.Router();
+    deleteAssetsDireve_default = router69.post(
       "/",
       validateFields({
         id: external_exports.number(),
@@ -252640,17 +253063,17 @@ var init_deleteAssetsDireve = __esm({
 });
 
 // src/routes/production/assets/pollingImage.ts
-var import_express64, router64, pollingImage_default;
+var import_express70, router70, pollingImage_default;
 var init_pollingImage = __esm({
   "src/routes/production/assets/pollingImage.ts"() {
     "use strict";
-    import_express64 = __toESM(require_express2());
+    import_express70 = __toESM(require_express2());
     init_utils3();
     init_zod();
     init_responseFormat();
     init_middleware();
-    router64 = import_express64.default.Router();
-    pollingImage_default = router64.post(
+    router70 = import_express70.default.Router();
+    pollingImage_default = router70.post(
       "/",
       validateFields({
         ids: external_exports.array(external_exports.number())
@@ -252671,17 +253094,17 @@ var init_pollingImage = __esm({
 });
 
 // src/routes/production/assets/updateAssetsUrl.ts
-var import_express65, router65, updateAssetsUrl_default;
+var import_express71, router71, updateAssetsUrl_default;
 var init_updateAssetsUrl = __esm({
   "src/routes/production/assets/updateAssetsUrl.ts"() {
     "use strict";
-    import_express65 = __toESM(require_express2());
+    import_express71 = __toESM(require_express2());
     init_utils3();
     init_zod();
     init_responseFormat();
     init_middleware();
-    router65 = import_express65.default.Router();
-    updateAssetsUrl_default = router65.post(
+    router71 = import_express71.default.Router();
+    updateAssetsUrl_default = router71.post(
       "/",
       validateFields({
         id: external_exports.number(),
@@ -252713,18 +253136,18 @@ async function urlToBase643(imageUrl) {
   const base644 = Buffer.from(response.data, "binary").toString("base64");
   return `data:${contentType};base64,${base644}`;
 }
-var import_express66, router66, generateFlowImage_default;
+var import_express72, router72, generateFlowImage_default;
 var init_generateFlowImage = __esm({
   "src/routes/production/editImage/generateFlowImage.ts"() {
     "use strict";
-    import_express66 = __toESM(require_express2());
+    import_express72 = __toESM(require_express2());
     init_utils3();
     init_zod();
     init_responseFormat();
     init_middleware();
     init_axios2();
-    router66 = import_express66.default.Router();
-    generateFlowImage_default = router66.post(
+    router72 = import_express72.default.Router();
+    generateFlowImage_default = router72.post(
       "/",
       validateFields({
         model: external_exports.string(),
@@ -252782,11 +253205,11 @@ async function urlToBase644(imageUrl) {
   const base644 = Buffer.from(response.data, "binary").toString("base64");
   return `data:${contentType};base64,${base644}`;
 }
-var import_express67, import_path14, router67, generateFlowVideo_default;
+var import_express73, import_path14, router73, generateFlowVideo_default;
 var init_generateFlowVideo = __esm({
   "src/routes/production/editImage/generateFlowVideo.ts"() {
     "use strict";
-    import_express67 = __toESM(require_express2());
+    import_express73 = __toESM(require_express2());
     init_utils3();
     init_zod();
     init_responseFormat();
@@ -252794,8 +253217,8 @@ var init_generateFlowVideo = __esm({
     init_is_path_inside();
     import_path14 = __toESM(require("path"));
     init_axios2();
-    router67 = import_express67.default.Router();
-    generateFlowVideo_default = router67.post(
+    router73 = import_express73.default.Router();
+    generateFlowVideo_default = router73.post(
       "/",
       validateFields({
         projectId: external_exports.number(),
@@ -252883,17 +253306,17 @@ var init_generateFlowVideo = __esm({
 });
 
 // src/routes/production/editImage/getImageDefaultModle.ts
-var import_express68, router68, getImageDefaultModle_default;
+var import_express74, router74, getImageDefaultModle_default;
 var init_getImageDefaultModle = __esm({
   "src/routes/production/editImage/getImageDefaultModle.ts"() {
     "use strict";
-    import_express68 = __toESM(require_express2());
+    import_express74 = __toESM(require_express2());
     init_utils3();
     init_zod();
     init_responseFormat();
     init_middleware();
-    router68 = import_express68.default.Router();
-    getImageDefaultModle_default = router68.post(
+    router74 = import_express74.default.Router();
+    getImageDefaultModle_default = router74.post(
       "/",
       validateFields({
         projectId: external_exports.number()
@@ -252908,17 +253331,17 @@ var init_getImageDefaultModle = __esm({
 });
 
 // src/routes/production/editImage/getImageFlow.ts
-var import_express69, router69, getImageFlow_default;
+var import_express75, router75, getImageFlow_default;
 var init_getImageFlow = __esm({
   "src/routes/production/editImage/getImageFlow.ts"() {
     "use strict";
-    import_express69 = __toESM(require_express2());
+    import_express75 = __toESM(require_express2());
     init_utils3();
     init_zod();
     init_responseFormat();
     init_middleware();
-    router69 = import_express69.default.Router();
-    getImageFlow_default = router69.post(
+    router75 = import_express75.default.Router();
+    getImageFlow_default = router75.post(
       "/",
       validateFields({
         id: external_exports.number()
@@ -252951,17 +253374,17 @@ var init_getImageFlow = __esm({
 });
 
 // src/routes/production/editImage/saveImageFlow.ts
-var import_express70, router70, saveImageFlow_default;
+var import_express76, router76, saveImageFlow_default;
 var init_saveImageFlow = __esm({
   "src/routes/production/editImage/saveImageFlow.ts"() {
     "use strict";
-    import_express70 = __toESM(require_express2());
+    import_express76 = __toESM(require_express2());
     init_utils3();
     init_zod();
     init_responseFormat();
     init_middleware();
-    router70 = import_express70.default.Router();
-    saveImageFlow_default = router70.post(
+    router76 = import_express76.default.Router();
+    saveImageFlow_default = router76.post(
       "/",
       validateFields({
         edges: external_exports.any(),
@@ -252990,17 +253413,17 @@ var init_saveImageFlow = __esm({
 });
 
 // src/routes/production/editImage/updateImageFlow.ts
-var import_express71, router71, updateImageFlow_default;
+var import_express77, router77, updateImageFlow_default;
 var init_updateImageFlow = __esm({
   "src/routes/production/editImage/updateImageFlow.ts"() {
     "use strict";
-    import_express71 = __toESM(require_express2());
+    import_express77 = __toESM(require_express2());
     init_utils3();
     init_zod();
     init_responseFormat();
     init_middleware();
-    router71 = import_express71.default.Router();
-    updateImageFlow_default = router71.post(
+    router77 = import_express77.default.Router();
+    updateImageFlow_default = router77.post(
       "/",
       validateFields({
         edges: external_exports.any(),
@@ -253030,18 +253453,18 @@ var init_updateImageFlow = __esm({
 });
 
 // src/routes/production/editImage/uploadImage.ts
-var import_express72, router72, uploadImage_default;
+var import_express78, router78, uploadImage_default;
 var init_uploadImage = __esm({
   "src/routes/production/editImage/uploadImage.ts"() {
     "use strict";
-    import_express72 = __toESM(require_express2());
+    import_express78 = __toESM(require_express2());
     init_utils3();
     init_responseFormat();
     init_middleware();
     init_zod();
     init_dist_node();
-    router72 = import_express72.default.Router();
-    uploadImage_default = router72.post(
+    router78 = import_express78.default.Router();
+    uploadImage_default = router78.post(
       "/",
       validateFields({
         projectId: external_exports.number(),
@@ -253081,17 +253504,17 @@ var init_uploadImage = __esm({
 });
 
 // src/routes/production/getFlowData.ts
-var import_express73, router73, getFlowData_default;
+var import_express79, router79, getFlowData_default;
 var init_getFlowData = __esm({
   "src/routes/production/getFlowData.ts"() {
     "use strict";
-    import_express73 = __toESM(require_express2());
+    import_express79 = __toESM(require_express2());
     init_utils3();
     init_zod();
     init_responseFormat();
     init_middleware();
-    router73 = import_express73.default.Router();
-    getFlowData_default = router73.post(
+    router79 = import_express79.default.Router();
+    getFlowData_default = router79.post(
       "/",
       validateFields({
         projectId: external_exports.number(),
@@ -253220,17 +253643,17 @@ var init_getFlowData = __esm({
 });
 
 // src/routes/production/getStoryboardData.ts
-var import_express74, router74, getStoryboardData_default;
+var import_express80, router80, getStoryboardData_default;
 var init_getStoryboardData = __esm({
   "src/routes/production/getStoryboardData.ts"() {
     "use strict";
-    import_express74 = __toESM(require_express2());
+    import_express80 = __toESM(require_express2());
     init_utils3();
     init_zod();
     init_responseFormat();
     init_middleware();
-    router74 = import_express74.default.Router();
-    getStoryboardData_default = router74.post(
+    router80 = import_express80.default.Router();
+    getStoryboardData_default = router80.post(
       "/",
       validateFields({
         scriptId: external_exports.number()
@@ -253292,17 +253715,17 @@ var init_getStoryboardData = __esm({
 });
 
 // src/routes/production/saveFlowData.ts
-var import_express75, router75, saveFlowData_default;
+var import_express81, router81, saveFlowData_default;
 var init_saveFlowData = __esm({
   "src/routes/production/saveFlowData.ts"() {
     "use strict";
-    import_express75 = __toESM(require_express2());
+    import_express81 = __toESM(require_express2());
     init_utils3();
     init_zod();
     init_responseFormat();
     init_middleware();
-    router75 = import_express75.default.Router();
-    saveFlowData_default = router75.post(
+    router81 = import_express81.default.Router();
+    saveFlowData_default = router81.post(
       "/",
       validateFields({
         projectId: external_exports.number(),
@@ -253349,17 +253772,17 @@ var init_saveFlowData = __esm({
 });
 
 // src/routes/production/storyboard/addStoryboard.ts
-var import_express76, router76, addStoryboard_default;
+var import_express82, router82, addStoryboard_default;
 var init_addStoryboard = __esm({
   "src/routes/production/storyboard/addStoryboard.ts"() {
     "use strict";
-    import_express76 = __toESM(require_express2());
+    import_express82 = __toESM(require_express2());
     init_utils3();
     init_zod();
     init_responseFormat();
     init_middleware();
-    router76 = import_express76.default.Router();
-    addStoryboard_default = router76.post(
+    router82 = import_express82.default.Router();
+    addStoryboard_default = router82.post(
       "/",
       validateFields({
         prompt: external_exports.string(),
@@ -253397,17 +253820,17 @@ var init_addStoryboard = __esm({
 });
 
 // src/routes/production/storyboard/batchAddStoryboardInfo.ts
-var import_express77, router77, batchAddStoryboardInfo_default;
+var import_express83, router83, batchAddStoryboardInfo_default;
 var init_batchAddStoryboardInfo = __esm({
   "src/routes/production/storyboard/batchAddStoryboardInfo.ts"() {
     "use strict";
-    import_express77 = __toESM(require_express2());
+    import_express83 = __toESM(require_express2());
     init_utils3();
     init_zod();
     init_responseFormat();
     init_middleware();
-    router77 = import_express77.default.Router();
-    batchAddStoryboardInfo_default = router77.post(
+    router83 = import_express83.default.Router();
+    batchAddStoryboardInfo_default = router83.post(
       "/",
       validateFields({
         data: external_exports.array(
@@ -253502,17 +253925,17 @@ var init_batchAddStoryboardInfo = __esm({
 });
 
 // src/routes/production/storyboard/batchDelete.ts
-var import_express78, router78, batchDelete_default2;
+var import_express84, router84, batchDelete_default2;
 var init_batchDelete2 = __esm({
   "src/routes/production/storyboard/batchDelete.ts"() {
     "use strict";
-    import_express78 = __toESM(require_express2());
+    import_express84 = __toESM(require_express2());
     init_utils3();
     init_zod();
     init_responseFormat();
     init_middleware();
-    router78 = import_express78.default.Router();
-    batchDelete_default2 = router78.post(
+    router84 = import_express84.default.Router();
+    batchDelete_default2 = router84.post(
       "/",
       validateFields({
         ids: external_exports.array(external_exports.number()),
@@ -253558,17 +253981,17 @@ async function getAssetsImageBase64(imageIds) {
   );
   return imageUrls.filter(Boolean).map((url4) => ({ type: "image", base64: url4 }));
 }
-var import_express79, router79, batchGenerateImage_default;
+var import_express85, router85, batchGenerateImage_default;
 var init_batchGenerateImage = __esm({
   "src/routes/production/storyboard/batchGenerateImage.ts"() {
     "use strict";
-    import_express79 = __toESM(require_express2());
+    import_express85 = __toESM(require_express2());
     init_utils3();
     init_zod();
     init_responseFormat();
     init_middleware();
-    router79 = import_express79.default.Router();
-    batchGenerateImage_default = router79.post(
+    router85 = import_express85.default.Router();
+    batchGenerateImage_default = router85.post(
       "/",
       validateFields({
         storyboardIds: external_exports.array(external_exports.number()),
@@ -253679,17 +254102,17 @@ var init_batchGenerateImage = __esm({
 });
 
 // src/routes/production/storyboard/downPreviewImage.ts
-var import_express80, import_sharp4, router80, downPreviewImage_default;
+var import_express86, import_sharp4, router86, downPreviewImage_default;
 var init_downPreviewImage = __esm({
   "src/routes/production/storyboard/downPreviewImage.ts"() {
     "use strict";
-    import_express80 = __toESM(require_express2());
+    import_express86 = __toESM(require_express2());
     init_utils3();
     init_zod();
     import_sharp4 = __toESM(require("sharp"));
     init_middleware();
-    router80 = import_express80.default.Router();
-    downPreviewImage_default = router80.post(
+    router86 = import_express86.default.Router();
+    downPreviewImage_default = router86.post(
       "/",
       validateFields({
         storyboardIds: external_exports.array(external_exports.number())
@@ -253775,17 +254198,17 @@ var init_downPreviewImage = __esm({
 });
 
 // src/routes/production/storyboard/editStoryboardInfo.ts
-var import_express81, router81, editStoryboardInfo_default;
+var import_express87, router87, editStoryboardInfo_default;
 var init_editStoryboardInfo = __esm({
   "src/routes/production/storyboard/editStoryboardInfo.ts"() {
     "use strict";
-    import_express81 = __toESM(require_express2());
+    import_express87 = __toESM(require_express2());
     init_utils3();
     init_zod();
     init_responseFormat();
     init_middleware();
-    router81 = import_express81.default.Router();
-    editStoryboardInfo_default = router81.post(
+    router87 = import_express87.default.Router();
+    editStoryboardInfo_default = router87.post(
       "/",
       validateFields({
         id: external_exports.number(),
@@ -253805,17 +254228,17 @@ var init_editStoryboardInfo = __esm({
 });
 
 // src/routes/production/storyboard/getStoryboardData.ts
-var import_express82, router82, getStoryboardData_default2;
+var import_express88, router88, getStoryboardData_default2;
 var init_getStoryboardData2 = __esm({
   "src/routes/production/storyboard/getStoryboardData.ts"() {
     "use strict";
-    import_express82 = __toESM(require_express2());
+    import_express88 = __toESM(require_express2());
     init_utils3();
     init_zod();
     init_responseFormat();
     init_middleware();
-    router82 = import_express82.default.Router();
-    getStoryboardData_default2 = router82.post(
+    router88 = import_express88.default.Router();
+    getStoryboardData_default2 = router88.post(
       "/",
       validateFields({
         scriptId: external_exports.number(),
@@ -253853,17 +254276,17 @@ var init_getStoryboardData2 = __esm({
 });
 
 // src/routes/production/storyboard/pollingImage.ts
-var import_express83, router83, pollingImage_default2;
+var import_express89, router89, pollingImage_default2;
 var init_pollingImage2 = __esm({
   "src/routes/production/storyboard/pollingImage.ts"() {
     "use strict";
-    import_express83 = __toESM(require_express2());
+    import_express89 = __toESM(require_express2());
     init_utils3();
     init_zod();
     init_responseFormat();
     init_middleware();
-    router83 = import_express83.default.Router();
-    pollingImage_default2 = router83.post(
+    router89 = import_express89.default.Router();
+    pollingImage_default2 = router89.post(
       "/",
       validateFields({
         ids: external_exports.array(external_exports.number())
@@ -253884,18 +254307,18 @@ var init_pollingImage2 = __esm({
 });
 
 // src/routes/production/storyboard/previewImage.ts
-var import_express84, import_sharp5, router84, previewImage_default;
+var import_express90, import_sharp5, router90, previewImage_default;
 var init_previewImage = __esm({
   "src/routes/production/storyboard/previewImage.ts"() {
     "use strict";
-    import_express84 = __toESM(require_express2());
+    import_express90 = __toESM(require_express2());
     init_utils3();
     init_zod();
     import_sharp5 = __toESM(require("sharp"));
     init_responseFormat();
     init_middleware();
-    router84 = import_express84.default.Router();
-    previewImage_default = router84.post(
+    router90 = import_express90.default.Router();
+    previewImage_default = router90.post(
       "/",
       validateFields({
         storyboardIds: external_exports.array(external_exports.number())
@@ -253992,17 +254415,17 @@ var init_previewImage = __esm({
 });
 
 // src/routes/production/storyboard/removeFrame.ts
-var import_express85, router85, removeFrame_default;
+var import_express91, router91, removeFrame_default;
 var init_removeFrame = __esm({
   "src/routes/production/storyboard/removeFrame.ts"() {
     "use strict";
-    import_express85 = __toESM(require_express2());
+    import_express91 = __toESM(require_express2());
     init_utils3();
     init_zod();
     init_responseFormat();
     init_middleware();
-    router85 = import_express85.default.Router();
-    removeFrame_default = router85.post(
+    router91 = import_express91.default.Router();
+    removeFrame_default = router91.post(
       "/",
       validateFields({
         id: external_exports.number()
@@ -254023,17 +254446,17 @@ var init_removeFrame = __esm({
 });
 
 // src/routes/production/storyboard/updateStoryboardUrl.ts
-var import_express86, router86, updateStoryboardUrl_default;
+var import_express92, router92, updateStoryboardUrl_default;
 var init_updateStoryboardUrl = __esm({
   "src/routes/production/storyboard/updateStoryboardUrl.ts"() {
     "use strict";
-    import_express86 = __toESM(require_express2());
+    import_express92 = __toESM(require_express2());
     init_utils3();
     init_zod();
     init_responseFormat();
     init_middleware();
-    router86 = import_express86.default.Router();
-    updateStoryboardUrl_default = router86.post(
+    router92 = import_express92.default.Router();
+    updateStoryboardUrl_default = router92.post(
       "/",
       validateFields({
         id: external_exports.number(),
@@ -254055,17 +254478,17 @@ var init_updateStoryboardUrl = __esm({
 });
 
 // src/routes/production/workbench/addTrack.ts
-var import_express87, router87, addTrack_default;
+var import_express93, router93, addTrack_default;
 var init_addTrack = __esm({
   "src/routes/production/workbench/addTrack.ts"() {
     "use strict";
-    import_express87 = __toESM(require_express2());
+    import_express93 = __toESM(require_express2());
     init_utils3();
     init_zod();
     init_responseFormat();
     init_middleware();
-    router87 = import_express87.default.Router();
-    addTrack_default = router87.post(
+    router93 = import_express93.default.Router();
+    addTrack_default = router93.post(
       "/",
       validateFields({
         projectId: external_exports.number(),
@@ -254091,11 +254514,11 @@ var init_addTrack = __esm({
 });
 
 // src/routes/production/workbench/batchGeneratePrompt.ts
-var import_express88, import_promises5, import_path15, router88, batchGeneratePrompt_default;
+var import_express94, import_promises5, import_path15, router94, batchGeneratePrompt_default;
 var init_batchGeneratePrompt = __esm({
   "src/routes/production/workbench/batchGeneratePrompt.ts"() {
     "use strict";
-    import_express88 = __toESM(require_express2());
+    import_express94 = __toESM(require_express2());
     init_utils3();
     init_zod();
     init_responseFormat();
@@ -254103,8 +254526,8 @@ var init_batchGeneratePrompt = __esm({
     import_promises5 = __toESM(require("fs/promises"));
     import_path15 = __toESM(require("path"));
     init_userConfig();
-    router88 = import_express88.default.Router();
-    batchGeneratePrompt_default = router88.post(
+    router94 = import_express94.default.Router();
+    batchGeneratePrompt_default = router94.post(
       "/",
       validateFields({
         projectId: external_exports.number(),
@@ -254314,21 +254737,21 @@ async function runBatchVideoTasks(input) {
     await runVideoTask({ ...input, task });
   });
 }
-var import_express89, router89, VIDEO_REFERENCE_IMAGE_MAX_BYTES, VIDEO_REFERENCE_IMAGE_MAX_EDGE, VIDEO_GENERATION_CONCURRENCY, batchGenerateVideo_default;
+var import_express95, router95, VIDEO_REFERENCE_IMAGE_MAX_BYTES, VIDEO_REFERENCE_IMAGE_MAX_EDGE, VIDEO_GENERATION_CONCURRENCY, batchGenerateVideo_default;
 var init_batchGenerateVideo = __esm({
   "src/routes/production/workbench/batchGenerateVideo.ts"() {
     "use strict";
-    import_express89 = __toESM(require_express2());
+    import_express95 = __toESM(require_express2());
     init_utils3();
     init_zod();
     init_dist_node();
     init_responseFormat();
     init_middleware();
-    router89 = import_express89.default.Router();
+    router95 = import_express95.default.Router();
     VIDEO_REFERENCE_IMAGE_MAX_BYTES = 512 * 1024;
     VIDEO_REFERENCE_IMAGE_MAX_EDGE = 1280;
     VIDEO_GENERATION_CONCURRENCY = 2;
-    batchGenerateVideo_default = router89.post(
+    batchGenerateVideo_default = router95.post(
       "/",
       validateFields({
         projectId: external_exports.number(),
@@ -254402,17 +254825,17 @@ var init_batchGenerateVideo = __esm({
 });
 
 // src/routes/production/workbench/checkVideoStateList.ts
-var import_express90, router90, checkVideoStateList_default;
+var import_express96, router96, checkVideoStateList_default;
 var init_checkVideoStateList = __esm({
   "src/routes/production/workbench/checkVideoStateList.ts"() {
     "use strict";
-    import_express90 = __toESM(require_express2());
+    import_express96 = __toESM(require_express2());
     init_utils3();
     init_zod();
     init_responseFormat();
     init_middleware();
-    router90 = import_express90.default.Router();
-    checkVideoStateList_default = router90.post(
+    router96 = import_express96.default.Router();
+    checkVideoStateList_default = router96.post(
       "/",
       validateFields({
         projectId: external_exports.number(),
@@ -254438,17 +254861,17 @@ var init_checkVideoStateList = __esm({
 });
 
 // src/routes/production/workbench/deleteTrack.ts
-var import_express91, router91, deleteTrack_default;
+var import_express97, router97, deleteTrack_default;
 var init_deleteTrack = __esm({
   "src/routes/production/workbench/deleteTrack.ts"() {
     "use strict";
-    import_express91 = __toESM(require_express2());
+    import_express97 = __toESM(require_express2());
     init_utils3();
     init_zod();
     init_responseFormat();
     init_middleware();
-    router91 = import_express91.default.Router();
-    deleteTrack_default = router91.post(
+    router97 = import_express97.default.Router();
+    deleteTrack_default = router97.post(
       "/",
       validateFields({
         id: external_exports.number()
@@ -254466,17 +254889,17 @@ var init_deleteTrack = __esm({
 });
 
 // src/routes/production/workbench/delVideo.ts
-var import_express92, router92, delVideo_default;
+var import_express98, router98, delVideo_default;
 var init_delVideo = __esm({
   "src/routes/production/workbench/delVideo.ts"() {
     "use strict";
-    import_express92 = __toESM(require_express2());
+    import_express98 = __toESM(require_express2());
     init_utils3();
     init_zod();
     init_responseFormat();
     init_middleware();
-    router92 = import_express92.default.Router();
-    delVideo_default = router92.post(
+    router98 = import_express98.default.Router();
+    delVideo_default = router98.post(
       "/",
       validateFields({
         id: external_exports.number()
@@ -254560,20 +254983,20 @@ async function runVideoGenerationTask(input) {
     });
   }
 }
-var import_express93, router93, VIDEO_REFERENCE_IMAGE_MAX_BYTES2, VIDEO_REFERENCE_IMAGE_MAX_EDGE2, generateVideo_default;
+var import_express99, router99, VIDEO_REFERENCE_IMAGE_MAX_BYTES2, VIDEO_REFERENCE_IMAGE_MAX_EDGE2, generateVideo_default;
 var init_generateVideo = __esm({
   "src/routes/production/workbench/generateVideo.ts"() {
     "use strict";
-    import_express93 = __toESM(require_express2());
+    import_express99 = __toESM(require_express2());
     init_utils3();
     init_zod();
     init_dist_node();
     init_responseFormat();
     init_middleware();
-    router93 = import_express93.default.Router();
+    router99 = import_express99.default.Router();
     VIDEO_REFERENCE_IMAGE_MAX_BYTES2 = 512 * 1024;
     VIDEO_REFERENCE_IMAGE_MAX_EDGE2 = 1280;
-    generateVideo_default = router93.post(
+    generateVideo_default = router99.post(
       "/",
       validateFields({
         projectId: external_exports.number(),
@@ -254641,11 +255064,11 @@ var init_generateVideo = __esm({
 });
 
 // src/routes/production/workbench/generateVideoPrompt.ts
-var import_express94, import_promises6, import_path16, router94, generateVideoPrompt_default;
+var import_express100, import_promises6, import_path16, router100, generateVideoPrompt_default;
 var init_generateVideoPrompt = __esm({
   "src/routes/production/workbench/generateVideoPrompt.ts"() {
     "use strict";
-    import_express94 = __toESM(require_express2());
+    import_express100 = __toESM(require_express2());
     init_utils3();
     init_zod();
     init_responseFormat();
@@ -254653,8 +255076,8 @@ var init_generateVideoPrompt = __esm({
     import_promises6 = __toESM(require("fs/promises"));
     import_path16 = __toESM(require("path"));
     init_userConfig();
-    router94 = import_express94.default.Router();
-    generateVideoPrompt_default = router94.post(
+    router100 = import_express100.default.Router();
+    generateVideoPrompt_default = router100.post(
       "/",
       validateFields({
         trackId: external_exports.number(),
@@ -254801,17 +255224,17 @@ var init_generateVideoPrompt = __esm({
 });
 
 // src/routes/production/workbench/getAudioBindAssetsList.ts
-var import_express95, router95, getAudioBindAssetsList_default;
+var import_express101, router101, getAudioBindAssetsList_default;
 var init_getAudioBindAssetsList = __esm({
   "src/routes/production/workbench/getAudioBindAssetsList.ts"() {
     "use strict";
-    import_express95 = __toESM(require_express2());
+    import_express101 = __toESM(require_express2());
     init_utils3();
     init_zod();
     init_responseFormat();
     init_middleware();
-    router95 = import_express95.default.Router();
-    getAudioBindAssetsList_default = router95.post(
+    router101 = import_express101.default.Router();
+    getAudioBindAssetsList_default = router101.post(
       "/",
       validateFields({
         assetsIds: external_exports.array(external_exports.number())
@@ -254845,17 +255268,17 @@ var init_getAudioBindAssetsList = __esm({
 });
 
 // src/routes/production/workbench/getFileUrl.ts
-var import_express96, router96, getFileUrl_default;
+var import_express102, router102, getFileUrl_default;
 var init_getFileUrl = __esm({
   "src/routes/production/workbench/getFileUrl.ts"() {
     "use strict";
-    import_express96 = __toESM(require_express2());
+    import_express102 = __toESM(require_express2());
     init_utils3();
     init_zod();
     init_responseFormat();
     init_middleware();
-    router96 = import_express96.default.Router();
-    getFileUrl_default = router96.post(
+    router102 = import_express102.default.Router();
+    getFileUrl_default = router102.post(
       "/",
       validateFields({
         items: external_exports.array(external_exports.object({
@@ -254889,17 +255312,17 @@ var init_getFileUrl = __esm({
 });
 
 // src/routes/production/workbench/getGenerateData.ts
-var import_express97, router97, getGenerateData_default;
+var import_express103, router103, getGenerateData_default;
 var init_getGenerateData = __esm({
   "src/routes/production/workbench/getGenerateData.ts"() {
     "use strict";
-    import_express97 = __toESM(require_express2());
+    import_express103 = __toESM(require_express2());
     init_utils3();
     init_zod();
     init_responseFormat();
     init_middleware();
-    router97 = import_express97.default.Router();
-    getGenerateData_default = router97.post(
+    router103 = import_express103.default.Router();
+    getGenerateData_default = router103.post(
       "/",
       validateFields({
         projectId: external_exports.number(),
@@ -255068,17 +255491,17 @@ var init_getGenerateData = __esm({
 });
 
 // src/routes/production/workbench/getVideoList.ts
-var import_express98, router98, getVideoList_default;
+var import_express104, router104, getVideoList_default;
 var init_getVideoList = __esm({
   "src/routes/production/workbench/getVideoList.ts"() {
     "use strict";
-    import_express98 = __toESM(require_express2());
+    import_express104 = __toESM(require_express2());
     init_utils3();
     init_zod();
     init_responseFormat();
     init_middleware();
-    router98 = import_express98.default.Router();
-    getVideoList_default = router98.post(
+    router104 = import_express104.default.Router();
+    getVideoList_default = router104.post(
       "/",
       validateFields({
         projectId: external_exports.number(),
@@ -255107,17 +255530,17 @@ var init_getVideoList = __esm({
 });
 
 // src/routes/production/workbench/selectVideo.ts
-var import_express99, router99, selectVideo_default;
+var import_express105, router105, selectVideo_default;
 var init_selectVideo = __esm({
   "src/routes/production/workbench/selectVideo.ts"() {
     "use strict";
-    import_express99 = __toESM(require_express2());
+    import_express105 = __toESM(require_express2());
     init_utils3();
     init_zod();
     init_responseFormat();
     init_middleware();
-    router99 = import_express99.default.Router();
-    selectVideo_default = router99.post(
+    router105 = import_express105.default.Router();
+    selectVideo_default = router105.post(
       "/",
       validateFields({
         trackId: external_exports.number(),
@@ -255135,17 +255558,17 @@ var init_selectVideo = __esm({
 });
 
 // src/routes/production/workbench/updateVideoDuration.ts
-var import_express100, router100, updateVideoDuration_default;
+var import_express106, router106, updateVideoDuration_default;
 var init_updateVideoDuration = __esm({
   "src/routes/production/workbench/updateVideoDuration.ts"() {
     "use strict";
-    import_express100 = __toESM(require_express2());
+    import_express106 = __toESM(require_express2());
     init_utils3();
     init_zod();
     init_responseFormat();
     init_middleware();
-    router100 = import_express100.default.Router();
-    updateVideoDuration_default = router100.post(
+    router106 = import_express106.default.Router();
+    updateVideoDuration_default = router106.post(
       "/",
       validateFields({
         id: external_exports.number(),
@@ -255163,17 +255586,17 @@ var init_updateVideoDuration = __esm({
 });
 
 // src/routes/production/workbench/updateVideoPrompt.ts
-var import_express101, router101, updateVideoPrompt_default;
+var import_express107, router107, updateVideoPrompt_default;
 var init_updateVideoPrompt = __esm({
   "src/routes/production/workbench/updateVideoPrompt.ts"() {
     "use strict";
-    import_express101 = __toESM(require_express2());
+    import_express107 = __toESM(require_express2());
     init_utils3();
     init_zod();
     init_responseFormat();
     init_middleware();
-    router101 = import_express101.default.Router();
-    updateVideoPrompt_default = router101.post(
+    router107 = import_express107.default.Router();
+    updateVideoPrompt_default = router107.post(
       "/",
       validateFields({
         id: external_exports.number(),
@@ -255191,19 +255614,19 @@ var init_updateVideoPrompt = __esm({
 });
 
 // src/routes/project/addDirectorManual.ts
-var import_express102, import_fs9, import_path17, router102, addDirectorManual_default;
+var import_express108, import_fs9, import_path17, router108, addDirectorManual_default;
 var init_addDirectorManual = __esm({
   "src/routes/project/addDirectorManual.ts"() {
     "use strict";
-    import_express102 = __toESM(require_express2());
+    import_express108 = __toESM(require_express2());
     init_utils3();
     init_responseFormat();
     import_fs9 = __toESM(require("fs"));
     import_path17 = __toESM(require("path"));
     init_middleware();
     init_zod();
-    router102 = import_express102.default.Router();
-    addDirectorManual_default = router102.post(
+    router108 = import_express108.default.Router();
+    addDirectorManual_default = router108.post(
       "/",
       validateFields({
         name: external_exports.string(),
@@ -255281,18 +255704,19 @@ var init_addDirectorManual = __esm({
 });
 
 // src/routes/project/addProject.ts
-var import_express103, router103, addProject_default;
+var import_express109, router109, addProject_default;
 var init_addProject = __esm({
   "src/routes/project/addProject.ts"() {
     "use strict";
-    import_express103 = __toESM(require_express2());
+    import_express109 = __toESM(require_express2());
     init_utils3();
     init_zod();
     init_responseFormat();
     init_middleware();
     init_requestContext();
-    router103 = import_express103.default.Router();
-    addProject_default = router103.post(
+    init_vendorVisibility();
+    router109 = import_express109.default.Router();
+    addProject_default = router109.post(
       "/",
       validateFields({
         projectType: external_exports.string(),
@@ -255321,8 +255745,8 @@ var init_addProject = __esm({
           videoRatio,
           directorManual,
           userId,
-          imageModel,
-          videoModel,
+          imageModel: toInternalModelId(imageModel),
+          videoModel: toInternalModelId(videoModel),
           createTime: Date.now(),
           imageQuality,
           mode
@@ -255334,19 +255758,19 @@ var init_addProject = __esm({
 });
 
 // src/routes/project/addVisualManual.ts
-var import_express104, import_fs10, import_path18, router104, addVisualManual_default;
+var import_express110, import_fs10, import_path18, router110, addVisualManual_default;
 var init_addVisualManual = __esm({
   "src/routes/project/addVisualManual.ts"() {
     "use strict";
-    import_express104 = __toESM(require_express2());
+    import_express110 = __toESM(require_express2());
     init_utils3();
     init_responseFormat();
     import_fs10 = __toESM(require("fs"));
     import_path18 = __toESM(require("path"));
     init_middleware();
     init_zod();
-    router104 = import_express104.default.Router();
-    addVisualManual_default = router104.post(
+    router110 = import_express110.default.Router();
+    addVisualManual_default = router110.post(
       "/",
       validateFields({
         name: external_exports.string(),
@@ -255433,18 +255857,18 @@ var init_addVisualManual = __esm({
 });
 
 // src/routes/project/deleteDirectorManual.ts
-var import_express105, import_promises7, router105, deleteDirectorManual_default;
+var import_express111, import_promises7, router111, deleteDirectorManual_default;
 var init_deleteDirectorManual = __esm({
   "src/routes/project/deleteDirectorManual.ts"() {
     "use strict";
-    import_express105 = __toESM(require_express2());
+    import_express111 = __toESM(require_express2());
     init_utils3();
     import_promises7 = __toESM(require("node:fs/promises"));
     init_zod();
     init_responseFormat();
     init_middleware();
-    router105 = import_express105.default.Router();
-    deleteDirectorManual_default = router105.post(
+    router111 = import_express111.default.Router();
+    deleteDirectorManual_default = router111.post(
       "/",
       validateFields({
         name: external_exports.string()
@@ -255476,18 +255900,18 @@ var init_deleteDirectorManual = __esm({
 });
 
 // src/routes/project/deleteVisualManual.ts
-var import_express106, import_promises8, router106, deleteVisualManual_default;
+var import_express112, import_promises8, router112, deleteVisualManual_default;
 var init_deleteVisualManual = __esm({
   "src/routes/project/deleteVisualManual.ts"() {
     "use strict";
-    import_express106 = __toESM(require_express2());
+    import_express112 = __toESM(require_express2());
     init_utils3();
     import_promises8 = __toESM(require("node:fs/promises"));
     init_zod();
     init_responseFormat();
     init_middleware();
-    router106 = import_express106.default.Router();
-    deleteVisualManual_default = router106.post(
+    router112 = import_express112.default.Router();
+    deleteVisualManual_default = router112.post(
       "/",
       validateFields({
         name: external_exports.string()
@@ -255519,18 +255943,18 @@ var init_deleteVisualManual = __esm({
 });
 
 // src/routes/project/delProject.ts
-var import_express107, router107, delProject_default2;
+var import_express113, router113, delProject_default2;
 var init_delProject2 = __esm({
   "src/routes/project/delProject.ts"() {
     "use strict";
-    import_express107 = __toESM(require_express2());
+    import_express113 = __toESM(require_express2());
     init_utils3();
     init_zod();
     init_responseFormat();
     init_middleware();
     init_isolation();
-    router107 = import_express107.default.Router();
-    delProject_default2 = router107.post(
+    router113 = import_express113.default.Router();
+    delProject_default2 = router113.post(
       "/",
       validateFields({
         id: external_exports.number()
@@ -255578,19 +256002,19 @@ var init_delProject2 = __esm({
 });
 
 // src/routes/project/editDirectorlManual.ts
-var import_express108, import_fs11, import_path19, router108, editDirectorlManual_default;
+var import_express114, import_fs11, import_path19, router114, editDirectorlManual_default;
 var init_editDirectorlManual = __esm({
   "src/routes/project/editDirectorlManual.ts"() {
     "use strict";
-    import_express108 = __toESM(require_express2());
+    import_express114 = __toESM(require_express2());
     init_utils3();
     init_responseFormat();
     import_fs11 = __toESM(require("fs"));
     import_path19 = __toESM(require("path"));
     init_middleware();
     init_zod();
-    router108 = import_express108.default.Router();
-    editDirectorlManual_default = router108.post(
+    router114 = import_express114.default.Router();
+    editDirectorlManual_default = router114.post(
       "/",
       validateFields({
         name: external_exports.string(),
@@ -255670,17 +256094,18 @@ ${item.data}` : item.data;
 });
 
 // src/routes/project/editProject.ts
-var import_express109, router109, editProject_default;
+var import_express115, router115, editProject_default;
 var init_editProject = __esm({
   "src/routes/project/editProject.ts"() {
     "use strict";
-    import_express109 = __toESM(require_express2());
+    import_express115 = __toESM(require_express2());
     init_utils3();
     init_zod();
     init_responseFormat();
     init_middleware();
-    router109 = import_express109.default.Router();
-    editProject_default = router109.post(
+    init_vendorVisibility();
+    router115 = import_express115.default.Router();
+    editProject_default = router115.post(
       "/",
       validateFields({
         id: external_exports.number(),
@@ -255705,8 +256130,8 @@ var init_editProject = __esm({
           artStyle,
           videoRatio,
           directorManual,
-          imageModel,
-          videoModel,
+          imageModel: toInternalModelId(imageModel),
+          videoModel: toInternalModelId(videoModel),
           imageQuality,
           projectType,
           mode
@@ -255718,19 +256143,19 @@ var init_editProject = __esm({
 });
 
 // src/routes/project/editVisualManual.ts
-var import_express110, import_fs12, import_path20, router110, editVisualManual_default;
+var import_express116, import_fs12, import_path20, router116, editVisualManual_default;
 var init_editVisualManual = __esm({
   "src/routes/project/editVisualManual.ts"() {
     "use strict";
-    import_express110 = __toESM(require_express2());
+    import_express116 = __toESM(require_express2());
     init_utils3();
     init_responseFormat();
     import_fs12 = __toESM(require("fs"));
     import_path20 = __toESM(require("path"));
     init_middleware();
     init_zod();
-    router110 = import_express110.default.Router();
-    editVisualManual_default = router110.post(
+    router116 = import_express116.default.Router();
+    editVisualManual_default = router116.post(
       "/",
       validateFields({
         name: external_exports.string(),
@@ -255819,18 +256244,19 @@ ${item.data}` : item.data;
 });
 
 // src/routes/project/getModelDetails.ts
-var import_express111, router111, getModelDetails_default;
+var import_express117, router117, getModelDetails_default;
 var init_getModelDetails = __esm({
   "src/routes/project/getModelDetails.ts"() {
     "use strict";
-    import_express111 = __toESM(require_express2());
+    import_express117 = __toESM(require_express2());
     init_responseFormat();
     init_utils3();
     init_zod();
     init_middleware();
     init_userConfig();
-    router111 = import_express111.default.Router();
-    getModelDetails_default = router111.post(
+    init_vendorVisibility();
+    router117 = import_express117.default.Router();
+    getModelDetails_default = router117.post(
       "/",
       validateFields({
         key: external_exports.enum(["scriptAgent", "productionAgent"])
@@ -255841,7 +256267,7 @@ var init_getModelDetails = __esm({
         if (!data?.modelName) return res.status(200).send(success3(null));
         const [id, modelName] = data.modelName.split(/:(.+)/);
         if (!id || !modelName) return res.status(200).send(success3(null));
-        const models = await utils_default.vendor.getModelList(id);
+        const models = await utils_default.vendor.getModelList(toInternalVendorId(id));
         const model = models.find((m) => m.modelName === modelName);
         if (!model) return res.status(200).send(success3(null));
         res.status(200).send(success3(model));
@@ -255851,21 +256277,30 @@ var init_getModelDetails = __esm({
 });
 
 // src/routes/project/getProject.ts
-var import_express112, router112, getProject_default;
+var import_express118, router118, getProject_default;
 var init_getProject = __esm({
   "src/routes/project/getProject.ts"() {
     "use strict";
-    import_express112 = __toESM(require_express2());
+    import_express118 = __toESM(require_express2());
     init_utils3();
     init_responseFormat();
     init_requestContext();
-    router112 = import_express112.default.Router();
-    getProject_default = router112.post("/", async (req, res) => {
+    init_vendorVisibility();
+    router118 = import_express118.default.Router();
+    getProject_default = router118.post("/", async (req, res) => {
       const userId = getCurrentUserId();
       const query = utils_default.db("o_project").select("*");
       if (userId) query.where("userId", userId);
       const data = await query;
-      res.status(200).send(success3(data));
+      res.status(200).send(
+        success3(
+          data.map((item) => ({
+            ...item,
+            imageModel: toPublicModelId(item.imageModel),
+            videoModel: toPublicModelId(item.videoModel)
+          }))
+        )
+      );
     });
   }
 });
@@ -255892,16 +256327,16 @@ async function readAllImages(imagesDir) {
     return [];
   }
 }
-var import_express113, import_fs13, import_path21, router113, DATA_MAP, getVisualManual_default;
+var import_express119, import_fs13, import_path21, router119, DATA_MAP, getVisualManual_default;
 var init_getVisualManual = __esm({
   "src/routes/project/getVisualManual.ts"() {
     "use strict";
-    import_express113 = __toESM(require_express2());
+    import_express119 = __toESM(require_express2());
     init_utils3();
     init_responseFormat();
     import_fs13 = __toESM(require("fs"));
     import_path21 = __toESM(require("path"));
-    router113 = import_express113.default.Router();
+    router119 = import_express119.default.Router();
     DATA_MAP = [
       { label: "README", value: "README" },
       { label: "\u524D\u7F00", value: "prefix" },
@@ -255916,7 +256351,7 @@ var init_getVisualManual = __esm({
       { label: "\u6280\u6CD5-\u5BFC\u6F14\u89C4\u5212", value: "director_planning_style", subDir: "driector_skills" },
       { label: "\u6280\u6CD5-\u5206\u955C\u8868\u8BBE\u8BA1", value: "director_storyboard_table_style", subDir: "driector_skills" }
     ];
-    getVisualManual_default = router113.post("/", async (req, res) => {
+    getVisualManual_default = router119.post("/", async (req, res) => {
       try {
         const artPromptsDir = utils_default.getPath(["skills", "art_skills"]);
         const styleDirs = import_fs13.default.readdirSync(artPromptsDir, { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => d.name);
@@ -255978,22 +256413,22 @@ async function readAllImages2(imagesDir) {
     return [];
   }
 }
-var import_express114, import_fs14, import_path22, router114, DATA_MAP2, queryDirectorManual_default;
+var import_express120, import_fs14, import_path22, router120, DATA_MAP2, queryDirectorManual_default;
 var init_queryDirectorManual = __esm({
   "src/routes/project/queryDirectorManual.ts"() {
     "use strict";
-    import_express114 = __toESM(require_express2());
+    import_express120 = __toESM(require_express2());
     init_utils3();
     init_responseFormat();
     import_fs14 = __toESM(require("fs"));
     import_path22 = __toESM(require("path"));
-    router114 = import_express114.default.Router();
+    router120 = import_express120.default.Router();
     DATA_MAP2 = [
       { label: "README", value: "README" },
       { label: "\u5BFC\u6F14\u89C4\u5212", value: "director_planning_narrative", subDir: "driector_skills" },
       { label: "\u5206\u955C\u8868", value: "director_storyboard_table_narrative", subDir: "driector_skills" }
     ];
-    queryDirectorManual_default = router114.post("/", async (req, res) => {
+    queryDirectorManual_default = router120.post("/", async (req, res) => {
       try {
         const artPromptsDir = utils_default.getPath(["skills", "story_skills"]);
         const styleDirs = import_fs14.default.readdirSync(artPromptsDir, { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => d.name);
@@ -256034,19 +256469,19 @@ var init_queryDirectorManual = __esm({
 });
 
 // src/routes/project/visualManual.ts
-var import_express115, import_fs15, import_path23, router115, visualManual_default;
+var import_express121, import_fs15, import_path23, router121, visualManual_default;
 var init_visualManual = __esm({
   "src/routes/project/visualManual.ts"() {
     "use strict";
-    import_express115 = __toESM(require_express2());
+    import_express121 = __toESM(require_express2());
     init_zod();
     init_responseFormat();
     init_middleware();
     init_getPath();
     import_fs15 = __toESM(require("fs"));
     import_path23 = __toESM(require("path"));
-    router115 = import_express115.default.Router();
-    visualManual_default = router115.post(
+    router121 = import_express121.default.Router();
+    visualManual_default = router121.post(
       "/",
       validateFields({
         type: external_exports.string()
@@ -256080,17 +256515,17 @@ var init_visualManual = __esm({
 });
 
 // src/routes/script/addScript.ts
-var import_express116, router116, addScript_default;
+var import_express122, router122, addScript_default;
 var init_addScript = __esm({
   "src/routes/script/addScript.ts"() {
     "use strict";
-    import_express116 = __toESM(require_express2());
+    import_express122 = __toESM(require_express2());
     init_utils3();
     init_zod();
     init_responseFormat();
     init_middleware();
-    router116 = import_express116.default.Router();
-    addScript_default = router116.post(
+    router122 = import_express122.default.Router();
+    addScript_default = router122.post(
       "/",
       validateFields({
         name: external_exports.string(),
@@ -256126,17 +256561,17 @@ var init_addScript = __esm({
 });
 
 // src/routes/script/batchAddScript.ts
-var import_express117, router117, batchAddScript_default;
+var import_express123, router123, batchAddScript_default;
 var init_batchAddScript = __esm({
   "src/routes/script/batchAddScript.ts"() {
     "use strict";
-    import_express117 = __toESM(require_express2());
+    import_express123 = __toESM(require_express2());
     init_utils3();
     init_zod();
     init_responseFormat();
     init_middleware();
-    router117 = import_express117.default.Router();
-    batchAddScript_default = router117.post(
+    router123 = import_express123.default.Router();
+    batchAddScript_default = router123.post(
       "/",
       validateFields({
         data: external_exports.array(
@@ -256166,17 +256601,17 @@ var init_batchAddScript = __esm({
 });
 
 // src/routes/script/delScript.ts
-var import_express118, router118, delScript_default;
+var import_express124, router124, delScript_default;
 var init_delScript = __esm({
   "src/routes/script/delScript.ts"() {
     "use strict";
-    import_express118 = __toESM(require_express2());
+    import_express124 = __toESM(require_express2());
     init_utils3();
     init_zod();
     init_responseFormat();
     init_middleware();
-    router118 = import_express118.default.Router();
-    delScript_default = router118.post(
+    router124 = import_express124.default.Router();
+    delScript_default = router124.post(
       "/",
       validateFields({
         ids: external_exports.array(external_exports.number())
@@ -266668,17 +267103,17 @@ var require_compressing = __commonJS({
 });
 
 // src/routes/script/exportScript.ts
-var import_express119, import_compressing, router119, exportScript_default;
+var import_express125, import_compressing, router125, exportScript_default;
 var init_exportScript = __esm({
   "src/routes/script/exportScript.ts"() {
     "use strict";
-    import_express119 = __toESM(require_express2());
+    import_express125 = __toESM(require_express2());
     init_utils3();
     init_zod();
     import_compressing = __toESM(require_compressing());
     init_middleware();
-    router119 = import_express119.default.Router();
-    exportScript_default = router119.post(
+    router125 = import_express125.default.Router();
+    exportScript_default = router125.post(
       "/",
       validateFields({
         id: external_exports.array(external_exports.number())
@@ -266711,18 +267146,18 @@ function chunkArray(arr, groupSize) {
   }
   return groupChunks;
 }
-var import_express120, router120, NewAssetSchema, ExistingAssetRefSchema, AssetSchema, extractAssets_default;
+var import_express126, router126, NewAssetSchema, ExistingAssetRefSchema, AssetSchema, extractAssets_default;
 var init_extractAssets = __esm({
   "src/routes/script/extractAssets.ts"() {
     "use strict";
-    import_express120 = __toESM(require_express2());
+    import_express126 = __toESM(require_express2());
     init_utils3();
     init_zod();
     init_responseFormat();
     init_middleware();
     init_dist22();
     init_userConfig();
-    router120 = import_express120.default.Router();
+    router126 = import_express126.default.Router();
     NewAssetSchema = external_exports.object({
       name: external_exports.string().describe("\u8D44\u4EA7\u540D\u79F0,\u4EC5\u4E3A\u540D\u79F0\u4E0D\u505A\u5176\u4ED6\u4EFB\u4F55\u8868\u8FF0"),
       desc: external_exports.string().describe("\u8D44\u4EA7\u63CF\u8FF0"),
@@ -266738,7 +267173,7 @@ var init_extractAssets = __esm({
       desc: external_exports.string().describe("\u8D44\u4EA7\u63CF\u8FF0"),
       type: external_exports.enum(["role", "tool", "scene"]).describe("\u8D44\u4EA7\u7C7B\u578B")
     });
-    extractAssets_default = router120.post(
+    extractAssets_default = router126.post(
       "/",
       validateFields({
         scriptIds: external_exports.array(external_exports.number()),
@@ -266901,17 +267336,17 @@ ${scriptsContent}`
 });
 
 // src/routes/script/getAiRegex.ts
-var import_express121, router121, getAiRegex_default;
+var import_express127, router127, getAiRegex_default;
 var init_getAiRegex = __esm({
   "src/routes/script/getAiRegex.ts"() {
     "use strict";
-    import_express121 = __toESM(require_express2());
+    import_express127 = __toESM(require_express2());
     init_utils3();
     init_zod();
     init_responseFormat();
     init_middleware();
-    router121 = import_express121.default.Router();
-    getAiRegex_default = router121.post(
+    router127 = import_express127.default.Router();
+    getAiRegex_default = router127.post(
       "/",
       validateFields({
         content: external_exports.string()
@@ -266943,17 +267378,17 @@ var init_getAiRegex = __esm({
 });
 
 // src/routes/script/getScrptApi.ts
-var import_express122, router122, getScrptApi_default;
+var import_express128, router128, getScrptApi_default;
 var init_getScrptApi = __esm({
   "src/routes/script/getScrptApi.ts"() {
     "use strict";
-    import_express122 = __toESM(require_express2());
+    import_express128 = __toESM(require_express2());
     init_utils3();
     init_zod();
     init_responseFormat();
     init_middleware();
-    router122 = import_express122.default.Router();
-    getScrptApi_default = router122.post(
+    router128 = import_express128.default.Router();
+    getScrptApi_default = router128.post(
       "/",
       validateFields({
         projectId: external_exports.number(),
@@ -266994,17 +267429,17 @@ var init_getScrptApi = __esm({
 });
 
 // src/routes/script/pollScriptAssets.ts
-var import_express123, router123, pollScriptAssets_default;
+var import_express129, router129, pollScriptAssets_default;
 var init_pollScriptAssets = __esm({
   "src/routes/script/pollScriptAssets.ts"() {
     "use strict";
-    import_express123 = __toESM(require_express2());
+    import_express129 = __toESM(require_express2());
     init_utils3();
     init_zod();
     init_responseFormat();
     init_middleware();
-    router123 = import_express123.default.Router();
-    pollScriptAssets_default = router123.post(
+    router129 = import_express129.default.Router();
+    pollScriptAssets_default = router129.post(
       "/",
       validateFields({
         ids: external_exports.array(external_exports.number())
@@ -267019,17 +267454,17 @@ var init_pollScriptAssets = __esm({
 });
 
 // src/routes/script/updateScript.ts
-var import_express124, router124, updateScript_default;
+var import_express130, router130, updateScript_default;
 var init_updateScript = __esm({
   "src/routes/script/updateScript.ts"() {
     "use strict";
-    import_express124 = __toESM(require_express2());
+    import_express130 = __toESM(require_express2());
     init_utils3();
     init_zod();
     init_responseFormat();
     init_middleware();
-    router124 = import_express124.default.Router();
-    updateScript_default = router124.post(
+    router130 = import_express130.default.Router();
+    updateScript_default = router130.post(
       "/",
       validateFields({
         id: external_exports.number(),
@@ -267063,17 +267498,17 @@ var init_updateScript = __esm({
 });
 
 // src/routes/scriptAgent/getPlanData.ts
-var import_express125, router125, getPlanData_default;
+var import_express131, router131, getPlanData_default;
 var init_getPlanData = __esm({
   "src/routes/scriptAgent/getPlanData.ts"() {
     "use strict";
-    import_express125 = __toESM(require_express2());
+    import_express131 = __toESM(require_express2());
     init_responseFormat();
     init_utils3();
     init_zod();
     init_middleware();
-    router125 = import_express125.default.Router();
-    getPlanData_default = router125.post(
+    router131 = import_express131.default.Router();
+    getPlanData_default = router131.post(
       "/",
       validateFields({
         projectId: external_exports.number(),
@@ -267114,17 +267549,17 @@ var init_getPlanData = __esm({
 });
 
 // src/routes/scriptAgent/setPlanData.ts
-var import_express126, router126, setPlanData_default;
+var import_express132, router132, setPlanData_default;
 var init_setPlanData = __esm({
   "src/routes/scriptAgent/setPlanData.ts"() {
     "use strict";
-    import_express126 = __toESM(require_express2());
+    import_express132 = __toESM(require_express2());
     init_responseFormat();
     init_utils3();
     init_zod();
     init_middleware();
-    router126 = import_express126.default.Router();
-    setPlanData_default = router126.post(
+    router132 = import_express132.default.Router();
+    setPlanData_default = router132.post(
       "/",
       validateFields({
         projectId: external_exports.number(),
@@ -267164,17 +267599,17 @@ var init_setPlanData = __esm({
 });
 
 // src/routes/scriptAgent/updateData.ts
-var import_express127, router127, updateData_default;
+var import_express133, router133, updateData_default;
 var init_updateData = __esm({
   "src/routes/scriptAgent/updateData.ts"() {
     "use strict";
-    import_express127 = __toESM(require_express2());
+    import_express133 = __toESM(require_express2());
     init_responseFormat();
     init_utils3();
     init_zod();
     init_middleware();
-    router127 = import_express127.default.Router();
-    updateData_default = router127.post(
+    router133 = import_express133.default.Router();
+    updateData_default = router133.post(
       "/",
       validateFields({
         id: external_exports.number(),
@@ -267201,17 +267636,17 @@ var init_updateData = __esm({
 });
 
 // src/routes/setting/about/checkUpdate.ts
-var import_express128, import_fs16, import_path24, router128, APP_VERSION2, checkUpdate_default;
+var import_express134, import_fs16, import_path24, router134, APP_VERSION2, checkUpdate_default;
 var init_checkUpdate = __esm({
   "src/routes/setting/about/checkUpdate.ts"() {
     "use strict";
-    import_express128 = __toESM(require_express2());
+    import_express134 = __toESM(require_express2());
     init_responseFormat();
     init_middleware();
     init_zod();
     import_fs16 = __toESM(require("fs"));
     import_path24 = __toESM(require("path"));
-    router128 = import_express128.default.Router();
+    router134 = import_express134.default.Router();
     APP_VERSION2 = (() => {
       if (true) {
         return "1.1.8";
@@ -267220,7 +267655,7 @@ var init_checkUpdate = __esm({
       const pkg = JSON.parse(import_fs16.default.readFileSync(pkgPath, "utf8"));
       return pkg.version;
     })();
-    checkUpdate_default = router128.post(
+    checkUpdate_default = router134.post(
       "/",
       validateFields({
         source: external_exports.enum(["toonflow", "github", "gitee", "atomgit"]),
@@ -267246,16 +267681,16 @@ var init_checkUpdate = __esm({
 });
 
 // src/routes/setting/about/downloadApp.ts
-var import_express129, router129, downloadApp_default;
+var import_express135, router135, downloadApp_default;
 var init_downloadApp = __esm({
   "src/routes/setting/about/downloadApp.ts"() {
     "use strict";
-    import_express129 = __toESM(require_express2());
+    import_express135 = __toESM(require_express2());
     init_zod();
     init_middleware();
     init_responseFormat();
-    router129 = import_express129.default.Router();
-    downloadApp_default = router129.post(
+    router135 = import_express135.default.Router();
+    downloadApp_default = router135.post(
       "/",
       validateFields({
         url: zod_default.url(),
@@ -267290,19 +267725,19 @@ async function setAgent(userId, agentKey, model, modelName) {
     vendorId: "toonflow"
   });
 }
-var import_express130, router130, agentSetKey_default;
+var import_express136, router136, agentSetKey_default;
 var init_agentSetKey = __esm({
   "src/routes/setting/agentDeploy/agentSetKey.ts"() {
     "use strict";
-    import_express130 = __toESM(require_express2());
+    import_express136 = __toESM(require_express2());
     init_responseFormat();
     init_utils3();
     init_zod();
     init_middleware();
     init_requestContext();
     init_userConfig();
-    router130 = import_express130.default.Router();
-    agentSetKey_default = router130.post(
+    router136 = import_express136.default.Router();
+    agentSetKey_default = router136.post(
       "/",
       validateFields({
         key: external_exports.string().optional()
@@ -267351,19 +267786,20 @@ var init_agentSetKey = __esm({
 });
 
 // src/routes/setting/agentDeploy/deployAgentModel.ts
-var import_express131, router131, deployAgentModel_default;
+var import_express137, router137, deployAgentModel_default;
 var init_deployAgentModel = __esm({
   "src/routes/setting/agentDeploy/deployAgentModel.ts"() {
     "use strict";
-    import_express131 = __toESM(require_express2());
+    import_express137 = __toESM(require_express2());
     init_responseFormat();
     init_utils3();
     init_zod();
     init_middleware();
     init_requestContext();
     init_userConfig();
-    router131 = import_express131.default.Router();
-    deployAgentModel_default = router131.post(
+    init_vendorVisibility();
+    router137 = import_express137.default.Router();
+    deployAgentModel_default = router137.post(
       "/",
       validateFields({
         id: external_exports.number(),
@@ -267377,6 +267813,8 @@ var init_deployAgentModel = __esm({
       }),
       async (req, res) => {
         const { id, name: name28, model, modelName, vendorId, desc, temperature, maxOutputTokens } = req.body;
+        const internalModelName = toInternalModelId(modelName);
+        const internalVendorId = vendorId ? toInternalVendorId(vendorId) : vendorId;
         const userId = getCurrentUserId();
         if (userId) {
           const base = await utils_default.db("o_agentDeploy").where({ id }).first();
@@ -267387,14 +267825,14 @@ var init_deployAgentModel = __esm({
             agentKey: base.key,
             name: name28,
             model,
-            modelName,
-            vendorId,
+            modelName: internalModelName,
+            vendorId: internalVendorId,
             desc,
             temperature,
             maxOutputTokens
           });
         } else {
-          await utils_default.db("o_agentDeploy").where({ id }).update({ id, name: name28, model, modelName, vendorId, desc, temperature, maxOutputTokens });
+          await utils_default.db("o_agentDeploy").where({ id }).update({ id, name: name28, model, modelName: internalModelName, vendorId: internalVendorId, desc, temperature, maxOutputTokens });
         }
         res.status(200).send(success3("\u914D\u7F6E\u6210\u529F"));
       }
@@ -267403,16 +267841,24 @@ var init_deployAgentModel = __esm({
 });
 
 // src/routes/setting/agentDeploy/getAgentDeploy.ts
-var import_express132, router132, getAgentDeploy_default;
+function toPublicAgentDeploy(item) {
+  return {
+    ...item,
+    modelName: toPublicModelId(item.modelName),
+    vendorId: toPublicVendorId(item.vendorId)
+  };
+}
+var import_express138, router138, getAgentDeploy_default;
 var init_getAgentDeploy = __esm({
   "src/routes/setting/agentDeploy/getAgentDeploy.ts"() {
     "use strict";
-    import_express132 = __toESM(require_express2());
+    import_express138 = __toESM(require_express2());
     init_responseFormat();
     init_userConfig();
-    router132 = import_express132.default.Router();
-    getAgentDeploy_default = router132.post("/", async (req, res) => {
-      const allData = await getEffectiveAgentDeployList();
+    init_vendorVisibility();
+    router138 = import_express138.default.Router();
+    getAgentDeploy_default = router138.post("/", async (req, res) => {
+      const allData = (await getEffectiveAgentDeployList()).map(toPublicAgentDeploy);
       const qrdinaryData = allData.filter((item) => !item.key?.includes(":"));
       const advancedData = allData.filter((item) => item.key?.includes(":"));
       res.status(200).send(success3({ qrdinaryData, advancedData }));
@@ -267421,15 +267867,15 @@ var init_getAgentDeploy = __esm({
 });
 
 // src/routes/setting/agentDeploy/getAgentUseMode.ts
-var import_express133, router133, getAgentUseMode_default;
+var import_express139, router139, getAgentUseMode_default;
 var init_getAgentUseMode = __esm({
   "src/routes/setting/agentDeploy/getAgentUseMode.ts"() {
     "use strict";
-    import_express133 = __toESM(require_express2());
+    import_express139 = __toESM(require_express2());
     init_responseFormat();
     init_userConfig();
-    router133 = import_express133.default.Router();
-    getAgentUseMode_default = router133.get("/", async (req, res) => {
+    router139 = import_express139.default.Router();
+    getAgentUseMode_default = router139.get("/", async (req, res) => {
       const useMode = await getUserSetting("agentUseMode", "0");
       res.status(200).send(success3(useMode));
     });
@@ -267437,17 +267883,17 @@ var init_getAgentUseMode = __esm({
 });
 
 // src/routes/setting/agentDeploy/updateUseMode.ts
-var import_express134, router134, updateUseMode_default;
+var import_express140, router140, updateUseMode_default;
 var init_updateUseMode = __esm({
   "src/routes/setting/agentDeploy/updateUseMode.ts"() {
     "use strict";
-    import_express134 = __toESM(require_express2());
+    import_express140 = __toESM(require_express2());
     init_zod();
     init_responseFormat();
     init_middleware();
     init_userConfig();
-    router134 = import_express134.default.Router();
-    updateUseMode_default = router134.post(
+    router140 = import_express140.default.Router();
+    updateUseMode_default = router140.post(
       "/",
       validateFields({
         agentUseMode: external_exports.string()
@@ -267462,16 +267908,16 @@ var init_updateUseMode = __esm({
 });
 
 // src/routes/setting/dbConfig/clearData.ts
-var import_express135, router135, clearData_default;
+var import_express141, router141, clearData_default;
 var init_clearData = __esm({
   "src/routes/setting/dbConfig/clearData.ts"() {
     "use strict";
-    import_express135 = __toESM(require_express2());
+    import_express141 = __toESM(require_express2());
     init_responseFormat();
     init_db();
     init_initDB();
-    router135 = import_express135.default.Router();
-    clearData_default = router135.get("/", async (req, res) => {
+    router141 = import_express141.default.Router();
+    clearData_default = router141.get("/", async (req, res) => {
       try {
         const tables = await db.raw(
           `SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE 'knex_%'`
@@ -267491,15 +267937,15 @@ var init_clearData = __esm({
 });
 
 // src/routes/setting/dbConfig/clearTable.ts
-var import_express136, router136, clearTable_default;
+var import_express142, router142, clearTable_default;
 var init_clearTable = __esm({
   "src/routes/setting/dbConfig/clearTable.ts"() {
     "use strict";
-    import_express136 = __toESM(require_express2());
+    import_express142 = __toESM(require_express2());
     init_responseFormat();
     init_db();
-    router136 = import_express136.default.Router();
-    clearTable_default = router136.post("/", async (req, res) => {
+    router142 = import_express142.default.Router();
+    clearTable_default = router142.post("/", async (req, res) => {
       try {
         const { tableName } = req.body;
         if (!tableName || typeof tableName !== "string") {
@@ -267522,15 +267968,15 @@ var init_clearTable = __esm({
 });
 
 // src/routes/setting/dbConfig/dbInfo.ts
-var import_express137, router137, dbInfo_default;
+var import_express143, router143, dbInfo_default;
 var init_dbInfo = __esm({
   "src/routes/setting/dbConfig/dbInfo.ts"() {
     "use strict";
-    import_express137 = __toESM(require_express2());
+    import_express143 = __toESM(require_express2());
     init_responseFormat();
     init_db();
-    router137 = import_express137.default.Router();
-    dbInfo_default = router137.get("/", async (req, res) => {
+    router143 = import_express143.default.Router();
+    dbInfo_default = router143.get("/", async (req, res) => {
       try {
         const tables = await db.raw(
           `SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE 'knex_%'`
@@ -267552,15 +267998,15 @@ var init_dbInfo = __esm({
 });
 
 // src/routes/setting/dbConfig/exportData.ts
-var import_express138, router138, exportData_default;
+var import_express144, router144, exportData_default;
 var init_exportData = __esm({
   "src/routes/setting/dbConfig/exportData.ts"() {
     "use strict";
-    import_express138 = __toESM(require_express2());
+    import_express144 = __toESM(require_express2());
     init_responseFormat();
     init_db();
-    router138 = import_express138.default.Router();
-    exportData_default = router138.get("/", async (req, res) => {
+    router144 = import_express144.default.Router();
+    exportData_default = router144.get("/", async (req, res) => {
       try {
         const tables = await db.raw(
           `SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE 'knex_%'`
@@ -267584,16 +268030,16 @@ var init_exportData = __esm({
 });
 
 // src/routes/setting/dbConfig/importData.ts
-var import_express139, router139, importData_default;
+var import_express145, router145, importData_default;
 var init_importData = __esm({
   "src/routes/setting/dbConfig/importData.ts"() {
     "use strict";
-    import_express139 = __toESM(require_express2());
+    import_express145 = __toESM(require_express2());
     init_responseFormat();
     init_db();
     init_initDB();
-    router139 = import_express139.default.Router();
-    importData_default = router139.post("/", async (req, res) => {
+    router145 = import_express145.default.Router();
+    importData_default = router145.post("/", async (req, res) => {
       try {
         const { tables: importTables } = req.body;
         if (!importTables || typeof importTables !== "object") {
@@ -267632,15 +268078,15 @@ var init_importData = __esm({
 });
 
 // src/routes/setting/dev/getSwitchAiDevTool.ts
-var import_express140, router140, getSwitchAiDevTool_default;
+var import_express146, router146, getSwitchAiDevTool_default;
 var init_getSwitchAiDevTool = __esm({
   "src/routes/setting/dev/getSwitchAiDevTool.ts"() {
     "use strict";
-    import_express140 = __toESM(require_express2());
+    import_express146 = __toESM(require_express2());
     init_responseFormat();
     init_userConfig();
-    router140 = import_express140.default.Router();
-    getSwitchAiDevTool_default = router140.get("/", async (req, res) => {
+    router146 = import_express146.default.Router();
+    getSwitchAiDevTool_default = router146.get("/", async (req, res) => {
       const switchAiDevTool = await getUserSetting("switchAiDevTool", "0");
       res.status(200).send(success3(switchAiDevTool || "0"));
     });
@@ -267648,17 +268094,17 @@ var init_getSwitchAiDevTool = __esm({
 });
 
 // src/routes/setting/dev/updateSwitchAiDevTool.ts
-var import_express141, router141, updateSwitchAiDevTool_default;
+var import_express147, router147, updateSwitchAiDevTool_default;
 var init_updateSwitchAiDevTool = __esm({
   "src/routes/setting/dev/updateSwitchAiDevTool.ts"() {
     "use strict";
-    import_express141 = __toESM(require_express2());
+    import_express147 = __toESM(require_express2());
     init_zod();
     init_responseFormat();
     init_middleware();
     init_userConfig();
-    router141 = import_express141.default.Router();
-    updateSwitchAiDevTool_default = router141.post(
+    router147 = import_express147.default.Router();
+    updateSwitchAiDevTool_default = router147.post(
       "/",
       validateFields({
         switchAiDevTool: external_exports.string()
@@ -267673,19 +268119,19 @@ var init_updateSwitchAiDevTool = __esm({
 });
 
 // src/routes/setting/fileManagement/openFolder.ts
-var import_express142, import_child_process, router142, openFolder_default;
+var import_express148, import_child_process, router148, openFolder_default;
 var init_openFolder = __esm({
   "src/routes/setting/fileManagement/openFolder.ts"() {
     "use strict";
-    import_express142 = __toESM(require_express2());
+    import_express148 = __toESM(require_express2());
     init_zod();
     import_child_process = require("child_process");
     init_responseFormat();
     init_middleware();
     init_getPath();
     init_utils3();
-    router142 = import_express142.default.Router();
-    openFolder_default = router142.post(
+    router148 = import_express148.default.Router();
+    openFolder_default = router148.post(
       "/",
       validateFields({
         path: external_exports.string()
@@ -267710,14 +268156,14 @@ var init_openFolder = __esm({
 });
 
 // src/routes/setting/getTextModel.ts
-var import_express143, router143, getTextModel_default;
+var import_express149, router149, getTextModel_default;
 var init_getTextModel = __esm({
   "src/routes/setting/getTextModel.ts"() {
     "use strict";
-    import_express143 = __toESM(require_express2());
+    import_express149 = __toESM(require_express2());
     init_responseFormat();
-    router143 = import_express143.default.Router();
-    getTextModel_default = router143.post(
+    router149 = import_express149.default.Router();
+    getTextModel_default = router149.post(
       "/",
       async (req, res) => {
         res.status(200).send(success3("123"));
@@ -267727,15 +268173,15 @@ var init_getTextModel = __esm({
 });
 
 // src/routes/setting/loginConfig/getUser.ts
-var import_express144, router144, getUser_default;
+var import_express150, router150, getUser_default;
 var init_getUser = __esm({
   "src/routes/setting/loginConfig/getUser.ts"() {
     "use strict";
-    import_express144 = __toESM(require_express2());
+    import_express150 = __toESM(require_express2());
     init_utils3();
     init_responseFormat();
-    router144 = import_express144.default.Router();
-    getUser_default = router144.get("/", async (req, res) => {
+    router150 = import_express150.default.Router();
+    getUser_default = router150.get("/", async (req, res) => {
       const data = await utils_default.db("o_user").select("*").first();
       res.status(200).send(success3(data));
     });
@@ -267743,17 +268189,17 @@ var init_getUser = __esm({
 });
 
 // src/routes/setting/loginConfig/updateUserPwd.ts
-var import_express145, router145, updateUserPwd_default;
+var import_express151, router151, updateUserPwd_default;
 var init_updateUserPwd = __esm({
   "src/routes/setting/loginConfig/updateUserPwd.ts"() {
     "use strict";
-    import_express145 = __toESM(require_express2());
+    import_express151 = __toESM(require_express2());
     init_utils3();
     init_zod();
     init_responseFormat();
     init_middleware();
-    router145 = import_express145.default.Router();
-    updateUserPwd_default = router145.post(
+    router151 = import_express151.default.Router();
+    updateUserPwd_default = router151.post(
       "/",
       validateFields({
         name: external_exports.string(),
@@ -267778,17 +268224,17 @@ function parseTailBytes(value) {
   if (!Number.isFinite(bytes) || bytes <= 0) return 200 * 1024;
   return Math.min(Math.floor(bytes), MAX_TAIL_BYTES);
 }
-var import_express146, router146, MAX_TAIL_BYTES, getLogs_default;
+var import_express152, router152, MAX_TAIL_BYTES, getLogs_default;
 var init_getLogs = __esm({
   "src/routes/setting/logViewer/getLogs.ts"() {
     "use strict";
-    import_express146 = __toESM(require_express2());
+    import_express152 = __toESM(require_express2());
     init_logger();
     init_utils3();
     init_responseFormat();
-    router146 = import_express146.default.Router();
+    router152 = import_express152.default.Router();
     MAX_TAIL_BYTES = 1024 * 1024;
-    getLogs_default = router146.get("/", (req, res) => {
+    getLogs_default = router152.get("/", (req, res) => {
       const tailBytes = parseTailBytes(req.query.tailBytes);
       const content = logger_default.exportLogs();
       const tail = content.length > tailBytes ? content.slice(content.length - tailBytes) : content;
@@ -267804,15 +268250,15 @@ var init_getLogs = __esm({
 });
 
 // src/routes/setting/memoryConfig/delAllMemory.ts
-var import_express147, router147, delAllMemory_default;
+var import_express153, router153, delAllMemory_default;
 var init_delAllMemory = __esm({
   "src/routes/setting/memoryConfig/delAllMemory.ts"() {
     "use strict";
-    import_express147 = __toESM(require_express2());
+    import_express153 = __toESM(require_express2());
     init_responseFormat();
     init_utils3();
-    router147 = import_express147.default.Router();
-    delAllMemory_default = router147.post("/", async (req, res) => {
+    router153 = import_express153.default.Router();
+    delAllMemory_default = router153.post("/", async (req, res) => {
       await utils_default.db("memories").del();
       res.status(200).send(success3(true));
     });
@@ -267820,15 +268266,15 @@ var init_delAllMemory = __esm({
 });
 
 // src/routes/setting/memoryConfig/getMemory.ts
-var import_express148, router148, getMemory_default2;
+var import_express154, router154, getMemory_default2;
 var init_getMemory2 = __esm({
   "src/routes/setting/memoryConfig/getMemory.ts"() {
     "use strict";
-    import_express148 = __toESM(require_express2());
+    import_express154 = __toESM(require_express2());
     init_responseFormat();
     init_userConfig();
-    router148 = import_express148.default.Router();
-    getMemory_default2 = router148.get("/", async (req, res) => {
+    router154 = import_express154.default.Router();
+    getMemory_default2 = router154.get("/", async (req, res) => {
       try {
         const settingData = await getUserSettings({
           messagesPerSummary: "10",
@@ -267859,17 +268305,17 @@ var init_getMemory2 = __esm({
 });
 
 // src/routes/setting/memoryConfig/sureMemory.ts
-var import_express149, router149, sureMemory_default;
+var import_express155, router155, sureMemory_default;
 var init_sureMemory = __esm({
   "src/routes/setting/memoryConfig/sureMemory.ts"() {
     "use strict";
-    import_express149 = __toESM(require_express2());
+    import_express155 = __toESM(require_express2());
     init_zod();
     init_responseFormat();
     init_middleware();
     init_userConfig();
-    router149 = import_express149.default.Router();
-    sureMemory_default = router149.post(
+    router155 = import_express155.default.Router();
+    sureMemory_default = router155.post(
       "/",
       validateFields({
         messagesPerSummary: external_exports.number(),
@@ -267900,11 +268346,11 @@ var init_sureMemory = __esm({
 });
 
 // src/routes/setting/modelMap/bindingPrompt.ts
-var import_express150, import_promises9, import_path25, router150, bindingPrompt_default;
+var import_express156, import_promises9, import_path25, router156, bindingPrompt_default;
 var init_bindingPrompt = __esm({
   "src/routes/setting/modelMap/bindingPrompt.ts"() {
     "use strict";
-    import_express150 = __toESM(require_express2());
+    import_express156 = __toESM(require_express2());
     init_responseFormat();
     init_utils3();
     init_zod();
@@ -267913,8 +268359,9 @@ var init_bindingPrompt = __esm({
     init_userConfig();
     import_promises9 = __toESM(require("fs/promises"));
     import_path25 = __toESM(require("path"));
-    router150 = import_express150.default.Router();
-    bindingPrompt_default = router150.post(
+    init_vendorVisibility();
+    router156 = import_express156.default.Router();
+    bindingPrompt_default = router156.post(
       "/",
       validateFields({
         vendorId: external_exports.string(),
@@ -267924,6 +268371,7 @@ var init_bindingPrompt = __esm({
       }),
       async (req, res) => {
         const { vendorId, model, path: path40, fileName } = req.body;
+        const internalVendorId = toInternalVendorId(vendorId);
         const userId = getCurrentUserId();
         const normalizedPath = import_path25.default.normalize(path40).replace(/\\/g, "/");
         if (normalizedPath.startsWith("../") || import_path25.default.isAbsolute(normalizedPath)) {
@@ -267938,13 +268386,13 @@ var init_bindingPrompt = __esm({
           return res.status(404).send(error53("\u63D0\u793A\u8BCD\u6A21\u677F\u4E0D\u5B58\u5728"));
         }
         if (userId) {
-          await upsertUserModelPrompt(userId, vendorId, model, { fileName, path: normalizedPath });
+          await upsertUserModelPrompt(userId, internalVendorId, model, { fileName, path: normalizedPath });
         } else {
-          const data = await utils_default.db("o_modelPrompt").where("model", model).andWhere("vendorId", vendorId).select("*").first();
+          const data = await utils_default.db("o_modelPrompt").where("model", model).andWhere("vendorId", internalVendorId).select("*").first();
           if (data) {
-            await utils_default.db("o_modelPrompt").where("model", model).andWhere("vendorId", vendorId).update({ fileName, path: normalizedPath });
+            await utils_default.db("o_modelPrompt").where("model", model).andWhere("vendorId", internalVendorId).update({ fileName, path: normalizedPath });
           } else {
-            await utils_default.db("o_modelPrompt").insert({ vendorId, model, path: normalizedPath, fileName });
+            await utils_default.db("o_modelPrompt").insert({ vendorId: internalVendorId, model, path: normalizedPath, fileName });
           }
         }
         res.status(200).send(success3("\u7ED1\u5B9A\u6210\u529F"));
@@ -267954,11 +268402,11 @@ var init_bindingPrompt = __esm({
 });
 
 // src/routes/setting/modelMap/deletePrompt.ts
-var import_express151, import_promises10, import_path26, router151, deletePrompt_default;
+var import_express157, import_promises10, import_path26, router157, deletePrompt_default;
 var init_deletePrompt = __esm({
   "src/routes/setting/modelMap/deletePrompt.ts"() {
     "use strict";
-    import_express151 = __toESM(require_express2());
+    import_express157 = __toESM(require_express2());
     init_responseFormat();
     init_zod();
     init_middleware();
@@ -267967,8 +268415,8 @@ var init_deletePrompt = __esm({
     init_requestContext();
     init_userConfig();
     init_utils3();
-    router151 = import_express151.default.Router();
-    deletePrompt_default = router151.post(
+    router157 = import_express157.default.Router();
+    deletePrompt_default = router157.post(
       "/",
       validateFields({
         path: external_exports.string()
@@ -268007,16 +268455,17 @@ var init_deletePrompt = __esm({
 });
 
 // src/routes/setting/modelMap/getImageAndVideoModel.ts
-var import_express152, router152, getImageAndVideoModel_default;
+var import_express158, router158, getImageAndVideoModel_default;
 var init_getImageAndVideoModel = __esm({
   "src/routes/setting/modelMap/getImageAndVideoModel.ts"() {
     "use strict";
-    import_express152 = __toESM(require_express2());
+    import_express158 = __toESM(require_express2());
     init_utils3();
     init_responseFormat();
     init_userConfig();
-    router152 = import_express152.default.Router();
-    getImageAndVideoModel_default = router152.post("/", async (req, res) => {
+    init_vendorVisibility();
+    router158 = import_express158.default.Router();
+    getImageAndVideoModel_default = router158.post("/", async (req, res) => {
       const dataList = await getEffectiveEnabledVendors();
       if (!dataList || dataList.length === 0) {
         return res.status(404).send({ error: "\u6A21\u578B\u672A\u627E\u5230" });
@@ -268034,7 +268483,7 @@ var init_getImageAndVideoModel = __esm({
             ...promptMap.get(m.modelName) ? { ...promptMap.get(m.modelName) } : {}
           }));
           return {
-            id: item.id,
+            id: toPublicVendorId(item.id),
             name: vendor.name,
             promptList: filteredModels
           };
@@ -268046,19 +268495,19 @@ var init_getImageAndVideoModel = __esm({
 });
 
 // src/routes/setting/modelMap/getPromptList.ts
-var import_express153, import_fast_glob2, import_promises11, import_path27, router153, getPromptList_default;
+var import_express159, import_fast_glob2, import_promises11, import_path27, router159, getPromptList_default;
 var init_getPromptList = __esm({
   "src/routes/setting/modelMap/getPromptList.ts"() {
     "use strict";
-    import_express153 = __toESM(require_express2());
+    import_express159 = __toESM(require_express2());
     init_responseFormat();
     import_fast_glob2 = __toESM(require_out4());
     import_promises11 = __toESM(require("fs/promises"));
     import_path27 = __toESM(require("path"));
     init_requestContext();
     init_userConfig();
-    router153 = import_express153.default.Router();
-    getPromptList_default = router153.get("/", async (req, res) => {
+    router159 = import_express159.default.Router();
+    getPromptList_default = router159.get("/", async (req, res) => {
       const globalRoot = getGlobalModelPromptRoot();
       const userId = getCurrentUserId();
       const userRoot = getModelPromptRootForUser(userId);
@@ -268092,19 +268541,19 @@ var init_getPromptList = __esm({
 });
 
 // src/routes/setting/modelMap/savePrompt.ts
-var import_express154, import_promises12, import_path28, router154, savePrompt_default;
+var import_express160, import_promises12, import_path28, router160, savePrompt_default;
 var init_savePrompt = __esm({
   "src/routes/setting/modelMap/savePrompt.ts"() {
     "use strict";
-    import_express154 = __toESM(require_express2());
+    import_express160 = __toESM(require_express2());
     init_responseFormat();
     init_zod();
     init_middleware();
     import_promises12 = __toESM(require("fs/promises"));
     import_path28 = __toESM(require("path"));
     init_userConfig();
-    router154 = import_express154.default.Router();
-    savePrompt_default = router154.post(
+    router160 = import_express160.default.Router();
+    savePrompt_default = router160.post(
       "/",
       validateFields({
         name: external_exports.string().min(1),
@@ -268133,19 +268582,19 @@ var init_savePrompt = __esm({
 });
 
 // src/routes/setting/modelMap/updatePrompt.ts
-var import_express155, import_promises13, import_path29, router155, updatePrompt_default;
+var import_express161, import_promises13, import_path29, router161, updatePrompt_default;
 var init_updatePrompt = __esm({
   "src/routes/setting/modelMap/updatePrompt.ts"() {
     "use strict";
-    import_express155 = __toESM(require_express2());
+    import_express161 = __toESM(require_express2());
     init_responseFormat();
     init_zod();
     init_middleware();
     import_promises13 = __toESM(require("fs/promises"));
     import_path29 = __toESM(require("path"));
     init_userConfig();
-    router155 = import_express155.default.Router();
-    updatePrompt_default = router155.post(
+    router161 = import_express161.default.Router();
+    updatePrompt_default = router161.post(
       "/",
       validateFields({
         name: external_exports.string().min(1),
@@ -268173,11 +268622,11 @@ var init_updatePrompt = __esm({
 });
 
 // src/routes/setting/pluginConfig/addPlugin.ts
-var import_express156, import_fs17, import_fast_glob3, import_path30, import_compressing2, router156, addPlugin_default;
+var import_express162, import_fs17, import_fast_glob3, import_path30, import_compressing2, router162, addPlugin_default;
 var init_addPlugin = __esm({
   "src/routes/setting/pluginConfig/addPlugin.ts"() {
     "use strict";
-    import_express156 = __toESM(require_express2());
+    import_express162 = __toESM(require_express2());
     init_responseFormat();
     init_utils3();
     init_middleware();
@@ -268186,8 +268635,8 @@ var init_addPlugin = __esm({
     import_fast_glob3 = __toESM(require_out4());
     import_path30 = __toESM(require("path"));
     import_compressing2 = __toESM(require_compressing());
-    router156 = import_express156.default.Router();
-    addPlugin_default = router156.post(
+    router162 = import_express162.default.Router();
+    addPlugin_default = router162.post(
       "/",
       validateFields({
         base64Data: external_exports.string().optional(),
@@ -268272,11 +268721,11 @@ var init_addPlugin = __esm({
 });
 
 // src/routes/setting/pluginConfig/deletePlugin.ts
-var import_express157, import_path31, import_fs18, router157, deletePlugin_default;
+var import_express163, import_path31, import_fs18, router163, deletePlugin_default;
 var init_deletePlugin = __esm({
   "src/routes/setting/pluginConfig/deletePlugin.ts"() {
     "use strict";
-    import_express157 = __toESM(require_express2());
+    import_express163 = __toESM(require_express2());
     init_responseFormat();
     init_utils3();
     init_middleware();
@@ -268284,8 +268733,8 @@ var init_deletePlugin = __esm({
     init_is_path_inside();
     import_path31 = __toESM(require("path"));
     import_fs18 = __toESM(require("fs"));
-    router157 = import_express157.default.Router();
-    deletePlugin_default = router157.post(
+    router163 = import_express163.default.Router();
+    deletePlugin_default = router163.post(
       "/",
       validateFields({
         id: external_exports.string()
@@ -268312,17 +268761,17 @@ var init_deletePlugin = __esm({
 });
 
 // src/routes/setting/pluginConfig/getAllManifest.ts
-var import_express158, import_fast_glob4, import_path32, router158, getAllManifest_default;
+var import_express164, import_fast_glob4, import_path32, router164, getAllManifest_default;
 var init_getAllManifest = __esm({
   "src/routes/setting/pluginConfig/getAllManifest.ts"() {
     "use strict";
-    import_express158 = __toESM(require_express2());
+    import_express164 = __toESM(require_express2());
     init_responseFormat();
     init_utils3();
     import_fast_glob4 = __toESM(require_out4());
     import_path32 = __toESM(require("path"));
-    router158 = import_express158.default.Router();
-    getAllManifest_default = router158.get("/", async (req, res) => {
+    router164 = import_express164.default.Router();
+    getAllManifest_default = router164.get("/", async (req, res) => {
       const plugintRoot = utils_default.getPath(["plugin"]);
       const entries = await (0, import_fast_glob4.default)("**/manifest.json", {
         cwd: plugintRoot.replace(/\\/g, "/"),
@@ -268337,18 +268786,18 @@ var init_getAllManifest = __esm({
 });
 
 // src/routes/setting/pluginConfig/getPlugin.ts
-var import_express159, import_fast_glob5, import_promises14, import_path33, router159, getPlugin_default;
+var import_express165, import_fast_glob5, import_promises14, import_path33, router165, getPlugin_default;
 var init_getPlugin = __esm({
   "src/routes/setting/pluginConfig/getPlugin.ts"() {
     "use strict";
-    import_express159 = __toESM(require_express2());
+    import_express165 = __toESM(require_express2());
     init_responseFormat();
     init_utils3();
     import_fast_glob5 = __toESM(require_out4());
     import_promises14 = __toESM(require("fs/promises"));
     import_path33 = __toESM(require("path"));
-    router159 = import_express159.default.Router();
-    getPlugin_default = router159.get("/", async (req, res) => {
+    router165 = import_express165.default.Router();
+    getPlugin_default = router165.get("/", async (req, res) => {
       const plugintRoot = utils_default.getPath(["plugin"]);
       const entries = await (0, import_fast_glob5.default)("**/manifest.json", {
         cwd: plugintRoot.replace(/\\/g, "/"),
@@ -268367,11 +268816,11 @@ var init_getPlugin = __esm({
 });
 
 // src/routes/setting/pluginConfig/getPluginInfo.ts
-var import_express160, import_path34, import_fs19, router160, getPluginInfo_default;
+var import_express166, import_path34, import_fs19, router166, getPluginInfo_default;
 var init_getPluginInfo = __esm({
   "src/routes/setting/pluginConfig/getPluginInfo.ts"() {
     "use strict";
-    import_express160 = __toESM(require_express2());
+    import_express166 = __toESM(require_express2());
     init_responseFormat();
     init_utils3();
     init_middleware();
@@ -268379,8 +268828,8 @@ var init_getPluginInfo = __esm({
     init_is_path_inside();
     import_path34 = __toESM(require("path"));
     import_fs19 = __toESM(require("fs"));
-    router160 = import_express160.default.Router();
-    getPluginInfo_default = router160.post(
+    router166 = import_express166.default.Router();
+    getPluginInfo_default = router166.post(
       "/",
       validateFields({
         id: external_exports.string().min(1, "id \u4E0D\u80FD\u4E3A\u7A7A"),
@@ -268419,11 +268868,11 @@ var init_getPluginInfo = __esm({
 });
 
 // src/routes/setting/pluginConfig/updatePlugin.ts
-var import_express161, import_fs20, import_fast_glob6, import_path35, import_compressing3, router161, updatePlugin_default;
+var import_express167, import_fs20, import_fast_glob6, import_path35, import_compressing3, router167, updatePlugin_default;
 var init_updatePlugin = __esm({
   "src/routes/setting/pluginConfig/updatePlugin.ts"() {
     "use strict";
-    import_express161 = __toESM(require_express2());
+    import_express167 = __toESM(require_express2());
     init_responseFormat();
     init_utils3();
     init_middleware();
@@ -268432,8 +268881,8 @@ var init_updatePlugin = __esm({
     import_fast_glob6 = __toESM(require_out4());
     import_path35 = __toESM(require("path"));
     import_compressing3 = __toESM(require_compressing());
-    router161 = import_express161.default.Router();
-    updatePlugin_default = router161.post(
+    router167 = import_express167.default.Router();
+    updatePlugin_default = router167.post(
       "/",
       validateFields({
         base64Data: external_exports.string().optional(),
@@ -268520,15 +268969,15 @@ var init_updatePlugin = __esm({
 });
 
 // src/routes/setting/promptManage/getPrompt.ts
-var import_express162, router162, getPrompt_default;
+var import_express168, router168, getPrompt_default;
 var init_getPrompt = __esm({
   "src/routes/setting/promptManage/getPrompt.ts"() {
     "use strict";
-    import_express162 = __toESM(require_express2());
+    import_express168 = __toESM(require_express2());
     init_responseFormat();
     init_userConfig();
-    router162 = import_express162.default.Router();
-    getPrompt_default = router162.post("/", async (req, res) => {
+    router168 = import_express168.default.Router();
+    getPrompt_default = router168.post("/", async (req, res) => {
       const list2 = await getEffectivePromptList();
       const data = list2.map((item) => ({
         ...item,
@@ -268540,19 +268989,19 @@ var init_getPrompt = __esm({
 });
 
 // src/routes/setting/promptManage/updatePrompt.ts
-var import_express163, router163, updatePrompt_default2;
+var import_express169, router169, updatePrompt_default2;
 var init_updatePrompt2 = __esm({
   "src/routes/setting/promptManage/updatePrompt.ts"() {
     "use strict";
-    import_express163 = __toESM(require_express2());
+    import_express169 = __toESM(require_express2());
     init_utils3();
     init_zod();
     init_responseFormat();
     init_middleware();
     init_requestContext();
     init_userConfig();
-    router163 = import_express163.default.Router();
-    updatePrompt_default2 = router163.post(
+    router169 = import_express169.default.Router();
+    updatePrompt_default2 = router169.post(
       "/",
       validateFields({
         id: external_exports.number()
@@ -268574,11 +269023,11 @@ var init_updatePrompt2 = __esm({
 });
 
 // src/routes/setting/skillManagement/getSkillContent.ts
-var import_express164, import_path36, fs37, router164, getSkillContent_default;
+var import_express170, import_path36, fs37, router170, getSkillContent_default;
 var init_getSkillContent = __esm({
   "src/routes/setting/skillManagement/getSkillContent.ts"() {
     "use strict";
-    import_express164 = __toESM(require_express2());
+    import_express170 = __toESM(require_express2());
     init_responseFormat();
     init_middleware();
     init_zod();
@@ -268586,8 +269035,8 @@ var init_getSkillContent = __esm({
     init_utils3();
     import_path36 = __toESM(require("path"));
     fs37 = __toESM(require("fs"));
-    router164 = import_express164.default.Router();
-    getSkillContent_default = router164.post(
+    router170 = import_express170.default.Router();
+    getSkillContent_default = router170.post(
       "/",
       validateFields({
         path: external_exports.string()
@@ -268607,16 +269056,16 @@ var init_getSkillContent = __esm({
 });
 
 // src/routes/setting/skillManagement/getSkillList.ts
-var import_express165, import_fast_glob7, router165, getSkillList_default;
+var import_express171, import_fast_glob7, router171, getSkillList_default;
 var init_getSkillList = __esm({
   "src/routes/setting/skillManagement/getSkillList.ts"() {
     "use strict";
-    import_express165 = __toESM(require_express2());
+    import_express171 = __toESM(require_express2());
     init_responseFormat();
     import_fast_glob7 = __toESM(require_out4());
     init_utils3();
-    router165 = import_express165.default.Router();
-    getSkillList_default = router165.post("/", async (req, res) => {
+    router171 = import_express171.default.Router();
+    getSkillList_default = router171.post("/", async (req, res) => {
       const skillsRoot = utils_default.getPath(["skills"]);
       const entries = await (0, import_fast_glob7.default)("**/*.md", {
         cwd: skillsRoot.replace(/\\/g, "/"),
@@ -268628,11 +269077,11 @@ var init_getSkillList = __esm({
 });
 
 // src/routes/setting/skillManagement/saveSkillContent.ts
-var import_express166, import_path37, fs38, router166, saveSkillContent_default;
+var import_express172, import_path37, fs38, router172, saveSkillContent_default;
 var init_saveSkillContent = __esm({
   "src/routes/setting/skillManagement/saveSkillContent.ts"() {
     "use strict";
-    import_express166 = __toESM(require_express2());
+    import_express172 = __toESM(require_express2());
     init_responseFormat();
     init_middleware();
     init_zod();
@@ -268640,8 +269089,8 @@ var init_saveSkillContent = __esm({
     init_utils3();
     import_path37 = __toESM(require("path"));
     fs38 = __toESM(require("fs"));
-    router166 = import_express166.default.Router();
-    saveSkillContent_default = router166.post(
+    router172 = import_express172.default.Router();
+    saveSkillContent_default = router172.post(
       "/",
       validateFields({
         path: external_exports.string(),
@@ -268665,18 +269114,18 @@ var init_saveSkillContent = __esm({
 });
 
 // src/routes/setting/vendorConfig/addVendor.ts
-var import_express167, import_sucrase4, router167, vendorConfigSchema, addVendor_default;
+var import_express173, import_sucrase4, router173, vendorConfigSchema, addVendor_default;
 var init_addVendor = __esm({
   "src/routes/setting/vendorConfig/addVendor.ts"() {
     "use strict";
-    import_express167 = __toESM(require_express2());
+    import_express173 = __toESM(require_express2());
     init_responseFormat();
     init_middleware();
     init_utils3();
     init_zod();
     import_sucrase4 = __toESM(require_dist6());
     init_vendorVisibility();
-    router167 = import_express167.default.Router();
+    router173 = import_express173.default.Router();
     vendorConfigSchema = external_exports.object({
       id: external_exports.string(),
       author: external_exports.string(),
@@ -268728,7 +269177,7 @@ var init_addVendor = __esm({
         ])
       )
     });
-    addVendor_default = router167.post(
+    addVendor_default = router173.post(
       "/",
       validateFields({
         tsCode: external_exports.string()
@@ -268764,7 +269213,7 @@ var init_addVendor = __esm({
 ${issueLines.join("\n")}`));
         }
         if (vendor.id.includes(":")) return res.status(400).send(error53("id\u4E0D\u80FD\u5305\u542B\u82F1\u6587\u5192\u53F7"));
-        if (isHiddenBuiltInVendorId(vendor.id)) return res.status(400).send(error53("\u8BE5\u5185\u7F6E\u4F9B\u5E94\u5546\u5DF2\u5173\u95ED\uFF0C\u8BF7\u4F7F\u7528\u5185\u7F6E\u667A\u80FD\u8DEF\u7531"));
+        if (isHiddenBuiltInVendorId(vendor.id)) return res.status(400).send(error53("\u8BE5\u5185\u7F6E\u4F9B\u5E94\u5546\u5DF2\u5173\u95ED\uFF0C\u8BF7\u4F7F\u7528\u6A21\u578B\u670D\u52A1"));
         const data = await utils_default.db("o_vendorConfig").where("id", vendor.id).first();
         if (data) return res.status(500).send(error53("\u4F9B\u5E94\u5546id\u5DF2\u5B58\u5728"));
         const [id] = await utils_default.db("o_vendorConfig").insert({
@@ -268781,19 +269230,19 @@ ${issueLines.join("\n")}`));
 });
 
 // src/routes/setting/vendorConfig/addVendorModel.ts
-var import_express168, router168, addVendorModel_default;
+var import_express174, router174, addVendorModel_default;
 var init_addVendorModel = __esm({
   "src/routes/setting/vendorConfig/addVendorModel.ts"() {
     "use strict";
-    import_express168 = __toESM(require_express2());
+    import_express174 = __toESM(require_express2());
     init_responseFormat();
     init_middleware();
     init_utils3();
     init_zod();
     init_requestContext();
     init_userConfig();
-    router168 = import_express168.default.Router();
-    addVendorModel_default = router168.post(
+    router174 = import_express174.default.Router();
+    addVendorModel_default = router174.post(
       "/",
       validateFields({
         id: external_exports.string(),
@@ -268856,11 +269305,11 @@ var init_addVendorModel = __esm({
 });
 
 // src/routes/setting/vendorConfig/deleteVendor.ts
-var import_express169, import_path38, import_fs21, router169, deleteVendor_default;
+var import_express175, import_path38, import_fs21, router175, deleteVendor_default;
 var init_deleteVendor = __esm({
   "src/routes/setting/vendorConfig/deleteVendor.ts"() {
     "use strict";
-    import_express169 = __toESM(require_express2());
+    import_express175 = __toESM(require_express2());
     init_responseFormat();
     init_middleware();
     import_path38 = __toESM(require("path"));
@@ -268868,8 +269317,8 @@ var init_deleteVendor = __esm({
     init_utils3();
     init_zod();
     init_requestContext();
-    router169 = import_express169.default.Router();
-    deleteVendor_default = router169.post(
+    router175 = import_express175.default.Router();
+    deleteVendor_default = router175.post(
       "/",
       validateFields({
         id: external_exports.string()
@@ -268898,19 +269347,19 @@ var init_deleteVendor = __esm({
 });
 
 // src/routes/setting/vendorConfig/delVendorModel.ts
-var import_express170, router170, delVendorModel_default;
+var import_express176, router176, delVendorModel_default;
 var init_delVendorModel = __esm({
   "src/routes/setting/vendorConfig/delVendorModel.ts"() {
     "use strict";
-    import_express170 = __toESM(require_express2());
+    import_express176 = __toESM(require_express2());
     init_responseFormat();
     init_middleware();
     init_utils3();
     init_zod();
     init_requestContext();
     init_userConfig();
-    router170 = import_express170.default.Router();
-    delVendorModel_default = router170.post(
+    router176 = import_express176.default.Router();
+    delVendorModel_default = router176.post(
       "/",
       validateFields({
         id: external_exports.string(),
@@ -268945,19 +269394,19 @@ var init_delVendorModel = __esm({
 });
 
 // src/routes/setting/vendorConfig/enableVendor.ts
-var import_express171, router171, enableVendor_default;
+var import_express177, router177, enableVendor_default;
 var init_enableVendor = __esm({
   "src/routes/setting/vendorConfig/enableVendor.ts"() {
     "use strict";
-    import_express171 = __toESM(require_express2());
+    import_express177 = __toESM(require_express2());
     init_responseFormat();
     init_middleware();
     init_utils3();
     init_zod();
     init_requestContext();
     init_userConfig();
-    router171 = import_express171.default.Router();
-    enableVendor_default = router171.post(
+    router177 = import_express177.default.Router();
+    enableVendor_default = router177.post(
       "/",
       validateFields({
         id: external_exports.string(),
@@ -268983,16 +269432,16 @@ var init_enableVendor = __esm({
 });
 
 // src/routes/setting/vendorConfig/getCodeByLink.ts
-var import_express172, router172, getCodeByLink_default;
+var import_express178, router178, getCodeByLink_default;
 var init_getCodeByLink = __esm({
   "src/routes/setting/vendorConfig/getCodeByLink.ts"() {
     "use strict";
-    import_express172 = __toESM(require_express2());
+    import_express178 = __toESM(require_express2());
     init_responseFormat();
     init_middleware();
     init_zod();
-    router172 = import_express172.default.Router();
-    getCodeByLink_default = router172.post(
+    router178 = import_express178.default.Router();
+    getCodeByLink_default = router178.post(
       "/",
       validateFields({
         link: external_exports.string()
@@ -269007,20 +269456,20 @@ var init_getCodeByLink = __esm({
 });
 
 // src/routes/setting/vendorConfig/getVendorList.ts
-var import_express173, router173, getVendorList_default;
+var import_express179, router179, getVendorList_default;
 var init_getVendorList = __esm({
   "src/routes/setting/vendorConfig/getVendorList.ts"() {
     "use strict";
-    import_express173 = __toESM(require_express2());
+    import_express179 = __toESM(require_express2());
     init_responseFormat();
     init_utils3();
     init_userConfig();
     init_subrouter();
     init_vendorVisibility();
-    router173 = import_express173.default.Router();
-    getVendorList_default = router173.post("/", async (req, res) => {
+    router179 = import_express179.default.Router();
+    getVendorList_default = router179.post("/", async (req, res) => {
       await ensureSubrouterVendor();
-      const data = (await utils_default.db("o_vendorConfig").select("*")).filter((item) => !isHiddenBuiltInVendorId(item.id));
+      const data = (await utils_default.db("o_vendorConfig").select("*")).filter((item) => !isHiddenBuiltInVendorId(item.id) && item.id !== INTERNAL_ROUTER_VENDOR_ID);
       const list2 = (await Promise.all(
         data.map(async (item) => {
           let vendor;
@@ -269048,26 +269497,25 @@ var init_getVendorList = __esm({
           };
         })
       )).filter((i) => Boolean(i));
-      list2.sort((a, b) => a.id === INTERNAL_ROUTER_VENDOR_ID ? -1 : b.id === INTERNAL_ROUTER_VENDOR_ID ? 1 : 0);
       res.status(200).send(success3(list2));
     });
   }
 });
 
 // src/routes/setting/vendorConfig/modelTest.ts
-var import_express174, router174, modelTest_default;
+var import_express180, router180, modelTest_default;
 var init_modelTest = __esm({
   "src/routes/setting/vendorConfig/modelTest.ts"() {
     "use strict";
-    import_express174 = __toESM(require_express2());
+    import_express180 = __toESM(require_express2());
     init_responseFormat();
     init_middleware();
     init_utils3();
     init_zod();
     init_dist22();
     init_userConfig();
-    router174 = import_express174.default.Router();
-    modelTest_default = router174.post(
+    router180 = import_express180.default.Router();
+    modelTest_default = router180.post(
       "/",
       validateFields({
         modelName: external_exports.string(),
@@ -269160,18 +269608,18 @@ var init_modelTest = __esm({
 });
 
 // src/routes/setting/vendorConfig/modelTest/imageTest.ts
-var import_express175, router175, imageTest_default;
+var import_express181, router181, imageTest_default;
 var init_imageTest = __esm({
   "src/routes/setting/vendorConfig/modelTest/imageTest.ts"() {
     "use strict";
-    import_express175 = __toESM(require_express2());
+    import_express181 = __toESM(require_express2());
     init_responseFormat();
     init_middleware();
     init_utils3();
     init_zod();
     init_userConfig();
-    router175 = import_express175.default.Router();
-    imageTest_default = router175.post(
+    router181 = import_express181.default.Router();
+    imageTest_default = router181.post(
       "/",
       validateFields({
         modelName: external_exports.string(),
@@ -269208,19 +269656,19 @@ var init_imageTest = __esm({
 });
 
 // src/routes/setting/vendorConfig/modelTest/textTest.ts
-var import_express176, router176, textTest_default;
+var import_express182, router182, textTest_default;
 var init_textTest = __esm({
   "src/routes/setting/vendorConfig/modelTest/textTest.ts"() {
     "use strict";
-    import_express176 = __toESM(require_express2());
+    import_express182 = __toESM(require_express2());
     init_responseFormat();
     init_middleware();
     init_utils3();
     init_zod();
     init_dist22();
     init_userConfig();
-    router176 = import_express176.default.Router();
-    textTest_default = router176.post(
+    router182 = import_express182.default.Router();
+    textTest_default = router182.post(
       "/",
       validateFields({
         modelName: external_exports.string(),
@@ -269272,18 +269720,18 @@ var init_textTest = __esm({
 });
 
 // src/routes/setting/vendorConfig/modelTest/videoTest.ts
-var import_express177, router177, videoTest_default;
+var import_express183, router183, videoTest_default;
 var init_videoTest = __esm({
   "src/routes/setting/vendorConfig/modelTest/videoTest.ts"() {
     "use strict";
-    import_express177 = __toESM(require_express2());
+    import_express183 = __toESM(require_express2());
     init_responseFormat();
     init_middleware();
     init_utils3();
     init_zod();
     init_userConfig();
-    router177 = import_express177.default.Router();
-    videoTest_default = router177.post(
+    router183 = import_express183.default.Router();
+    videoTest_default = router183.post(
       "/",
       validateFields({
         modelName: external_exports.string(),
@@ -269349,18 +269797,18 @@ var init_videoTest = __esm({
 });
 
 // src/routes/setting/vendorConfig/updateCode.ts
-var import_express178, import_sucrase5, router178, vendorConfigSchema2, updateCode_default;
+var import_express184, import_sucrase5, router184, vendorConfigSchema2, updateCode_default;
 var init_updateCode = __esm({
   "src/routes/setting/vendorConfig/updateCode.ts"() {
     "use strict";
-    import_express178 = __toESM(require_express2());
+    import_express184 = __toESM(require_express2());
     init_serialize_error();
     init_responseFormat();
     init_middleware();
     init_utils3();
     init_zod();
     import_sucrase5 = __toESM(require_dist6());
-    router178 = import_express178.default.Router();
+    router184 = import_express184.default.Router();
     vendorConfigSchema2 = external_exports.object({
       id: external_exports.string(),
       author: external_exports.string(),
@@ -269412,7 +269860,7 @@ var init_updateCode = __esm({
         ])
       )
     });
-    updateCode_default = router178.post(
+    updateCode_default = router184.post(
       "/",
       validateFields({
         id: external_exports.string(),
@@ -269449,19 +269897,19 @@ var init_updateCode = __esm({
 });
 
 // src/routes/setting/vendorConfig/updateVendorInputs.ts
-var import_express179, router179, updateVendorInputs_default;
+var import_express185, router185, updateVendorInputs_default;
 var init_updateVendorInputs = __esm({
   "src/routes/setting/vendorConfig/updateVendorInputs.ts"() {
     "use strict";
-    import_express179 = __toESM(require_express2());
+    import_express185 = __toESM(require_express2());
     init_responseFormat();
     init_middleware();
     init_utils3();
     init_zod();
     init_requestContext();
     init_userConfig();
-    router179 = import_express179.default.Router();
-    updateVendorInputs_default = router179.post(
+    router185 = import_express185.default.Router();
+    updateVendorInputs_default = router185.post(
       "/",
       validateFields({
         id: external_exports.string(),
@@ -269489,19 +269937,19 @@ var init_updateVendorInputs = __esm({
 });
 
 // src/routes/setting/vendorConfig/upVendorModel.ts
-var import_express180, router180, upVendorModel_default;
+var import_express186, router186, upVendorModel_default;
 var init_upVendorModel = __esm({
   "src/routes/setting/vendorConfig/upVendorModel.ts"() {
     "use strict";
-    import_express180 = __toESM(require_express2());
+    import_express186 = __toESM(require_express2());
     init_responseFormat();
     init_middleware();
     init_utils3();
     init_zod();
     init_requestContext();
     init_userConfig();
-    router180 = import_express180.default.Router();
-    upVendorModel_default = router180.post(
+    router186 = import_express186.default.Router();
+    upVendorModel_default = router186.post(
       "/",
       validateFields({
         id: external_exports.string(),
@@ -269564,378 +270012,6 @@ var init_upVendorModel = __esm({
           }
         }
         res.status(200).send(success3("\u66F4\u65B0\u6210\u529F"));
-      }
-    );
-  }
-});
-
-// src/routes/subrouter/login.ts
-var import_express181, router181, login_default2;
-var init_login2 = __esm({
-  "src/routes/subrouter/login.ts"() {
-    "use strict";
-    import_express181 = __toESM(require_express2());
-    init_zod();
-    init_responseFormat();
-    init_middleware();
-    init_subrouter();
-    router181 = import_express181.default.Router();
-    login_default2 = router181.post(
-      "/",
-      validateFields({
-        provider: external_exports.enum(["subrouterai", "sub2api"]),
-        baseUrl: external_exports.string().min(1),
-        username: external_exports.string().min(1),
-        password: external_exports.string().min(1)
-      }),
-      async (req, res) => {
-        try {
-          const result = await loginAndPrepareSubrouter(req.body);
-          res.status(200).send(
-            success3(
-              {
-                token: result.token,
-                name: result.toonflowUser.name,
-                id: result.toonflowUser.id,
-                account: {
-                  provider: result.account.provider,
-                  baseUrl: result.account.baseUrl,
-                  username: result.account.username,
-                  email: result.account.email,
-                  displayName: result.account.displayName,
-                  distributorId: result.account.distributorId,
-                  distributorSlug: result.account.distributorSlug,
-                  distributorName: result.account.distributorName,
-                  apiKeyReady: Boolean(result.account.apiKey)
-                },
-                models: result.models,
-                modelsSource: result.modelsSource,
-                defaultTextModel: result.defaultTextModel,
-                notice: result.notice
-              },
-              "\u5185\u7F6E\u667A\u80FD\u8DEF\u7531\u767B\u5F55\u6210\u529F"
-            )
-          );
-        } catch (err) {
-          res.status(400).send(error53(formatSubrouterError(err)));
-        }
-      }
-    );
-  }
-});
-
-// src/routes/subrouter/models.ts
-function parseModels(value) {
-  if (typeof value !== "string" || !value) return [];
-  try {
-    const parsed = JSON.parse(value);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-var import_express182, router182, models_default;
-var init_models = __esm({
-  "src/routes/subrouter/models.ts"() {
-    "use strict";
-    import_express182 = __toESM(require_express2());
-    init_zod();
-    init_responseFormat();
-    init_middleware();
-    init_requestContext();
-    init_subrouter();
-    router182 = import_express182.default.Router();
-    models_default = router182.post(
-      "/",
-      validateFields({
-        provider: external_exports.enum(["subrouterai", "sub2api"]).optional(),
-        baseUrl: external_exports.string().optional(),
-        refresh: external_exports.boolean().optional()
-      }),
-      async (req, res) => {
-        const userId = getCurrentUserId();
-        if (!userId) return res.status(401).send({ message: "\u672A\u63D0\u4F9Btoken" });
-        try {
-          const models = req.body.refresh ? await refreshStoredModels(userId, req.body.provider, req.body.baseUrl) : parseModels((await getStoredSubrouterAccount(userId, req.body.provider, req.body.baseUrl))?.models);
-          res.status(200).send(success3(models));
-        } catch (err) {
-          res.status(400).send(error53(formatSubrouterError(err)));
-        }
-      }
-    );
-  }
-});
-
-// src/routes/subrouter/selectModel.ts
-var import_express183, router183, selectModel_default;
-var init_selectModel = __esm({
-  "src/routes/subrouter/selectModel.ts"() {
-    "use strict";
-    import_express183 = __toESM(require_express2());
-    init_zod();
-    init_responseFormat();
-    init_middleware();
-    init_requestContext();
-    init_subrouter();
-    router183 = import_express183.default.Router();
-    selectModel_default = router183.post(
-      "/",
-      validateFields({
-        modelName: external_exports.string().min(1),
-        targets: external_exports.array(external_exports.string()).optional()
-      }),
-      async (req, res) => {
-        const userId = getCurrentUserId();
-        if (!userId) return res.status(401).send({ message: "\u672A\u63D0\u4F9Btoken" });
-        try {
-          const targets = req.body.targets || [];
-          await selectSubrouterModel(userId, req.body.modelName, targets);
-          res.status(200).send(success3({ modelName: req.body.modelName, targets }, "\u6A21\u578B\u5DF2\u8BBE\u7F6E\u5230\u5F53\u524D\u7528\u6237"));
-        } catch (err) {
-          res.status(400).send(error53(formatSubrouterError(err)));
-        }
-      }
-    );
-  }
-});
-
-// src/routes/subrouter/status.ts
-function parseModels2(value) {
-  if (typeof value !== "string" || !value) return [];
-  try {
-    const parsed = JSON.parse(value);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-function countModelsByType(models) {
-  return models.reduce(
-    (acc, model) => {
-      const type = model.type === "image" || model.type === "video" || model.type === "text" ? model.type : "other";
-      acc[type] += 1;
-      return acc;
-    },
-    { text: 0, image: 0, video: 0, other: 0 }
-  );
-}
-var import_express184, router184, status_default;
-var init_status2 = __esm({
-  "src/routes/subrouter/status.ts"() {
-    "use strict";
-    import_express184 = __toESM(require_express2());
-    init_responseFormat();
-    init_requestContext();
-    init_subrouter();
-    router184 = import_express184.default.Router();
-    status_default = router184.post("/", async (req, res) => {
-      const user = getCurrentUser();
-      const userId = getCurrentUserId();
-      if (!userId) return res.status(401).send({ message: "\u672A\u63D0\u4F9Btoken" });
-      const account = await getStoredSubrouterAccount(userId, req.body?.provider, req.body?.baseUrl);
-      const models = parseModels2(account?.models);
-      res.status(200).send(
-        success3({
-          user,
-          connected: Boolean(account),
-          account: account ? {
-            provider: account.provider,
-            baseUrl: account.baseUrl,
-            username: account.username,
-            email: account.email,
-            displayName: account.displayName,
-            distributorId: account.distributorId,
-            distributorSlug: account.distributorSlug,
-            distributorName: account.distributorName,
-            apiKeyReady: Boolean(account.apiKey),
-            updatedTime: account.updatedTime
-          } : null,
-          modelCount: models.length,
-          modelStats: countModelsByType(models)
-        })
-      );
-    });
-  }
-});
-
-// src/routes/subrouter/summary.ts
-function parseModels3(value) {
-  if (typeof value !== "string" || !value) return [];
-  try {
-    const parsed = JSON.parse(value);
-    return Array.isArray(parsed) ? parsed.filter((item) => item && typeof item === "object") : [];
-  } catch {
-    return [];
-  }
-}
-function normalizeModelType(value) {
-  return value === "text" || value === "image" || value === "video" ? value : "other";
-}
-function countModelsByType2(models) {
-  return models.reduce(
-    (acc, model) => {
-      acc[normalizeModelType(model.type)] += 1;
-      return acc;
-    },
-    { text: 0, image: 0, video: 0, other: 0 }
-  );
-}
-function splitModelName(modelName) {
-  if (!modelName) return { vendorId: "", model: "" };
-  const [vendorId, model] = modelName.split(/:(.+)/);
-  return { vendorId: vendorId || "", model: model || "" };
-}
-function summarizeAgents(rows, models) {
-  const modelNames = new Set(models.map((model) => model.modelName).filter(Boolean));
-  return rows.filter((row) => DEFAULT_TARGETS.has(row.key || row.agentKey || "")).map((row) => {
-    const key = row.key || row.agentKey || "";
-    const parsed = splitModelName(row.modelName);
-    return {
-      key,
-      name: row.name || key,
-      desc: row.desc || "",
-      model: row.model || parsed.model,
-      modelName: row.modelName || "",
-      vendorId: row.vendorId || parsed.vendorId,
-      usingSubrouter: (row.vendorId || parsed.vendorId) === "subrouter",
-      available: (row.vendorId || parsed.vendorId) === "subrouter" ? modelNames.has(row.model || parsed.model) : null
-    };
-  });
-}
-function pickSelectedTextModel(agents) {
-  const selected = agents.find((agent) => agent.key === "scriptAgent" && agent.usingSubrouter && agent.model);
-  if (selected) return selected.model;
-  return agents.find((agent) => agent.usingSubrouter && agent.model)?.model || "";
-}
-var import_express185, router185, DEFAULT_TARGETS, summary_default;
-var init_summary = __esm({
-  "src/routes/subrouter/summary.ts"() {
-    "use strict";
-    import_express185 = __toESM(require_express2());
-    init_responseFormat();
-    init_requestContext();
-    init_userConfig();
-    init_subrouter();
-    router185 = import_express185.default.Router();
-    DEFAULT_TARGETS = /* @__PURE__ */ new Set(["scriptAgent", "productionAgent", "universalAi"]);
-    summary_default = router185.post("/", async (req, res) => {
-      const user = getCurrentUser();
-      const userId = getCurrentUserId();
-      if (!userId) return res.status(401).send({ message: "\u672A\u63D0\u4F9Btoken" });
-      const account = await getStoredSubrouterAccount(userId, req.body?.provider, req.body?.baseUrl);
-      const models = parseModels3(account?.models);
-      const modelStats = countModelsByType2(models);
-      const agents = summarizeAgents(await getEffectiveAgentDeployList(userId), models);
-      const selectedTextModel = pickSelectedTextModel(agents);
-      const diagnostics = [
-        !account ? "\u672A\u7ED1\u5B9A\u5185\u7F6E\u667A\u80FD\u8DEF\u7531\u8D26\u6237" : "",
-        account && !account.apiKey ? "\u81EA\u52A8 API Key \u672A\u751F\u6210" : "",
-        account && models.length === 0 ? "\u5F53\u524D\u8D26\u53F7\u6CA1\u6709\u53EF\u7528\u6A21\u578B\uFF0C\u8BF7\u5237\u65B0\u6216\u68C0\u67E5\u8BA2\u9605/\u5206\u7AD9\u4E0A\u67B6" : "",
-        account && modelStats.text === 0 ? "\u672A\u53D1\u73B0\u6587\u672C\u6A21\u578B\uFF0CAgent \u6682\u4E0D\u80FD\u4F7F\u7528\u5185\u7F6E\u667A\u80FD\u8DEF\u7531" : "",
-        account && modelStats.text > 0 && !selectedTextModel ? "\u5C1A\u672A\u4E3A\u5F53\u524D\u7528\u6237\u9009\u62E9 Agent \u6587\u672C\u6A21\u578B" : ""
-      ].filter(Boolean);
-      res.status(200).send(
-        success3({
-          user,
-          connected: Boolean(account),
-          account: account ? {
-            provider: account.provider,
-            baseUrl: account.baseUrl,
-            username: account.username,
-            email: account.email,
-            displayName: account.displayName,
-            distributorId: account.distributorId,
-            distributorSlug: account.distributorSlug,
-            distributorName: account.distributorName,
-            apiKeyReady: Boolean(account.apiKey),
-            updatedTime: account.updatedTime
-          } : null,
-          models,
-          modelStats,
-          selectedTextModel,
-          agentUseMode: await getUserSetting("agentUseMode", "0"),
-          agents,
-          diagnostics
-        })
-      );
-    });
-  }
-});
-
-// src/routes/subrouter/testModel.ts
-function parseModels4(value) {
-  if (typeof value !== "string" || !value) return [];
-  try {
-    const parsed = JSON.parse(value);
-    return Array.isArray(parsed) ? parsed.filter((item) => item && typeof item === "object") : [];
-  } catch {
-    return [];
-  }
-}
-var import_express186, router186, testModel_default;
-var init_testModel = __esm({
-  "src/routes/subrouter/testModel.ts"() {
-    "use strict";
-    import_express186 = __toESM(require_express2());
-    init_zod();
-    init_responseFormat();
-    init_middleware();
-    init_requestContext();
-    init_subrouter();
-    init_utils3();
-    router186 = import_express186.default.Router();
-    testModel_default = router186.post(
-      "/",
-      validateFields({
-        modelName: external_exports.string().min(1),
-        prompt: external_exports.string().optional()
-      }),
-      async (req, res) => {
-        const userId = getCurrentUserId();
-        if (!userId) return res.status(401).send({ message: "\u672A\u63D0\u4F9Btoken" });
-        const account = await getStoredSubrouterAccount(userId);
-        if (!account) return res.status(400).send(error53("\u672A\u7ED1\u5B9A\u5185\u7F6E\u667A\u80FD\u8DEF\u7531\u8D26\u6237"));
-        const modelName = String(req.body.modelName).includes(":") ? String(req.body.modelName).split(/:(.+)/)[1] : String(req.body.modelName);
-        const model = parseModels4(account.models).find((item) => item.modelName === modelName);
-        if (!model) return res.status(400).send(error53("\u5F53\u524D\u8D26\u53F7\u6A21\u578B\u5217\u8868\u4E2D\u672A\u627E\u5230\u8BE5\u6A21\u578B\uFF0C\u8BF7\u5237\u65B0\u6A21\u578B\u540E\u91CD\u8BD5"));
-        if (model.type !== "text") {
-          return res.status(200).send(
-            success3({
-              available: true,
-              checked: false,
-              modelName,
-              message: "\u6A21\u578B\u5728\u5F53\u524D\u8D26\u53F7\u5217\u8868\u4E2D\uFF1B\u975E\u6587\u672C\u6A21\u578B\u4E0D\u5728\u8BBE\u7F6E\u9875\u53D1\u8D77\u751F\u6210\u6D4B\u8BD5"
-            })
-          );
-        }
-        const started = Date.now();
-        try {
-          const result = await utils_default.Ai.Text(`subrouter:${modelName}`).invoke({
-            prompt: req.body.prompt || "\u8BF7\u53EA\u56DE\u590D OK",
-            temperature: 0,
-            maxOutputTokens: 16
-          });
-          const output = String(result.text || "").trim();
-          if (!output) return res.status(500).send(error53("\u6A21\u578B\u672A\u8FD4\u56DE\u5185\u5BB9"));
-          res.status(200).send(
-            success3({
-              available: true,
-              checked: true,
-              modelName,
-              latencyMs: Date.now() - started,
-              output: output.slice(0, 200)
-            })
-          );
-        } catch (err) {
-          res.status(500).send(
-            error53(formatSubrouterError(err), {
-              available: false,
-              checked: true,
-              modelName,
-              latencyMs: Date.now() - started
-            })
-          );
-        }
       }
     );
   }
@@ -270132,6 +270208,12 @@ var init_router = __esm({
     init_updateWorkFlow();
     init_uploadFile();
     init_login();
+    init_login3();
+    init_models2();
+    init_selectModel2();
+    init_status3();
+    init_summary2();
+    init_testModel2();
     init_getModelDetail();
     init_getModelList();
     init_addNovel();
@@ -270270,12 +270352,6 @@ var init_router = __esm({
     init_updateCode();
     init_updateVendorInputs();
     init_upVendorModel();
-    init_login2();
-    init_models();
-    init_selectModel();
-    init_status2();
-    init_summary();
-    init_testModel();
     init_getProject2();
     init_getTaskApi();
     init_getTaskCategories();
@@ -270366,6 +270442,18 @@ var init_router = __esm({
       app2.use("/infiniteCanvas/uploadFile", uploadFile_default);
       app2.use("/api/login/login", login_default);
       app2.use("/login/login", login_default);
+      app2.use("/api/model-service/login", login_default2);
+      app2.use("/model-service/login", login_default2);
+      app2.use("/api/model-service/models", models_default);
+      app2.use("/model-service/models", models_default);
+      app2.use("/api/model-service/selectModel", selectModel_default);
+      app2.use("/model-service/selectModel", selectModel_default);
+      app2.use("/api/model-service/status", status_default);
+      app2.use("/model-service/status", status_default);
+      app2.use("/api/model-service/summary", summary_default);
+      app2.use("/model-service/summary", summary_default);
+      app2.use("/api/model-service/testModel", testModel_default);
+      app2.use("/model-service/testModel", testModel_default);
       app2.use("/api/modelSelect/getModelDetail", getModelDetail_default);
       app2.use("/modelSelect/getModelDetail", getModelDetail_default);
       app2.use("/api/modelSelect/getModelList", getModelList_default);
@@ -270642,18 +270730,6 @@ var init_router = __esm({
       app2.use("/setting/vendorConfig/updateVendorInputs", updateVendorInputs_default);
       app2.use("/api/setting/vendorConfig/upVendorModel", upVendorModel_default);
       app2.use("/setting/vendorConfig/upVendorModel", upVendorModel_default);
-      app2.use("/api/subrouter/login", login_default2);
-      app2.use("/subrouter/login", login_default2);
-      app2.use("/api/subrouter/models", models_default);
-      app2.use("/subrouter/models", models_default);
-      app2.use("/api/subrouter/selectModel", selectModel_default);
-      app2.use("/subrouter/selectModel", selectModel_default);
-      app2.use("/api/subrouter/status", status_default);
-      app2.use("/subrouter/status", status_default);
-      app2.use("/api/subrouter/summary", summary_default);
-      app2.use("/subrouter/summary", summary_default);
-      app2.use("/api/subrouter/testModel", testModel_default);
-      app2.use("/subrouter/testModel", testModel_default);
       app2.use("/api/task/getProject", getProject_default2);
       app2.use("/task/getProject", getProject_default2);
       app2.use("/api/task/getTaskApi", getTaskApi_default);
@@ -270747,7 +270823,7 @@ function fileNameToRoutePath(fileName) {
   return routePath;
 }
 async function generateRouter() {
-  let entries = await (0, import_fast_glob.default)(["src/routes/**/*.ts"]);
+  let entries = await (0, import_fast_glob.default)(["src/routes/**/*.ts", "!src/routes/subrouter/**/*.ts"]);
   entries = entries.sort((a, b) => a.localeCompare(b));
   const importLines = [];
   const routeModulePairs = [];
@@ -273505,7 +273581,7 @@ init_getPath();
 init_requestContext();
 var app = (0, import_express192.default)();
 var server = import_node_http.default.createServer(app);
-var WEB_CACHE_VERSION = "v10";
+var WEB_CACHE_VERSION = "v11";
 var WEB_MAIN_SCRIPT_PREFIX = "toonflow-inline-main";
 var WEB_STYLESHEET_PREFIX = "toonflow-inline-style";
 var LONG_CACHE_SECONDS = 60 * 60 * 24 * 365;
@@ -273526,6 +273602,7 @@ function getWebApiBaseUrlPatch() {
       infiniteCanvas: true,
       login: true,
       modelSelect: true,
+      "model-service": true,
       novel: true,
       other: true,
       production: true,
@@ -273533,7 +273610,6 @@ function getWebApiBaseUrlPatch() {
       script: true,
       scriptAgent: true,
       setting: true,
-      subrouter: true,
       task: true,
       test: true
     };
@@ -273706,11 +273782,11 @@ function getWebApiBaseUrlPatch() {
 })();
 </script>`;
 }
-function getSubrouterSettingsPatch() {
+function getModelServiceSettingsPatch() {
   return `<script>
 (function () {
-  if (window.__TOONFLOW_SUBROUTER_SETTINGS__) return;
-  window.__TOONFLOW_SUBROUTER_SETTINGS__ = true;
+  if (window.__TOONFLOW_MODEL_SERVICE_SETTINGS__) return;
+  window.__TOONFLOW_MODEL_SERVICE_SETTINGS__ = true;
 
   var TARGET_LABELS = {
     scriptAgent: "\u5267\u672C Agent",
@@ -273860,7 +273936,7 @@ function getSubrouterSettingsPatch() {
     state.loading = true;
     state.error = "";
     render();
-    return post("/subrouter/summary", {})
+    return post("/model-service/summary", {})
       .then(function (data) {
         state.summary = data;
         if (!state.selectedModel && data && data.selectedTextModel) state.selectedModel = data.selectedTextModel;
@@ -273879,7 +273955,7 @@ function getSubrouterSettingsPatch() {
     state.refreshing = true;
     state.error = "";
     render();
-    return post("/subrouter/models", { refresh: true })
+    return post("/model-service/models", { refresh: true })
       .then(function () {
         setToast("\u6A21\u578B\u5217\u8868\u5DF2\u5237\u65B0");
         return loadSummary();
@@ -273906,7 +273982,7 @@ function getSubrouterSettingsPatch() {
     state.saving = true;
     state.error = "";
     render();
-    return post("/subrouter/selectModel", { modelName: state.selectedModel, targets: targets })
+    return post("/model-service/selectModel", { modelName: state.selectedModel, targets: targets })
       .then(function () {
         setToast("\u6A21\u578B\u5DF2\u4FDD\u5B58\u5230\u5F53\u524D\u7528\u6237");
         return loadSummary();
@@ -273929,7 +274005,7 @@ function getSubrouterSettingsPatch() {
     state.testResult = null;
     state.error = "";
     render();
-    return post("/subrouter/testModel", { modelName: state.selectedModel })
+    return post("/model-service/testModel", { modelName: state.selectedModel })
       .then(function (data) {
         state.testResult = data || {};
         setToast("\u6A21\u578B\u6D4B\u8BD5\u901A\u8FC7");
@@ -273944,56 +274020,56 @@ function getSubrouterSettingsPatch() {
   }
 
   function installStyle() {
-    if (document.getElementById("toonflow-subrouter-style")) return;
+    if (document.getElementById("toonflow-model-service-style")) return;
     var style = document.createElement("style");
-    style.id = "toonflow-subrouter-style";
+    style.id = "toonflow-model-service-style";
     style.textContent = [
-      ".tf-subrouter-entry{position:fixed;right:18px;top:76px;z-index:9998;height:40px;padding:0 14px;border:1px solid rgba(17,24,39,.16);border-radius:8px;background:#111827;color:#fff;box-shadow:0 10px 28px rgba(15,23,42,.18);display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;cursor:pointer;letter-spacing:0}",
-      ".tf-subrouter-entry:hover{background:#0f172a}",
-      ".tf-subrouter-dot{width:8px;height:8px;border-radius:50%;background:#9ca3af;box-shadow:0 0 0 3px rgba(156,163,175,.18);flex:0 0 auto}",
-      ".tf-subrouter-dot.is-on{background:#10b981;box-shadow:0 0 0 3px rgba(16,185,129,.18)}",
-      ".tf-subrouter-backdrop{position:fixed;inset:0;z-index:10000;background:rgba(15,23,42,.32);display:flex;justify-content:flex-end}",
-      ".tf-subrouter-backdrop[hidden]{display:none}",
-      ".tf-subrouter-panel{width:min(760px,100vw);height:100vh;background:#f8fafc;color:#111827;box-shadow:-18px 0 36px rgba(15,23,42,.22);display:flex;flex-direction:column;border-left:1px solid rgba(15,23,42,.08)}",
-      ".tf-subrouter-head{height:64px;padding:0 20px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between;background:#fff;flex:0 0 auto}",
-      ".tf-subrouter-title{font-size:18px;font-weight:700;letter-spacing:0}",
-      ".tf-subrouter-close{width:34px;height:34px;border:1px solid #d1d5db;border-radius:8px;background:#fff;color:#374151;cursor:pointer;font-size:22px;line-height:28px}",
-      ".tf-subrouter-body{padding:18px 20px 28px;overflow:auto;display:flex;flex-direction:column;gap:14px}",
-      ".tf-subrouter-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}",
-      ".tf-subrouter-card{background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:14px;min-width:0}",
-      ".tf-subrouter-card h3{margin:0 0 12px;font-size:15px;font-weight:700;color:#111827;letter-spacing:0}",
-      ".tf-subrouter-kv{display:grid;grid-template-columns:92px minmax(0,1fr);gap:8px 10px;font-size:13px;line-height:1.55}",
-      ".tf-subrouter-kv span:nth-child(odd){color:#6b7280}",
-      ".tf-subrouter-kv span:nth-child(even){overflow:hidden;text-overflow:ellipsis;white-space:nowrap}",
-      ".tf-subrouter-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}",
-      ".tf-subrouter-stat{border:1px solid #e5e7eb;border-radius:8px;padding:10px;background:#f9fafb}",
-      ".tf-subrouter-stat b{display:block;font-size:20px;line-height:1.1}",
-      ".tf-subrouter-stat span{font-size:12px;color:#6b7280}",
-      ".tf-subrouter-alert{border:1px solid #f59e0b;background:#fffbeb;color:#92400e;border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.5}",
-      ".tf-subrouter-error{border-color:#fecaca;background:#fef2f2;color:#991b1b}",
-      ".tf-subrouter-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}",
-      ".tf-subrouter-btn{height:34px;padding:0 12px;border-radius:8px;border:1px solid #d1d5db;background:#fff;color:#111827;cursor:pointer;font-size:13px;font-weight:600}",
-      ".tf-subrouter-btn.primary{border-color:#0f766e;background:#0f766e;color:#fff}",
-      ".tf-subrouter-btn:disabled{opacity:.55;cursor:not-allowed}",
-      ".tf-subrouter-control{display:flex;flex-direction:column;gap:6px;min-width:0}",
-      ".tf-subrouter-control label{font-size:12px;color:#6b7280}",
-      ".tf-subrouter-select,.tf-subrouter-input{height:36px;border:1px solid #d1d5db;border-radius:8px;background:#fff;color:#111827;padding:0 10px;font-size:13px;min-width:0}",
-      ".tf-subrouter-targets{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}",
-      ".tf-subrouter-check{display:flex;align-items:center;gap:6px;font-size:13px;color:#374151}",
-      ".tf-subrouter-tabs{display:flex;gap:6px;flex-wrap:wrap}",
-      ".tf-subrouter-tab{height:30px;padding:0 10px;border:1px solid #d1d5db;border-radius:8px;background:#fff;color:#374151;font-size:13px;cursor:pointer}",
-      ".tf-subrouter-tab.is-active{background:#ecfdf5;border-color:#10b981;color:#065f46}",
-      ".tf-subrouter-model-list{display:grid;grid-template-columns:1fr 1fr;gap:8px;max-height:310px;overflow:auto;padding-right:2px}",
-      ".tf-subrouter-model{border:1px solid #e5e7eb;border-radius:8px;background:#fff;padding:10px;display:flex;flex-direction:column;gap:6px;min-width:0}",
-      ".tf-subrouter-model strong{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}",
-      ".tf-subrouter-model small{font-size:12px;color:#6b7280}",
-      ".tf-subrouter-pill{display:inline-flex;align-items:center;width:max-content;height:22px;padding:0 8px;border-radius:999px;background:#eef2ff;color:#3730a3;font-size:12px}",
-      ".tf-subrouter-agent{width:100%;border-collapse:collapse;font-size:13px}",
-      ".tf-subrouter-agent th,.tf-subrouter-agent td{padding:8px;border-bottom:1px solid #e5e7eb;text-align:left;vertical-align:top}",
-      ".tf-subrouter-agent th{color:#6b7280;font-weight:600;background:#f9fafb}",
-      ".tf-subrouter-muted{color:#6b7280;font-size:13px;line-height:1.5}",
-      ".tf-subrouter-toast{position:fixed;right:24px;top:130px;z-index:10002;background:#111827;color:#fff;border-radius:8px;padding:10px 12px;font-size:13px;box-shadow:0 10px 28px rgba(15,23,42,.2)}",
-      "@media (max-width:720px){.tf-subrouter-entry{right:12px;top:auto;bottom:18px}.tf-subrouter-panel{width:100vw}.tf-subrouter-body{padding:14px}.tf-subrouter-row{grid-template-columns:1fr}.tf-subrouter-model-list{grid-template-columns:1fr}.tf-subrouter-stats{grid-template-columns:repeat(2,1fr)}}"
+      ".tf-model-service-entry{position:fixed;right:18px;top:76px;z-index:9998;height:40px;padding:0 14px;border:1px solid rgba(17,24,39,.16);border-radius:8px;background:#111827;color:#fff;box-shadow:0 10px 28px rgba(15,23,42,.18);display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;cursor:pointer;letter-spacing:0}",
+      ".tf-model-service-entry:hover{background:#0f172a}",
+      ".tf-model-service-dot{width:8px;height:8px;border-radius:50%;background:#9ca3af;box-shadow:0 0 0 3px rgba(156,163,175,.18);flex:0 0 auto}",
+      ".tf-model-service-dot.is-on{background:#10b981;box-shadow:0 0 0 3px rgba(16,185,129,.18)}",
+      ".tf-model-service-backdrop{position:fixed;inset:0;z-index:10000;background:rgba(15,23,42,.32);display:flex;justify-content:flex-end}",
+      ".tf-model-service-backdrop[hidden]{display:none}",
+      ".tf-model-service-panel{width:min(760px,100vw);height:100vh;background:#f8fafc;color:#111827;box-shadow:-18px 0 36px rgba(15,23,42,.22);display:flex;flex-direction:column;border-left:1px solid rgba(15,23,42,.08)}",
+      ".tf-model-service-head{height:64px;padding:0 20px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between;background:#fff;flex:0 0 auto}",
+      ".tf-model-service-title{font-size:18px;font-weight:700;letter-spacing:0}",
+      ".tf-model-service-close{width:34px;height:34px;border:1px solid #d1d5db;border-radius:8px;background:#fff;color:#374151;cursor:pointer;font-size:22px;line-height:28px}",
+      ".tf-model-service-body{padding:18px 20px 28px;overflow:auto;display:flex;flex-direction:column;gap:14px}",
+      ".tf-model-service-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}",
+      ".tf-model-service-card{background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:14px;min-width:0}",
+      ".tf-model-service-card h3{margin:0 0 12px;font-size:15px;font-weight:700;color:#111827;letter-spacing:0}",
+      ".tf-model-service-kv{display:grid;grid-template-columns:92px minmax(0,1fr);gap:8px 10px;font-size:13px;line-height:1.55}",
+      ".tf-model-service-kv span:nth-child(odd){color:#6b7280}",
+      ".tf-model-service-kv span:nth-child(even){overflow:hidden;text-overflow:ellipsis;white-space:nowrap}",
+      ".tf-model-service-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}",
+      ".tf-model-service-stat{border:1px solid #e5e7eb;border-radius:8px;padding:10px;background:#f9fafb}",
+      ".tf-model-service-stat b{display:block;font-size:20px;line-height:1.1}",
+      ".tf-model-service-stat span{font-size:12px;color:#6b7280}",
+      ".tf-model-service-alert{border:1px solid #f59e0b;background:#fffbeb;color:#92400e;border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.5}",
+      ".tf-model-service-error{border-color:#fecaca;background:#fef2f2;color:#991b1b}",
+      ".tf-model-service-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}",
+      ".tf-model-service-btn{height:34px;padding:0 12px;border-radius:8px;border:1px solid #d1d5db;background:#fff;color:#111827;cursor:pointer;font-size:13px;font-weight:600}",
+      ".tf-model-service-btn.primary{border-color:#0f766e;background:#0f766e;color:#fff}",
+      ".tf-model-service-btn:disabled{opacity:.55;cursor:not-allowed}",
+      ".tf-model-service-control{display:flex;flex-direction:column;gap:6px;min-width:0}",
+      ".tf-model-service-control label{font-size:12px;color:#6b7280}",
+      ".tf-model-service-select,.tf-model-service-input{height:36px;border:1px solid #d1d5db;border-radius:8px;background:#fff;color:#111827;padding:0 10px;font-size:13px;min-width:0}",
+      ".tf-model-service-targets{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}",
+      ".tf-model-service-check{display:flex;align-items:center;gap:6px;font-size:13px;color:#374151}",
+      ".tf-model-service-tabs{display:flex;gap:6px;flex-wrap:wrap}",
+      ".tf-model-service-tab{height:30px;padding:0 10px;border:1px solid #d1d5db;border-radius:8px;background:#fff;color:#374151;font-size:13px;cursor:pointer}",
+      ".tf-model-service-tab.is-active{background:#ecfdf5;border-color:#10b981;color:#065f46}",
+      ".tf-model-service-model-list{display:grid;grid-template-columns:1fr 1fr;gap:8px;max-height:310px;overflow:auto;padding-right:2px}",
+      ".tf-model-service-model{border:1px solid #e5e7eb;border-radius:8px;background:#fff;padding:10px;display:flex;flex-direction:column;gap:6px;min-width:0}",
+      ".tf-model-service-model strong{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}",
+      ".tf-model-service-model small{font-size:12px;color:#6b7280}",
+      ".tf-model-service-pill{display:inline-flex;align-items:center;width:max-content;height:22px;padding:0 8px;border-radius:999px;background:#eef2ff;color:#3730a3;font-size:12px}",
+      ".tf-model-service-agent{width:100%;border-collapse:collapse;font-size:13px}",
+      ".tf-model-service-agent th,.tf-model-service-agent td{padding:8px;border-bottom:1px solid #e5e7eb;text-align:left;vertical-align:top}",
+      ".tf-model-service-agent th{color:#6b7280;font-weight:600;background:#f9fafb}",
+      ".tf-model-service-muted{color:#6b7280;font-size:13px;line-height:1.5}",
+      ".tf-model-service-toast{position:fixed;right:24px;top:130px;z-index:10002;background:#111827;color:#fff;border-radius:8px;padding:10px 12px;font-size:13px;box-shadow:0 10px 28px rgba(15,23,42,.2)}",
+      "@media (max-width:720px){.tf-model-service-entry{right:12px;top:auto;bottom:18px}.tf-model-service-panel{width:100vw}.tf-model-service-body{padding:14px}.tf-model-service-row{grid-template-columns:1fr}.tf-model-service-model-list{grid-template-columns:1fr}.tf-model-service-stats{grid-template-columns:repeat(2,1fr)}}"
     ].join("\\n");
     document.head.appendChild(style);
   }
@@ -274001,13 +274077,12 @@ function getSubrouterSettingsPatch() {
   function accountHtml(summary) {
     var account = summary && summary.account;
     if (!account) {
-      return '<div class="tf-subrouter-muted">\u5F53\u524D\u7528\u6237\u672A\u7ED1\u5B9A\u5185\u7F6E\u667A\u80FD\u8DEF\u7531\u8D26\u53F7\u3002</div>';
+      return '<div class="tf-model-service-muted">\u5F53\u524D\u7528\u6237\u672A\u7ED1\u5B9A\u6A21\u578B\u8D26\u53F7\u3002</div>';
     }
     return [
-      '<div class="tf-subrouter-kv">',
+      '<div class="tf-model-service-kv">',
       '<span>\u8D26\u53F7</span><span>' + escapeHtml(account.displayName || account.username || account.email || "-") + '</span>',
-      '<span>\u670D\u52A1</span><span>' + escapeHtml(account.provider || "-") + '</span>',
-      '<span>\u5206\u7AD9</span><span>' + escapeHtml(account.distributorName || account.distributorSlug || "-") + '</span>',
+      '<span>\u5206\u7AD9</span><span>' + escapeHtml(account.distributorName || "-") + '</span>',
       '<span>Key</span><span>' + (account.apiKeyReady ? "\u5DF2\u751F\u6210" : "\u672A\u751F\u6210") + '</span>',
       '<span>\u66F4\u65B0\u65F6\u95F4</span><span>' + escapeHtml(formatTime(account.updatedTime)) + '</span>',
       '</div>'
@@ -274017,7 +274092,7 @@ function getSubrouterSettingsPatch() {
   function statsHtml(summary) {
     var stats = summary && summary.modelStats || {};
     return ["text", "image", "video", "other"].map(function (type) {
-      return '<div class="tf-subrouter-stat"><b>' + Number(stats[type] || 0) + '</b><span>' + TYPE_LABELS[type] + '</span></div>';
+      return '<div class="tf-model-service-stat"><b>' + Number(stats[type] || 0) + '</b><span>' + TYPE_LABELS[type] + '</span></div>';
     }).join("");
   }
 
@@ -274029,12 +274104,12 @@ function getSubrouterSettingsPatch() {
       var name = model.modelName || model.name || "";
       return '<option value="' + escapeHtml(name) + '"' + (name === state.selectedModel ? " selected" : "") + '>' + escapeHtml(name) + '</option>';
     }));
-    return '<select class="tf-subrouter-select" data-action="select-model">' + options.join("") + '</select>';
+    return '<select class="tf-model-service-select" data-action="select-model">' + options.join("") + '</select>';
   }
 
   function targetsHtml() {
-    return '<div class="tf-subrouter-targets">' + Object.keys(TARGET_LABELS).map(function (key) {
-      return '<label class="tf-subrouter-check"><input type="checkbox" data-target="' + key + '"' + (state.targets[key] ? " checked" : "") + '> ' + TARGET_LABELS[key] + '</label>';
+    return '<div class="tf-model-service-targets">' + Object.keys(TARGET_LABELS).map(function (key) {
+      return '<label class="tf-model-service-check"><input type="checkbox" data-target="' + key + '"' + (state.targets[key] ? " checked" : "") + '> ' + TARGET_LABELS[key] + '</label>';
     }).join("") + '</div>';
   }
 
@@ -274048,33 +274123,33 @@ function getSubrouterSettingsPatch() {
       return (filter === "all" || type === filter) && (!search || name.toLowerCase().indexOf(search) >= 0);
     }).slice(0, 180);
     return [
-      '<div class="tf-subrouter-card">',
+      '<div class="tf-model-service-card">',
       '<h3>\u6A21\u578B\u5217\u8868</h3>',
-      '<div class="tf-subrouter-actions" style="justify-content:space-between;margin-bottom:10px">',
-      '<div class="tf-subrouter-tabs">',
+      '<div class="tf-model-service-actions" style="justify-content:space-between;margin-bottom:10px">',
+      '<div class="tf-model-service-tabs">',
       ["text", "image", "video", "all"].map(function (type) {
         var label = type === "all" ? "\u5168\u90E8" : TYPE_LABELS[type];
-        return '<button class="tf-subrouter-tab ' + (filter === type ? "is-active" : "") + '" data-filter="' + type + '">' + label + '</button>';
+        return '<button class="tf-model-service-tab ' + (filter === type ? "is-active" : "") + '" data-filter="' + type + '">' + label + '</button>';
       }).join(""),
       '</div>',
-      '<input class="tf-subrouter-input" data-action="search" placeholder="\u641C\u7D22\u6A21\u578B" value="' + escapeHtml(state.search) + '" style="width:210px">',
+      '<input class="tf-model-service-input" data-action="search" placeholder="\u641C\u7D22\u6A21\u578B" value="' + escapeHtml(state.search) + '" style="width:210px">',
       '</div>',
       filtered.length
-        ? '<div class="tf-subrouter-model-list">' + filtered.map(function (model) {
+        ? '<div class="tf-model-service-model-list">' + filtered.map(function (model) {
             var type = model.type || "other";
             var name = model.modelName || model.name || "";
-            return '<div class="tf-subrouter-model"><strong title="' + escapeHtml(name) + '">' + escapeHtml(name) + '</strong><div><span class="tf-subrouter-pill">' + escapeHtml(TYPE_LABELS[type] || type) + '</span></div><small>' + (model.think ? "\u652F\u6301\u601D\u8003" : "\u53EF\u7528") + '</small></div>';
+            return '<div class="tf-model-service-model"><strong title="' + escapeHtml(name) + '">' + escapeHtml(name) + '</strong><div><span class="tf-model-service-pill">' + escapeHtml(TYPE_LABELS[type] || type) + '</span></div><small>' + (model.think ? "\u652F\u6301\u601D\u8003" : "\u53EF\u7528") + '</small></div>';
           }).join("") + '</div>'
-        : '<div class="tf-subrouter-muted">\u6CA1\u6709\u5339\u914D\u7684\u6A21\u578B\u3002</div>',
+        : '<div class="tf-model-service-muted">\u6CA1\u6709\u5339\u914D\u7684\u6A21\u578B\u3002</div>',
       '</div>'
     ].join("");
   }
 
   function agentsHtml(summary) {
     var agents = summary && Array.isArray(summary.agents) ? summary.agents : [];
-    if (!agents.length) return '<div class="tf-subrouter-muted">\u6682\u65E0 Agent \u914D\u7F6E\u3002</div>';
-    return '<table class="tf-subrouter-agent"><thead><tr><th>\u76EE\u6807</th><th>\u5F53\u524D\u6A21\u578B</th><th>\u72B6\u6001</th></tr></thead><tbody>' + agents.map(function (agent) {
-      var status = agent.usingSubrouter ? (agent.available === false ? "\u6A21\u578B\u4E0D\u5B58\u5728" : "\u5185\u7F6E\u667A\u80FD\u8DEF\u7531") : (agent.modelName ? "\u5176\u4ED6\u4F9B\u5E94\u5546" : "\u672A\u914D\u7F6E");
+    if (!agents.length) return '<div class="tf-model-service-muted">\u6682\u65E0 Agent \u914D\u7F6E\u3002</div>';
+    return '<table class="tf-model-service-agent"><thead><tr><th>\u76EE\u6807</th><th>\u5F53\u524D\u6A21\u578B</th><th>\u72B6\u6001</th></tr></thead><tbody>' + agents.map(function (agent) {
+      var status = agent.usingModelService ? (agent.available === false ? "\u6A21\u578B\u4E0D\u5B58\u5728" : "\u6A21\u578B\u670D\u52A1") : (agent.modelName ? "\u5176\u4ED6\u4F9B\u5E94\u5546" : "\u672A\u914D\u7F6E");
       return '<tr><td>' + escapeHtml(agent.name || TARGET_LABELS[agent.key] || agent.key) + '</td><td>' + escapeHtml(agent.model || "-") + '</td><td>' + escapeHtml(status) + '</td></tr>';
     }).join("") + '</tbody></table>';
   }
@@ -274084,53 +274159,53 @@ function getSubrouterSettingsPatch() {
     var summary = state.summary;
     var models = summary && Array.isArray(summary.models) ? summary.models : [];
     if (!token) {
-      return '<div class="tf-subrouter-card"><h3>\u8D26\u53F7\u4E0E\u6A21\u578B</h3><div class="tf-subrouter-alert tf-subrouter-error">\u672A\u627E\u5230\u767B\u5F55\u4EE4\u724C\uFF0C\u8BF7\u91CD\u65B0\u767B\u5F55\u540E\u518D\u6253\u5F00\u8BBE\u7F6E\u3002</div></div>';
+      return '<div class="tf-model-service-card"><h3>\u8D26\u53F7\u4E0E\u6A21\u578B</h3><div class="tf-model-service-alert tf-model-service-error">\u672A\u627E\u5230\u767B\u5F55\u4EE4\u724C\uFF0C\u8BF7\u91CD\u65B0\u767B\u5F55\u540E\u518D\u6253\u5F00\u8BBE\u7F6E\u3002</div></div>';
     }
     var diagnostics = summary && Array.isArray(summary.diagnostics) ? summary.diagnostics : [];
     return [
-      state.error ? '<div class="tf-subrouter-alert tf-subrouter-error">' + escapeHtml(state.error) + '</div>' : '',
-      diagnostics.length ? '<div class="tf-subrouter-alert">' + diagnostics.map(escapeHtml).join('<br>') + '</div>' : '',
-      '<div class="tf-subrouter-row">',
-      '<div class="tf-subrouter-card"><h3>\u5F53\u524D\u8D26\u53F7</h3>' + accountHtml(summary) + '</div>',
-      '<div class="tf-subrouter-card"><h3>\u53EF\u7528\u6A21\u578B</h3><div class="tf-subrouter-stats">' + statsHtml(summary) + '</div></div>',
+      state.error ? '<div class="tf-model-service-alert tf-model-service-error">' + escapeHtml(state.error) + '</div>' : '',
+      diagnostics.length ? '<div class="tf-model-service-alert">' + diagnostics.map(escapeHtml).join('<br>') + '</div>' : '',
+      '<div class="tf-model-service-row">',
+      '<div class="tf-model-service-card"><h3>\u5F53\u524D\u8D26\u53F7</h3>' + accountHtml(summary) + '</div>',
+      '<div class="tf-model-service-card"><h3>\u53EF\u7528\u6A21\u578B</h3><div class="tf-model-service-stats">' + statsHtml(summary) + '</div></div>',
       '</div>',
-      '<div class="tf-subrouter-card">',
+      '<div class="tf-model-service-card">',
       '<h3>Agent \u6587\u672C\u6A21\u578B</h3>',
-      '<div class="tf-subrouter-row">',
-      '<div class="tf-subrouter-control"><label>\u6587\u672C\u6A21\u578B</label>' + modelSelectHtml(models, summary && summary.selectedTextModel) + '</div>',
-      '<div class="tf-subrouter-control"><label>\u64CD\u4F5C</label><div class="tf-subrouter-actions">',
-      '<button class="tf-subrouter-btn primary" data-action="save" ' + (state.saving ? "disabled" : "") + '>' + (state.saving ? "\u4FDD\u5B58\u4E2D" : "\u4FDD\u5B58\u9009\u62E9") + '</button>',
-      '<button class="tf-subrouter-btn" data-action="test" ' + (state.testing ? "disabled" : "") + '>' + (state.testing ? "\u6D4B\u8BD5\u4E2D" : "\u6D4B\u8BD5\u6A21\u578B") + '</button>',
-      '<button class="tf-subrouter-btn" data-action="refresh" ' + (state.refreshing ? "disabled" : "") + '>' + (state.refreshing ? "\u5237\u65B0\u4E2D" : "\u5237\u65B0\u6A21\u578B") + '</button>',
+      '<div class="tf-model-service-row">',
+      '<div class="tf-model-service-control"><label>\u6587\u672C\u6A21\u578B</label>' + modelSelectHtml(models, summary && summary.selectedTextModel) + '</div>',
+      '<div class="tf-model-service-control"><label>\u64CD\u4F5C</label><div class="tf-model-service-actions">',
+      '<button class="tf-model-service-btn primary" data-action="save" ' + (state.saving ? "disabled" : "") + '>' + (state.saving ? "\u4FDD\u5B58\u4E2D" : "\u4FDD\u5B58\u9009\u62E9") + '</button>',
+      '<button class="tf-model-service-btn" data-action="test" ' + (state.testing ? "disabled" : "") + '>' + (state.testing ? "\u6D4B\u8BD5\u4E2D" : "\u6D4B\u8BD5\u6A21\u578B") + '</button>',
+      '<button class="tf-model-service-btn" data-action="refresh" ' + (state.refreshing ? "disabled" : "") + '>' + (state.refreshing ? "\u5237\u65B0\u4E2D" : "\u5237\u65B0\u6A21\u578B") + '</button>',
       '</div></div>',
       '</div>',
       targetsHtml(),
-      state.testResult ? '<div class="tf-subrouter-alert ' + (state.testResult.available === false ? "tf-subrouter-error" : "") + '" style="margin-top:10px">' + escapeHtml(state.testResult.available === false ? (state.testResult.message || "\u6A21\u578B\u6D4B\u8BD5\u5931\u8D25") : ("\u6A21\u578B\u53EF\u7528\uFF0C\u8017\u65F6 " + (state.testResult.latencyMs || 0) + "ms")) + '</div>' : '',
+      state.testResult ? '<div class="tf-model-service-alert ' + (state.testResult.available === false ? "tf-model-service-error" : "") + '" style="margin-top:10px">' + escapeHtml(state.testResult.available === false ? (state.testResult.message || "\u6A21\u578B\u6D4B\u8BD5\u5931\u8D25") : ("\u6A21\u578B\u53EF\u7528\uFF0C\u8017\u65F6 " + (state.testResult.latencyMs || 0) + "ms")) + '</div>' : '',
       '</div>',
-      '<div class="tf-subrouter-card"><h3>\u5F53\u524D Agent \u914D\u7F6E</h3>' + agentsHtml(summary) + '</div>',
+      '<div class="tf-model-service-card"><h3>\u5F53\u524D Agent \u914D\u7F6E</h3>' + agentsHtml(summary) + '</div>',
       modelsHtml(summary),
-      state.loading && !summary ? '<div class="tf-subrouter-card"><div class="tf-subrouter-muted">\u52A0\u8F7D\u4E2D...</div></div>' : ''
+      state.loading && !summary ? '<div class="tf-model-service-card"><div class="tf-model-service-muted">\u52A0\u8F7D\u4E2D...</div></div>' : ''
     ].join("");
   }
 
   function render() {
-    var root = document.getElementById("toonflow-subrouter-root");
+    var root = document.getElementById("toonflow-model-service-root");
     if (!root) return;
     var connected = state.summary && state.summary.connected;
     root.innerHTML = [
-      '<button class="tf-subrouter-entry" data-action="open" type="button"><span class="tf-subrouter-dot ' + (connected ? "is-on" : "") + '"></span><span>\u6A21\u578B\u8BBE\u7F6E</span></button>',
-      '<div class="tf-subrouter-backdrop" ' + (state.open ? "" : "hidden") + ' data-action="backdrop">',
-      '<section class="tf-subrouter-panel" role="dialog" aria-modal="true" aria-label="\u8D26\u53F7\u4E0E\u6A21\u578B\u8BBE\u7F6E">',
-      '<header class="tf-subrouter-head"><div class="tf-subrouter-title">\u8D26\u53F7\u4E0E\u6A21\u578B\u8BBE\u7F6E</div><button class="tf-subrouter-close" data-action="close" type="button">\xD7</button></header>',
-      '<main class="tf-subrouter-body">' + bodyHtml() + '</main>',
+      '<button class="tf-model-service-entry" data-action="open" type="button"><span class="tf-model-service-dot ' + (connected ? "is-on" : "") + '"></span><span>\u6A21\u578B\u8BBE\u7F6E</span></button>',
+      '<div class="tf-model-service-backdrop" ' + (state.open ? "" : "hidden") + ' data-action="backdrop">',
+      '<section class="tf-model-service-panel" role="dialog" aria-modal="true" aria-label="\u8D26\u53F7\u4E0E\u6A21\u578B\u8BBE\u7F6E">',
+      '<header class="tf-model-service-head"><div class="tf-model-service-title">\u8D26\u53F7\u4E0E\u6A21\u578B\u8BBE\u7F6E</div><button class="tf-model-service-close" data-action="close" type="button">\xD7</button></header>',
+      '<main class="tf-model-service-body">' + bodyHtml() + '</main>',
       '</section></div>',
-      state.toast ? '<div class="tf-subrouter-toast">' + escapeHtml(state.toast) + '</div>' : ''
+      state.toast ? '<div class="tf-model-service-toast">' + escapeHtml(state.toast) + '</div>' : ''
     ].join("");
     refreshEntryVisibility();
   }
 
   function refreshEntryVisibility() {
-    var button = document.querySelector(".tf-subrouter-entry");
+    var button = document.querySelector(".tf-model-service-entry");
     if (!button) return;
     var onLoginPage = !!document.querySelector(".loginPage");
     button.style.display = !findToken() && onLoginPage ? "none" : "flex";
@@ -274192,9 +274267,9 @@ function getSubrouterSettingsPatch() {
 
   function install() {
     installStyle();
-    if (document.getElementById("toonflow-subrouter-root")) return;
+    if (document.getElementById("toonflow-model-service-root")) return;
     var root = document.createElement("div");
-    root.id = "toonflow-subrouter-root";
+    root.id = "toonflow-model-service-root";
     document.body.appendChild(root);
     installEvents(root);
     render();
@@ -274226,7 +274301,7 @@ function prepareWebAssets(webDir) {
   import_fs23.default.mkdirSync(cacheDir, { recursive: true });
   let html = import_fs23.default.readFileSync(indexPath, "utf8");
   const hasPatchedApiBaseUrl = html.includes("window.__TOONFLOW_API_BASE_URL__");
-  const hasSubrouterSettingsPatch = html.includes("window.__TOONFLOW_SUBROUTER_SETTINGS__");
+  const hasModelServiceSettingsPatch = html.includes("window.__TOONFLOW_MODEL_SERVICE_SETTINGS__");
   html = patchLegacyApiBaseUrls(html);
   if (!hasPatchedApiBaseUrl && !html.includes('(location.origin + "/api")')) {
     html = html.replace('<script type="module"', `${getWebApiBaseUrlPatch()}
@@ -274235,8 +274310,8 @@ function prepareWebAssets(webDir) {
     html = html.replace('<script type="module"', `${getWebApiBaseUrlPatch()}
     <script type="module"`);
   }
-  if (!hasSubrouterSettingsPatch) {
-    html = html.replace('<script type="module"', `${getSubrouterSettingsPatch()}
+  if (!hasModelServiceSettingsPatch) {
+    html = html.replace('<script type="module"', `${getModelServiceSettingsPatch()}
     <script type="module"`);
   }
   const inlineModuleScript = /<script type="module" crossorigin>([\s\S]*?)<\/script>/;
@@ -274661,7 +274736,7 @@ async function startServe(randomPort = false) {
     const rawToken = req.headers.authorization || req.query.token || "";
     const token = rawToken.replace("Bearer ", "");
     const apiPath = req.path.startsWith("/api/") ? req.path : `/api${req.path}`;
-    if (apiPath === "/api/login/login" || apiPath === "/api/subrouter/login") return next();
+    if (apiPath === "/api/login/login" || apiPath === "/api/model-service/login") return next();
     if (!token) return res.status(401).send({ message: "\u672A\u63D0\u4F9Btoken" });
     try {
       const decoded = import_jsonwebtoken6.default.verify(token, tokenKey);

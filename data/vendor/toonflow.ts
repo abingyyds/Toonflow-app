@@ -142,7 +142,7 @@ const vendor: VendorConfig = {
   inputs: [{ key: "apiKey", label: "API密钥", type: "password", required: true }],
   inputValues: {
     apiKey: "",
-    baseUrl: "http://subrouter.railway.internal:8080",
+    baseUrl: "https://api.toonflow.net/v1",
   },
   models: [
     { name: "claude-sonnet-4-6", type: "text", modelName: "claude-sonnet-4-6", think: false },

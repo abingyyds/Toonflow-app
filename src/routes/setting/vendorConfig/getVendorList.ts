@@ -8,7 +8,7 @@ const router = express.Router();
 
 export default router.post("/", async (req, res) => {
   await ensureSubrouterVendor();
-  const data = (await u.db("o_vendorConfig").select("*")).filter((item) => !isHiddenBuiltInVendorId(item.id));
+  const data = (await u.db("o_vendorConfig").select("*")).filter((item) => !isHiddenBuiltInVendorId(item.id) && item.id !== INTERNAL_ROUTER_VENDOR_ID);
 
   const list = (
     await Promise.all(
@@ -40,6 +40,5 @@ export default router.post("/", async (req, res) => {
     )
   ).filter((i) => Boolean(i));
 
-  list.sort((a, b) => (a!.id === INTERNAL_ROUTER_VENDOR_ID ? -1 : b!.id === INTERNAL_ROUTER_VENDOR_ID ? 1 : 0));
   res.status(200).send(success(list));
 });
