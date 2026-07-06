@@ -228,6 +228,16 @@ const normalizeOpenAIVideoSize = (resolution: string, aspectRatio: "16:9" | "9:1
   return isPortrait ? "720x1280" : "1280x720";
 };
 
+const ensureImageDataUrl = (value: string): string => {
+  return value.startsWith("data:") ? value : `data:image/png;base64,${value}`;
+};
+
+const normalizeOpenAIReferenceImage = async (value: string, size: string): Promise<string> => {
+  const [width, height] = size.split("x").map((item) => Number(item));
+  if (!Number.isFinite(width) || !Number.isFinite(height)) return ensureImageDataUrl(value);
+  return await zipImageResolution(ensureImageDataUrl(value), width, height);
+};
+
 const parseBase64File = (value: string) => {
   const match = value.match(/^data:([^;]+);base64,(.*)$/);
   const mime = match?.[1] || "image/png";
@@ -313,14 +323,15 @@ const videoRequest = async (config: VideoConfig, model: VideoModel): Promise<str
   const baseUrl = getBaseUrl();
   const imageRefs = getImageReferences(config);
   const formData = new FormData();
+  const size = normalizeOpenAIVideoSize(config.resolution, config.aspectRatio);
 
   formData.append("model", model.modelName);
   formData.append("prompt", config.prompt || "");
   formData.append("seconds", normalizeOpenAIVideoSeconds(config.duration));
-  formData.append("size", normalizeOpenAIVideoSize(config.resolution, config.aspectRatio));
+  formData.append("size", size);
 
   if (imageRefs[0]) {
-    const file = parseBase64File(imageRefs[0]);
+    const file = parseBase64File(await normalizeOpenAIReferenceImage(imageRefs[0], size));
     formData.append("input_reference", file.buffer, {
       filename: file.filename,
       contentType: file.contentType,
