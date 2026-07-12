@@ -78,7 +78,7 @@ interface PreparedSubrouterLogin {
 }
 
 const SUBROUTER_VENDOR_ID = "subrouter";
-const SUBROUTER_VENDOR_VERSION = "1.7";
+const SUBROUTER_VENDOR_VERSION = "2.0";
 const AUTO_KEY_PREFIX = "toonflow-auto";
 const INTERNAL_SUBROUTER_BASE_URL = "http://subrouter.railway.internal:8080";
 const SUBROUTER_LOGIN_PROVIDERS_SETTING_KEY = "subrouterLoginProviders";
@@ -114,14 +114,20 @@ function uniqueValues(values: string[]): string[] {
 }
 
 function getRuntimeSubrouterBaseUrlCandidates(accountBaseUrl?: string): string[] {
+  const configuredPublicBases = [
+    process.env.TOONFLOW_SUBROUTER_PUBLIC_BASE_URL,
+    process.env.SUBROUTER_PUBLIC_BASE_URL,
+    process.env.TOONFLOW_SUBROUTER_FALLBACK_BASE_URL,
+    process.env.SUBROUTER_FALLBACK_BASE_URL,
+    ...parseBaseUrlCandidates(process.env.TOONFLOW_SUBROUTER_BASE_URL_CANDIDATES || process.env.SUBROUTER_BASE_URL_CANDIDATES),
+  ];
+  const account = String(accountBaseUrl || "").trim();
+  const isInternalAccount = /(^|[.:])(?:.*\.internal|localhost$|127\.0\.0\.1$)/i.test(account);
+  const publicBases = configuredPublicBases.filter((value) => !isInternalAccount || !/(^|[.:])(?:.*\.internal|localhost$|127\.0\.0\.1$)/i.test(String(value || "")));
   return uniqueValues(
     [
-      accountBaseUrl,
-      process.env.TOONFLOW_SUBROUTER_PUBLIC_BASE_URL,
-      process.env.SUBROUTER_PUBLIC_BASE_URL,
-      process.env.TOONFLOW_SUBROUTER_FALLBACK_BASE_URL,
-      process.env.SUBROUTER_FALLBACK_BASE_URL,
-      ...parseBaseUrlCandidates(process.env.TOONFLOW_SUBROUTER_BASE_URL_CANDIDATES || process.env.SUBROUTER_BASE_URL_CANDIDATES),
+      ...(isInternalAccount ? publicBases : [accountBaseUrl, ...configuredPublicBases]),
+      ...(isInternalAccount ? [accountBaseUrl] : []),
     ]
       .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
       .map(gatewayBase),
@@ -620,11 +626,11 @@ const isMediaPayload = (value: string): boolean => {
     text.startsWith("http://") ||
     text.startsWith("https://") ||
     text.startsWith("data:") ||
+    /^\\/(?:v1\\/)?videos\\/[^/]+\\/content(?:[?#].*)?$/i.test(text) ||
+    /\\.(?:3gp|avi|m4v|mov|mp4|mpeg|mpg|ogv|webm)(?:[?#].*)?$/i.test(text) ||
     (text.length > 80 && /^[A-Za-z0-9+/]+={0,2}$/.test(text))
   );
 };
-const mediaToBase64 = async (value: string): Promise<string> =>
-  value.startsWith("http://") || value.startsWith("https://") ? await urlToBase64(value) : value;
 const describeRequestError = (err: any): string => {
   const status = err?.response?.status;
   const code = err?.code || err?.cause?.code;
@@ -633,6 +639,7 @@ const describeRequestError = (err: any): string => {
   const responseText = responseData ? (typeof responseData === "string" ? responseData : JSON.stringify(responseData)) : "";
   return [
     attemptedBaseUrl ? "baseUrl=" + attemptedBaseUrl : "",
+    err?.__mediaUrl ? "mediaUrl=" + err.__mediaUrl : "",
     status ? "status=" + status : "",
     code ? "code=" + code : "",
     err?.message || String(err),
@@ -669,32 +676,68 @@ const requestJson = async (path: string, method: "GET" | "POST", body?: any): Pr
   }
   throw new Error(method + " " + path + " " + describeRequestError(lastErr));
 };
-const requestBinary = async (path: string): Promise<string> => {
+const resolveMediaUrl = (base: string, value: string): string => {
+  const resource = value.trim();
+  if (/^https?:\\/\\//i.test(resource)) return resource;
+  const baseAddress = new URL(base + "/");
+  const resourcePath = resource.startsWith("/") ? resource : "/" + resource;
+  const basePath = baseAddress.pathname.replace(/\\/+$/, "");
+  if (basePath && (resourcePath === basePath || resourcePath.startsWith(basePath + "/"))) {
+    return baseAddress.origin + resourcePath;
+  }
+  return base.replace(/\\/+$/, "") + resourcePath;
+};
+const mediaRequestUrls = (value: string): string[] => {
+  const resource = value.trim();
+  if (!resource || resource.startsWith("data:")) return [];
   const candidates = baseUrls();
-  if (candidates.length === 0) throw new Error("GET " + path + " 未配置 API 基地址");
-  const ordered = activeBaseUrl ? [activeBaseUrl, ...candidates.filter((url) => url !== activeBaseUrl)] : candidates;
+  const urls: string[] = [];
+  if (/^https?:\\/\\//i.test(resource)) urls.push(resource);
+  let path = resource;
+  try {
+    if (/^https?:\\/\\//i.test(resource)) {
+      const parsed = new URL(resource);
+      path = parsed.pathname + parsed.search;
+    }
+  } catch {}
+  const ordered = activeBaseUrl ? [activeBaseUrl, ...candidates.filter((candidate) => candidate !== activeBaseUrl)] : candidates;
+  for (const candidate of ordered) urls.push(resolveMediaUrl(candidate, path));
+  return [...new Set(urls)];
+};
+const requestMedia = async (value: string): Promise<string> => {
+  const urls = mediaRequestUrls(value);
+  if (urls.length === 0) throw new Error("媒体地址为空或格式不受支持");
   let lastErr: any;
-  for (const candidate of ordered) {
+  for (const url of urls) {
     try {
       const response = await axios({
-        url: candidate + path,
+        url,
         method: "GET",
         headers: headers(),
         responseType: "arraybuffer",
         timeout: 120000,
         validateStatus: (status: number) => status >= 200 && status < 300,
       });
-      activeBaseUrl = candidate;
+      try {
+        const parsed = new URL(url);
+        activeBaseUrl = baseUrls().find((candidate) => new URL(candidate).origin === parsed.origin) || activeBaseUrl;
+      } catch {}
       const mime = String(response.headers?.["content-type"] || "video/mp4").split(";")[0];
       return "data:" + mime + ";base64," + Buffer.from(response.data).toString("base64");
     } catch (err: any) {
-      err.__baseUrl = candidate;
+      err.__mediaUrl = url;
       lastErr = err;
       if (!shouldTryNextBaseUrl(err)) break;
     }
   }
-  throw new Error("GET " + path + " " + describeRequestError(lastErr));
+  throw new Error("GET " + value + " " + describeRequestError(lastErr));
 };
+const mediaToBase64 = async (value: string): Promise<string> => {
+  const text = value.trim();
+  if (text.startsWith("data:") || (text.length > 80 && /^[A-Za-z0-9+/]+={0,2}$/.test(text))) return text;
+  return await requestMedia(text);
+};
+const requestBinary = async (path: string): Promise<string> => await requestMedia(path);
 const pickUrl = (data: any, seen = new Set<any>()): string | undefined => {
   if (data == null) return undefined;
   if (typeof data === "string") return isMediaPayload(data) ? data : undefined;
@@ -714,7 +757,7 @@ const pickUrl = (data: any, seen = new Set<any>()): string | undefined => {
     const nested = pickUrl(value, seen);
     if (nested) return nested;
   }
-  for (const key of ["data", "content", "output", "result", "results", "outputs", "file", "files", "asset", "assets", "video", "videos"]) {
+  for (const key of ["data", "content", "output", "result", "results", "outputs", "file", "files", "asset", "assets", "metadata", "video", "videos"]) {
     const value = pickUrl(data[key], seen);
     if (value) return value;
   }

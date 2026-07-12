@@ -190,15 +190,21 @@ function parseBaseUrlCandidates(value: unknown): string[] {
 
 function normalizeRuntimeSubrouterInputValues(id: string, inputValues: Record<string, any>) {
   if (id !== "subrouter") return inputValues;
-  const candidates = [
-    inputValues.baseUrl,
-    inputValues.fallbackBaseUrl,
-    ...parseBaseUrlCandidates(inputValues.baseUrlCandidates),
+  const configuredPublicBases = [
     process.env.TOONFLOW_SUBROUTER_PUBLIC_BASE_URL,
     process.env.SUBROUTER_PUBLIC_BASE_URL,
     process.env.TOONFLOW_SUBROUTER_FALLBACK_BASE_URL,
     process.env.SUBROUTER_FALLBACK_BASE_URL,
+    inputValues.fallbackBaseUrl,
+    ...parseBaseUrlCandidates(inputValues.baseUrlCandidates),
     ...parseBaseUrlCandidates(process.env.TOONFLOW_SUBROUTER_BASE_URL_CANDIDATES || process.env.SUBROUTER_BASE_URL_CANDIDATES),
+  ];
+  const accountBaseUrl = String(inputValues.baseUrl || "").trim();
+  const isInternalAccount = /(^|[.:])(?:.*\.internal|localhost$|127\.0\.0\.1$)/i.test(accountBaseUrl);
+  const publicBases = configuredPublicBases.filter((value) => !isInternalAccount || !/(^|[.:])(?:.*\.internal|localhost$|127\.0\.0\.1$)/i.test(String(value || "")));
+  const candidates = [
+    ...(isInternalAccount ? publicBases : [accountBaseUrl, ...configuredPublicBases]),
+    ...(isInternalAccount ? [accountBaseUrl] : []),
   ]
     .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
     .map(normalizeGatewayBaseUrl);
@@ -270,7 +276,7 @@ function pickMediaResult(value: unknown, seen = new Set<unknown>()): string | un
     const result = pickMediaResult(data[key], seen);
     if (result) return result;
   }
-  for (const key of ["data", "content", "output", "result", "results", "file", "files", "asset", "assets", "video", "videos"]) {
+  for (const key of ["data", "content", "output", "result", "results", "file", "files", "asset", "assets", "metadata", "video", "videos"]) {
     const result = pickMediaResult(data[key], seen);
     if (result) return result;
   }
