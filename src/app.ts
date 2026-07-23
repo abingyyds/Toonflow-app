@@ -1203,7 +1203,7 @@ export default async function startServe(randomPort: Boolean = false) {
           sizeOpts = { type: "percentage", value: pct };
         } else {
           // 无效的 size 参数，降级返回原图
-          express.static(ossDir, { acceptRanges: false })(req, res, next);
+          express.static(ossDir)(req, res, next);
           return;
         }
 
@@ -1217,14 +1217,14 @@ export default async function startServe(randomPort: Boolean = false) {
             res.sendFile(thumbnailPath);
           } else {
             // 缩略图生成失败，降级返回原图
-            express.static(ossDir, { acceptRanges: false })(req, res, next);
+            express.static(ossDir)(req, res, next);
           }
         });
         return;
       }
       next();
     },
-    express.static(ossDir, { acceptRanges: false }),
+    express.static(ossDir),
     (_, res) => res.status(404).end(),
   );
 

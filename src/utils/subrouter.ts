@@ -88,7 +88,7 @@ export interface PublicSubrouterAccount {
 }
 
 const SUBROUTER_VENDOR_ID = "subrouter";
-const SUBROUTER_VENDOR_VERSION = "1.8";
+const SUBROUTER_VENDOR_VERSION = "1.9";
 const AUTO_KEY_PREFIX = "toonflow-auto";
 const INTERNAL_SUBROUTER_BASE_URL = "http://subrouter.railway.internal:8080";
 const SUBROUTER_LOGIN_PROVIDERS_SETTING_KEY = "subrouterLoginProviders";
@@ -648,6 +648,12 @@ const isMediaPayload = (value: string): boolean => {
 };
 const mediaToBase64 = async (value: string): Promise<string> =>
   value.startsWith("http://") || value.startsWith("https://") ? await urlToBase64(value) : value;
+const downloadMedia = async (value: string): Promise<string> => {
+  if (!value.startsWith("http://") && !value.startsWith("https://")) return value;
+  const base = baseUrls().find((candidate) => value.startsWith(candidate + "/"));
+  if (base) return await requestBinary(value.slice(base.length));
+  return await urlToBase64(value);
+};
 const describeRequestError = (err: any): string => {
   const status = err?.response?.status;
   const code = err?.code || err?.cause?.code;
@@ -777,10 +783,11 @@ const pickError = (data: any): string | undefined =>
   data?.output?.error?.message ||
   data?.output?.error;
 
-const openAIVideoSeconds = (duration: unknown): string => {
+const openAIVideoSeconds = (duration: unknown, modelName: string): string => {
   const requested = Number(duration);
   const safe = Number.isFinite(requested) ? requested : 4;
-  return String([4, 8, 12].reduce((best, item) => Math.abs(item - safe) < Math.abs(best - safe) ? item : best, 4));
+  const allowed = /grok/i.test(modelName) ? [6, 10, 15] : [4, 8, 12];
+  return String(allowed.reduce((best, item) => Math.abs(item - safe) < Math.abs(best - safe) ? item : best, allowed[0]));
 };
 
 const openAIVideoSize = (resolution: unknown, aspectRatio: unknown): string => {
@@ -817,7 +824,7 @@ const videoRequest = async (config: VideoConfig, model: VideoModel): Promise<str
   const body: any = {
     model: model.modelName,
     prompt: config.prompt,
-    seconds: openAIVideoSeconds(config.duration),
+    seconds: openAIVideoSeconds(config.duration, model.modelName),
     size: openAIVideoSize(config.resolution, config.aspectRatio),
   };
   if (imageRefs.length > 0) body.input_reference = { image_url: imageRefs[0] };
@@ -834,7 +841,7 @@ const videoRequest = async (config: VideoConfig, model: VideoModel): Promise<str
     endpoint: "/videos",
     keys: data && typeof data === "object" ? Object.keys(data).slice(0, 20) : typeof data,
   });
-  if (!taskId && direct) return await mediaToBase64(direct);
+  if (!taskId && direct) return await downloadMedia(direct);
   if (!taskId) throw new Error("视频任务创建失败：未返回任务 ID");
   const res = await pollTask(async () => {
     const queryData = await requestJson("/videos/" + taskId, "GET").catch((err: any) => {
@@ -863,7 +870,7 @@ const videoRequest = async (config: VideoConfig, model: VideoModel): Promise<str
   }, 10000, 1800000);
   if (res.error) throw new Error(res.error);
   if (!res.data) throw new Error("视频生成失败：未返回视频地址");
-  return await mediaToBase64(res.data);
+  return await downloadMedia(res.data);
 };
 
 const ttsRequest = async (config: TTSConfig, model: TTSModel): Promise<string> => "";
