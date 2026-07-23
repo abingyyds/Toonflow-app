@@ -14,7 +14,7 @@ export default router.post(
     reel: z.string(),
     chapter: z.string(),
     chapterData: z.string(),
-    event: z.string(),
+    event: z.string().nullable(),
   }),
   async (req, res) => {
     const { id, index, reel, chapter, chapterData, event } = req.body;
