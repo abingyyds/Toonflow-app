@@ -237060,7 +237060,9 @@ function normalizeSubrouterAIKey(key) {
   return `sk-${String(key).replace(/^sk-/, "")}`;
 }
 function findReusableKey(items) {
-  const existing = items.find((item) => String(item.name || "").startsWith(AUTO_KEY_PREFIX) && (item.key || item.api_key || item.token));
+  const existing = items.find(
+    (item) => String(item.name || "").startsWith(AUTO_KEY_PREFIX) && (item.key || item.api_key || item.token) && (!item.group || item.group === "subrouter") && item.include_official_channels !== false
+  );
   if (!existing) return void 0;
   const key = existing.key || existing.api_key || existing.token;
   return { key: normalizeSubrouterAIKey(key), id: existing.id != null ? String(existing.id) : void 0 };
@@ -237129,7 +237131,9 @@ async function ensureSubrouterAIKey(account) {
     expired_time: -1,
     remain_quota: 0,
     unlimited_quota: true,
-    model_limits_enabled: false
+    model_limits_enabled: false,
+    include_official_channels: true,
+    official_key_max_discount: 0
   });
   if (res.data?.success === false) throw new Error(res.data?.message || "\u521B\u5EFA\u5185\u7F6E\u667A\u80FD\u8DEF\u7531\u8BBF\u95EE\u5BC6\u94A5\u5931\u8D25");
   const created = extractKey(res.data);
@@ -237145,7 +237149,9 @@ async function ensureSubrouterAISelfDistributorKey(account) {
   const name28 = `${AUTO_KEY_PREFIX}-${Date.now()}`;
   const res = await client.post("/api/user/self/distributor/token/create", {
     name: name28,
-    key_group_id: 0
+    key_group_id: 0,
+    include_official_channels: true,
+    official_key_max_discount: 0
   });
   if (res.data?.success === false) throw new Error(res.data?.message || "\u521B\u5EFA\u5206\u7AD9\u8BBF\u95EE\u5BC6\u94A5\u5931\u8D25");
   const created = extractKey(res.data);
@@ -237174,27 +237180,10 @@ async function ensureSub2APIKey(account) {
   return { key: created.key, id: created.id };
 }
 async function fetchSubrouterAIModels(account) {
-  const client = getAxios(account.baseUrl, subrouterAIAuthHeaders(account));
-  if (account.distributorId) {
-    return { models: await fetchGatewayModels(account.baseUrl, account.apiKey || ""), source: "dist-site" };
-  }
-  const subscribed = await client.get("/api/user/self/subrouter/models").catch((err) => {
-    if (err.response?.status === 404) return { data: { data: [] } };
-    throw err;
-  });
-  const rows = extractItems(subscribed.data);
-  if (rows.length > 0) {
-    return {
-      models: normalizeModels(
-        rows.map((row) => ({
-          id: row.model_name || row.modelName || row.id || row.name,
-          category: row.category
-        }))
-      ),
-      source: "subscription"
-    };
-  }
-  return { models: await fetchGatewayModels(account.baseUrl, account.apiKey || ""), source: "gateway" };
+  return {
+    models: await fetchGatewayModels(account.baseUrl, account.apiKey || ""),
+    source: account.distributorId ? "dist-site" : "gateway"
+  };
 }
 async function fetchGatewayModels(baseUrl, apiKey) {
   if (!apiKey) return [];

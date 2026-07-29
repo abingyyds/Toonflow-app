@@ -1,4 +1,4 @@
-import axios, { AxiosError, AxiosInstance } from "axios";
+import axios, { AxiosInstance } from "axios";
 import jwt from "jsonwebtoken";
 import db from "@/utils/db";
 import { getCode, writeCode } from "@/utils/vendor";
@@ -306,7 +306,13 @@ function normalizeSubrouterAIKey(key: string): string {
 }
 
 function findReusableKey(items: any[]): { key: string; id?: string } | undefined {
-  const existing = items.find((item) => String(item.name || "").startsWith(AUTO_KEY_PREFIX) && (item.key || item.api_key || item.token));
+  const existing = items.find(
+    (item) =>
+      String(item.name || "").startsWith(AUTO_KEY_PREFIX) &&
+      (item.key || item.api_key || item.token) &&
+      (!item.group || item.group === "subrouter") &&
+      item.include_official_channels !== false,
+  );
   if (!existing) return undefined;
   const key = existing.key || existing.api_key || existing.token;
   return { key: normalizeSubrouterAIKey(key), id: existing.id != null ? String(existing.id) : undefined };
@@ -383,6 +389,8 @@ async function ensureSubrouterAIKey(account: StoredAccount): Promise<{ key: stri
     remain_quota: 0,
     unlimited_quota: true,
     model_limits_enabled: false,
+    include_official_channels: true,
+    official_key_max_discount: 0,
   });
   if (res.data?.success === false) throw new Error(res.data?.message || "创建内置智能路由访问密钥失败");
 
@@ -403,6 +411,8 @@ async function ensureSubrouterAISelfDistributorKey(account: StoredAccount): Prom
   const res = await client.post("/api/user/self/distributor/token/create", {
     name,
     key_group_id: 0,
+    include_official_channels: true,
+    official_key_max_discount: 0,
   });
   if (res.data?.success === false) throw new Error(res.data?.message || "创建分站访问密钥失败");
 
@@ -437,28 +447,10 @@ async function ensureSub2APIKey(account: StoredAccount): Promise<{ key: string; 
 }
 
 async function fetchSubrouterAIModels(account: StoredAccount): Promise<ModelFetchResult> {
-  const client = getAxios(account.baseUrl, subrouterAIAuthHeaders(account));
-  if (account.distributorId) {
-    return { models: await fetchGatewayModels(account.baseUrl, account.apiKey || ""), source: "dist-site" };
-  }
-
-  const subscribed = await client.get("/api/user/self/subrouter/models").catch((err: AxiosError) => {
-    if (err.response?.status === 404) return { data: { data: [] } };
-    throw err;
-  });
-  const rows = extractItems(subscribed.data);
-  if (rows.length > 0) {
-    return {
-      models: normalizeModels(
-        rows.map((row) => ({
-          id: row.model_name || row.modelName || row.id || row.name,
-          category: row.category,
-        })),
-      ),
-      source: "subscription",
-    };
-  }
-  return { models: await fetchGatewayModels(account.baseUrl, account.apiKey || ""), source: "gateway" };
+  return {
+    models: await fetchGatewayModels(account.baseUrl, account.apiKey || ""),
+    source: account.distributorId ? "dist-site" : "gateway",
+  };
 }
 
 async function fetchGatewayModels(baseUrl: string, apiKey: string): Promise<NormalizedModel[]> {
