@@ -892,7 +892,8 @@ export async function ensureSubrouterVendor(): Promise<void> {
     await db("o_vendorConfig").insert({ id: SUBROUTER_VENDOR_ID, inputValues: "{}", models: "[]", enable: 0 });
   }
   const code = getCode(SUBROUTER_VENDOR_ID);
-  const isAutoSubrouterVendor = !code || code.includes("模型服务") || code.includes("模型服务");
+  // 按 author 判定自动模板：name 改过三次（SubRouter 智能路由 / 内置智能路由 / 模型服务），不能用它匹配
+  const isAutoSubrouterVendor = !code || code.includes('author: "ToonFlow"');
   const versionMatch = code.match(/version:\s*["']([^"']+)["']/);
   const currentVersion = versionMatch ? Number.parseFloat(versionMatch[1]) : 0;
   if (isAutoSubrouterVendor && (!code || !Number.isFinite(currentVersion) || currentVersion < Number.parseFloat(SUBROUTER_VENDOR_VERSION))) {
