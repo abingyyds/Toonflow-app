@@ -88,7 +88,7 @@ export interface PublicSubrouterAccount {
 }
 
 const SUBROUTER_VENDOR_ID = "subrouter";
-const SUBROUTER_VENDOR_VERSION = "1.9";
+const SUBROUTER_VENDOR_VERSION = "2.0";
 const AUTO_KEY_PREFIX = "toonflow-auto";
 const INTERNAL_SUBROUTER_BASE_URL = "http://subrouter.railway.internal:8080";
 const SUBROUTER_LOGIN_PROVIDERS_SETTING_KEY = "subrouterLoginProviders";
@@ -806,7 +806,9 @@ const imageRequest = async (config: ImageConfig, model: ImageModel): Promise<str
   const body: any = {
     model: model.modelName,
     prompt: config.prompt,
+    n: 1,
     size: config.size === "1K" ? "1024x1024" : config.size === "2K" ? "2048x2048" : "4096x4096",
+    response_format: "b64_json",
   };
   const refs = (config.referenceList || []).map((r) => r.base64).filter(Boolean);
   if (refs.length > 0) body.image = refs.length === 1 ? refs[0] : refs;
