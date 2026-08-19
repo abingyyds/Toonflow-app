@@ -13,6 +13,8 @@ export default router.post(
     baseUrl: z.string().min(1),
     username: z.string().min(1),
     password: z.string().min(1),
+    turnstileToken: z.string().optional(),
+    twoFactorCode: z.string().optional(),
   }),
   async (req, res) => {
     try {

@@ -236922,6 +236922,22 @@ function buildCookie(headers) {
   const cookies = Array.isArray(headers) ? headers : headers ? [String(headers)] : [];
   return cookies.map((cookie) => String(cookie).split(";")[0]).filter(Boolean).join("; ");
 }
+function mergeCookies(...values) {
+  const cookies = /* @__PURE__ */ new Map();
+  for (const value of values) {
+    for (const part of String(value || "").split(";")) {
+      const separator = part.indexOf("=");
+      if (separator <= 0) continue;
+      cookies.set(part.slice(0, separator).trim(), part.slice(separator + 1).trim());
+    }
+  }
+  return [...cookies.entries()].map(([name28, value]) => `${name28}=${value}`).join("; ");
+}
+function subrouterAuthError(message, code) {
+  const error74 = new Error(message);
+  error74.code = code;
+  return error74;
+}
 function bearer(apiKey) {
   return `Bearer ${apiKey.replace(/^Bearer\s+/i, "")}`;
 }
@@ -237067,13 +237083,48 @@ function findReusableKey(items) {
   const key = existing.key || existing.api_key || existing.token;
   return { key: normalizeSubrouterAIKey(key), id: existing.id != null ? String(existing.id) : void 0 };
 }
-async function loginSubrouterAI(baseUrl, username, password, timeoutMs) {
-  const client = getAxios(baseUrl, {}, timeoutMs);
-  const res = await client.post("/api/user/login", { username, password });
-  if (res.data?.success === false) throw new Error(res.data?.message || "\u5185\u7F6E\u667A\u80FD\u8DEF\u7531\u767B\u5F55\u5931\u8D25");
-  const cookie = buildCookie(res.headers["set-cookie"]);
+async function loginSubrouterAI(options) {
+  const baseUrl = normalizeBaseUrl(options.baseUrl);
+  const username = options.username;
+  const password = options.password;
+  const client = getAxios(baseUrl, {}, options.timeoutMs);
+  const res = await client.post(
+    "/api/user/login",
+    { username, password },
+    options.turnstileToken?.trim() ? { params: { turnstile: options.turnstileToken.trim() } } : void 0
+  );
+  if (res.data?.success === false) throw subrouterAuthError(res.data?.message || "\u5185\u7F6E\u667A\u80FD\u8DEF\u7531\u767B\u5F55\u5931\u8D25", "SUBROUTER_LOGIN_FAILED");
+  let data = res.data;
+  let user = extractUser(data);
+  let cookie = buildCookie(res.headers["set-cookie"]);
+  const body = data?.data || data || {};
+  const requiresTwoFactor = body?.require_2fa ?? body?.require2fa ?? data?.require_2fa ?? data?.require2fa;
+  if (requiresTwoFactor) {
+    if (!options.twoFactorCode?.trim()) {
+      throw subrouterAuthError("\u8BE5 SubRouter \u8D26\u53F7\u542F\u7528\u4E86\u53CC\u91CD\u9A8C\u8BC1\uFF0C\u8BF7\u8F93\u5165\u9A8C\u8BC1\u7801\u540E\u7EE7\u7EED", "SUBROUTER_TWO_FACTOR_REQUIRED");
+    }
+    if (!cookie) {
+      throw subrouterAuthError("\u53CC\u91CD\u9A8C\u8BC1\u4F1A\u8BDD\u5DF2\u5931\u6548\uFF0C\u8BF7\u91CD\u65B0\u767B\u5F55", "SUBROUTER_TWO_FACTOR_SESSION_EXPIRED");
+    }
+    let verification;
+    try {
+      verification = await client.post(
+        "/api/user/login/2fa",
+        { code: options.twoFactorCode.trim() },
+        { headers: { Cookie: cookie } }
+      );
+    } catch (error74) {
+      throw subrouterAuthError(getErrorMessage6(error74) || "\u53CC\u91CD\u9A8C\u8BC1\u7801\u9519\u8BEF", "SUBROUTER_TWO_FACTOR_INVALID");
+    }
+    if (verification.data?.success === false) {
+      throw subrouterAuthError(verification.data?.message || "\u53CC\u91CD\u9A8C\u8BC1\u7801\u9519\u8BEF", "SUBROUTER_TWO_FACTOR_INVALID");
+    }
+    cookie = mergeCookies(cookie, buildCookie(verification.headers["set-cookie"]));
+    data = verification.data;
+    const verifiedUser = extractUser(data);
+    if (verifiedUser.id != null || verifiedUser.username || verifiedUser.email) user = verifiedUser;
+  }
   if (!cookie) throw new Error("\u5185\u7F6E\u667A\u80FD\u8DEF\u7531\u767B\u5F55\u6210\u529F\u4F46\u672A\u8FD4\u56DE\u4F1A\u8BDD\u4FE1\u606F");
-  const user = extractUser(res.data);
   const externalUserId = user.id != null ? String(user.id) : void 0;
   const distributor = extractSubrouterAIDistributor(res.data);
   return {
@@ -237150,6 +237201,7 @@ async function ensureSubrouterAISelfDistributorKey(account) {
   const res = await client.post("/api/user/self/distributor/token/create", {
     name: name28,
     key_group_id: 0,
+    group: "subrouter",
     include_official_channels: true,
     official_key_max_discount: 0
   });
@@ -237662,7 +237714,7 @@ async function getStoredSubrouterAccount(userId, provider, baseUrl) {
 }
 async function authenticateSubrouter(options) {
   const baseUrl = normalizeBaseUrl(options.baseUrl);
-  return options.provider === "subrouterai" ? await loginSubrouterAI(baseUrl, options.username, options.password, options.timeoutMs) : await loginSub2API(baseUrl, options.username, options.password, options.timeoutMs);
+  return options.provider === "subrouterai" ? await loginSubrouterAI({ ...options, baseUrl }) : await loginSub2API(baseUrl, options.username, options.password, options.timeoutMs);
 }
 async function prepareSubrouterLogin(login, fallbackUsername, fallbackPassword) {
   await ensureSubrouterVendor();
@@ -237699,15 +237751,16 @@ async function loginAndPrepareSubrouter(options) {
   const login = await authenticateSubrouter(options);
   return prepareSubrouterLogin(login, options.username, options.password);
 }
-async function loginWithDefaultSubrouterProviders(username, password) {
+async function loginWithDefaultSubrouterProviders(username, password, options = {}) {
   const providers = await getDefaultSubrouterLoginProviders();
   let lastAuthError;
   for (const provider of providers) {
     let login;
     try {
-      login = await authenticateSubrouter({ ...provider, username, password, timeoutMs: 1e4 });
+      login = await authenticateSubrouter({ ...provider, username, password, timeoutMs: 1e4, ...options });
     } catch (err) {
       lastAuthError = err;
+      if (String(err?.code || "").startsWith("SUBROUTER_TWO_FACTOR_")) throw err;
       continue;
     }
     return prepareSubrouterLogin(login, username, password);
@@ -246129,14 +246182,16 @@ var init_login = __esm({
       validateFields({
         username: external_exports.string(),
         password: external_exports.string(),
+        turnstileToken: external_exports.string().optional(),
+        twoFactorCode: external_exports.string().optional(),
         provider: external_exports.enum(["subrouterai", "sub2api"]).optional(),
         baseUrl: external_exports.string().optional()
       }),
       async (req, res) => {
-        const { username, password, provider, baseUrl } = req.body;
+        const { username, password, provider, baseUrl, turnstileToken, twoFactorCode } = req.body;
         if (provider && baseUrl) {
           try {
-            const result = await loginAndPrepareSubrouter({ provider, baseUrl, username, password });
+            const result = await loginAndPrepareSubrouter({ provider, baseUrl, username, password, turnstileToken, twoFactorCode });
             return res.status(200).send(
               success3(
                 {
@@ -246181,7 +246236,7 @@ var init_login = __esm({
           return res.status(200).send(success3({ token: "Bearer " + token, name: data.name, id: data.id }, "\u767B\u5F55\u6210\u529F"));
         }
         try {
-          const result = await loginWithDefaultSubrouterProviders(username, password);
+          const result = await loginWithDefaultSubrouterProviders(username, password, { turnstileToken, twoFactorCode });
           if (result) {
             return res.status(200).send(
               success3(
@@ -269626,7 +269681,9 @@ var init_login2 = __esm({
         provider: external_exports.enum(["subrouterai", "sub2api"]),
         baseUrl: external_exports.string().min(1),
         username: external_exports.string().min(1),
-        password: external_exports.string().min(1)
+        password: external_exports.string().min(1),
+        turnstileToken: external_exports.string().optional(),
+        twoFactorCode: external_exports.string().optional()
       }),
       async (req, res) => {
         try {
@@ -273545,7 +273602,7 @@ init_getPath();
 init_requestContext();
 var app = (0, import_express192.default)();
 var server = import_node_http.default.createServer(app);
-var WEB_CACHE_VERSION = "v10";
+var WEB_CACHE_VERSION = "v11";
 var WEB_MAIN_SCRIPT_PREFIX = "toonflow-inline-main";
 var WEB_STYLESHEET_PREFIX = "toonflow-inline-style";
 var LONG_CACHE_SECONDS = 60 * 60 * 24 * 365;
@@ -273609,9 +273666,50 @@ function getWebApiBaseUrlPatch() {
         "body:not(.is-electron) .loginPage + .settingBtn > button:last-child{display:none!important}",
         "body:not(.is-electron) .loginPage ~ .settingBtn > button:last-child{display:none!important}",
         "body:not(.is-electron) .requestConfig input{pointer-events:none!important}",
-        "body:not(.is-electron) .requestConfig .t-input{opacity:.72!important}"
+        "body:not(.is-electron) .requestConfig .t-input{opacity:.72!important}",
+        ".tf-login-2fa{display:grid;gap:8px;margin-top:16px}",
+        ".tf-login-2fa label{font-size:14px;color:var(--td-text-color-primary,#111827)}",
+        ".tf-login-2fa input{box-sizing:border-box;width:100%;height:40px;border:1px solid var(--td-border-level-2-color,#d1d5db);border-radius:4px;background:var(--td-bg-color-container,#fff);padding:0 12px;color:inherit;outline:none}",
+        ".tf-login-2fa input:focus{border-color:var(--td-brand-color,#0052d9);box-shadow:0 0 0 2px rgba(0,82,217,.1)}"
       ].join("\\n");
       document.head.appendChild(style);
+    }
+
+    function twoFactorCode() {
+      var input = document.getElementById("toonflow-subrouter-two-factor-code");
+      return input && typeof input.value === "string" ? input.value.trim() : "";
+    }
+
+    function appendTwoFactorCode(url, body) {
+      var code = twoFactorCode();
+      if (!code || typeof body !== "string") return body;
+      var pathname = "";
+      try { pathname = new URL(String(url), location.href).pathname; } catch (err) { return body; }
+      if (!/(?:^|\\/)login$/.test(pathname)) return body;
+      try {
+        var parsed = JSON.parse(body);
+        if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return body;
+        parsed.twoFactorCode = code;
+        return JSON.stringify(parsed);
+      } catch (err) {
+        return body;
+      }
+    }
+
+    function installLoginTwoFactorField() {
+      function sync() {
+        var page = document.querySelector(".loginPage");
+        if (!page || document.getElementById("toonflow-subrouter-two-factor-code")) return;
+        var password = page.querySelector('input[type="password"]');
+        if (!password) return;
+        var field = document.createElement("div");
+        field.className = "tf-login-2fa";
+        field.innerHTML = '<label for="toonflow-subrouter-two-factor-code">SubRouter \u53CC\u91CD\u9A8C\u8BC1\u7801\uFF08\u5982\u5DF2\u542F\u7528\uFF09</label><input id="toonflow-subrouter-two-factor-code" inputmode="numeric" autocomplete="one-time-code" placeholder="\u672A\u542F\u7528\u53EF\u7559\u7A7A">';
+        var item = password.closest(".t-form__item") || password.parentElement;
+        if (item && item.parentNode) item.parentNode.insertBefore(field, item.nextSibling);
+      }
+      sync();
+      new MutationObserver(sync).observe(document.documentElement, { childList: true, subtree: true });
     }
 
     function normalizeSettingValue(key, raw) {
@@ -273711,12 +273809,16 @@ function getWebApiBaseUrlPatch() {
     var nativeFetch = window.fetch;
     if (typeof nativeFetch === "function") {
       window.fetch = function (input, init) {
+        var requestUrl;
         if (typeof Request !== "undefined" && input instanceof Request) {
           var rewrittenRequestUrl = rewriteHttpUrl(input.url);
           if (rewrittenRequestUrl !== input.url) input = new Request(rewrittenRequestUrl, input);
+          requestUrl = rewrittenRequestUrl;
         } else {
           input = rewriteHttpUrl(input);
+          requestUrl = String(input);
         }
+        if (init && init.body) init = Object.assign({}, init, { body: appendTwoFactorCode(requestUrl, init.body) });
         return nativeFetch.call(this, input, init);
       };
     }
@@ -273724,7 +273826,12 @@ function getWebApiBaseUrlPatch() {
     var nativeOpen = XMLHttpRequest.prototype.open;
     XMLHttpRequest.prototype.open = function (method, url) {
       arguments[1] = rewriteHttpUrl(url);
+      this.__toonflowRequestUrl = String(arguments[1]);
       return nativeOpen.apply(this, arguments);
+    };
+    var nativeSend = XMLHttpRequest.prototype.send;
+    XMLHttpRequest.prototype.send = function (body) {
+      return nativeSend.call(this, appendTwoFactorCode(this.__toonflowRequestUrl || "", body));
     };
 
     var NativeWebSocket = window.WebSocket;
@@ -273738,6 +273845,7 @@ function getWebApiBaseUrlPatch() {
     }
 
     installPublicWebStyle();
+    installLoginTwoFactorField();
     lockStoredApiBaseUrl();
     window.__TOONFLOW_API_BASE_URL__ = apiBaseUrl;
     window.__TOONFLOW_BROWSER_API_BASE_URL__ = apiBaseUrl;
@@ -274135,7 +274243,7 @@ function getSubrouterSettingsPatch() {
       '<div class="tf-subrouter-card"><h3>\u53EF\u7528\u6A21\u578B</h3><div class="tf-subrouter-stats">' + statsHtml(summary) + '</div></div>',
       '</div>',
       '<div class="tf-subrouter-card">',
-      '<h3>Agent \u6587\u672C\u6A21\u578B</h3>',
+      '<h3>\u9009\u62E9 SubRouter \u6587\u672C\u6A21\u578B</h3>',
       '<div class="tf-subrouter-row">',
       '<div class="tf-subrouter-control"><label>\u6587\u672C\u6A21\u578B</label>' + modelSelectHtml(models, summary && summary.selectedTextModel) + '</div>',
       '<div class="tf-subrouter-control"><label>\u64CD\u4F5C</label><div class="tf-subrouter-actions">',
@@ -274158,7 +274266,7 @@ function getSubrouterSettingsPatch() {
     if (!root) return;
     var connected = state.summary && state.summary.connected;
     root.innerHTML = [
-      '<button class="tf-subrouter-entry" data-action="open" type="button"><span class="tf-subrouter-dot ' + (connected ? "is-on" : "") + '"></span><span>\u6A21\u578B\u8BBE\u7F6E</span></button>',
+      '<button class="tf-subrouter-entry" data-action="open" type="button"><span class="tf-subrouter-dot ' + (connected ? "is-on" : "") + '"></span><span>\u9009\u62E9 SubRouter \u6A21\u578B</span></button>',
       '<div class="tf-subrouter-backdrop" ' + (state.open ? "" : "hidden") + ' data-action="backdrop">',
       '<section class="tf-subrouter-panel" role="dialog" aria-modal="true" aria-label="\u8D26\u53F7\u4E0E\u6A21\u578B\u8BBE\u7F6E">',
       '<header class="tf-subrouter-head"><div class="tf-subrouter-title">\u8D26\u53F7\u4E0E\u6A21\u578B\u8BBE\u7F6E</div><button class="tf-subrouter-close" data-action="close" type="button">\xD7</button></header>',

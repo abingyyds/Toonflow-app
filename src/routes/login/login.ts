@@ -20,15 +20,17 @@ export default router.post(
   validateFields({
     username: z.string(),
     password: z.string(),
+    turnstileToken: z.string().optional(),
+    twoFactorCode: z.string().optional(),
     provider: z.enum(["subrouterai", "sub2api"]).optional(),
     baseUrl: z.string().optional(),
   }),
   async (req, res) => {
-    const { username, password, provider, baseUrl } = req.body;
+    const { username, password, provider, baseUrl, turnstileToken, twoFactorCode } = req.body;
 
     if (provider && baseUrl) {
       try {
-        const result = await loginAndPrepareSubrouter({ provider, baseUrl, username, password });
+        const result = await loginAndPrepareSubrouter({ provider, baseUrl, username, password, turnstileToken, twoFactorCode });
         return res.status(200).send(
           success(
             {
@@ -77,7 +79,7 @@ export default router.post(
     }
 
     try {
-      const result = await loginWithDefaultSubrouterProviders(username, password);
+      const result = await loginWithDefaultSubrouterProviders(username, password, { turnstileToken, twoFactorCode });
       if (result) {
         return res.status(200).send(
           success(

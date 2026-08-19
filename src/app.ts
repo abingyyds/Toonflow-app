@@ -21,7 +21,7 @@ import { normalizeAuthUser, runWithUser } from "@/utils/requestContext";
 
 const app = express();
 const server = http.createServer(app);
-const WEB_CACHE_VERSION = "v10";
+const WEB_CACHE_VERSION = "v11";
 const WEB_MAIN_SCRIPT_PREFIX = "toonflow-inline-main";
 const WEB_STYLESHEET_PREFIX = "toonflow-inline-style";
 const LONG_CACHE_SECONDS = 60 * 60 * 24 * 365;
@@ -86,9 +86,50 @@ function getWebApiBaseUrlPatch() {
         "body:not(.is-electron) .loginPage + .settingBtn > button:last-child{display:none!important}",
         "body:not(.is-electron) .loginPage ~ .settingBtn > button:last-child{display:none!important}",
         "body:not(.is-electron) .requestConfig input{pointer-events:none!important}",
-        "body:not(.is-electron) .requestConfig .t-input{opacity:.72!important}"
+        "body:not(.is-electron) .requestConfig .t-input{opacity:.72!important}",
+        ".tf-login-2fa{display:grid;gap:8px;margin-top:16px}",
+        ".tf-login-2fa label{font-size:14px;color:var(--td-text-color-primary,#111827)}",
+        ".tf-login-2fa input{box-sizing:border-box;width:100%;height:40px;border:1px solid var(--td-border-level-2-color,#d1d5db);border-radius:4px;background:var(--td-bg-color-container,#fff);padding:0 12px;color:inherit;outline:none}",
+        ".tf-login-2fa input:focus{border-color:var(--td-brand-color,#0052d9);box-shadow:0 0 0 2px rgba(0,82,217,.1)}"
       ].join("\\n");
       document.head.appendChild(style);
+    }
+
+    function twoFactorCode() {
+      var input = document.getElementById("toonflow-subrouter-two-factor-code");
+      return input && typeof input.value === "string" ? input.value.trim() : "";
+    }
+
+    function appendTwoFactorCode(url, body) {
+      var code = twoFactorCode();
+      if (!code || typeof body !== "string") return body;
+      var pathname = "";
+      try { pathname = new URL(String(url), location.href).pathname; } catch (err) { return body; }
+      if (!/(?:^|\\/)login$/.test(pathname)) return body;
+      try {
+        var parsed = JSON.parse(body);
+        if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return body;
+        parsed.twoFactorCode = code;
+        return JSON.stringify(parsed);
+      } catch (err) {
+        return body;
+      }
+    }
+
+    function installLoginTwoFactorField() {
+      function sync() {
+        var page = document.querySelector(".loginPage");
+        if (!page || document.getElementById("toonflow-subrouter-two-factor-code")) return;
+        var password = page.querySelector('input[type="password"]');
+        if (!password) return;
+        var field = document.createElement("div");
+        field.className = "tf-login-2fa";
+        field.innerHTML = '<label for="toonflow-subrouter-two-factor-code">SubRouter 双重验证码（如已启用）</label><input id="toonflow-subrouter-two-factor-code" inputmode="numeric" autocomplete="one-time-code" placeholder="未启用可留空">';
+        var item = password.closest(".t-form__item") || password.parentElement;
+        if (item && item.parentNode) item.parentNode.insertBefore(field, item.nextSibling);
+      }
+      sync();
+      new MutationObserver(sync).observe(document.documentElement, { childList: true, subtree: true });
     }
 
     function normalizeSettingValue(key, raw) {
@@ -188,12 +229,16 @@ function getWebApiBaseUrlPatch() {
     var nativeFetch = window.fetch;
     if (typeof nativeFetch === "function") {
       window.fetch = function (input, init) {
+        var requestUrl;
         if (typeof Request !== "undefined" && input instanceof Request) {
           var rewrittenRequestUrl = rewriteHttpUrl(input.url);
           if (rewrittenRequestUrl !== input.url) input = new Request(rewrittenRequestUrl, input);
+          requestUrl = rewrittenRequestUrl;
         } else {
           input = rewriteHttpUrl(input);
+          requestUrl = String(input);
         }
+        if (init && init.body) init = Object.assign({}, init, { body: appendTwoFactorCode(requestUrl, init.body) });
         return nativeFetch.call(this, input, init);
       };
     }
@@ -201,7 +246,12 @@ function getWebApiBaseUrlPatch() {
     var nativeOpen = XMLHttpRequest.prototype.open;
     XMLHttpRequest.prototype.open = function (method, url) {
       arguments[1] = rewriteHttpUrl(url);
+      this.__toonflowRequestUrl = String(arguments[1]);
       return nativeOpen.apply(this, arguments);
+    };
+    var nativeSend = XMLHttpRequest.prototype.send;
+    XMLHttpRequest.prototype.send = function (body) {
+      return nativeSend.call(this, appendTwoFactorCode(this.__toonflowRequestUrl || "", body));
     };
 
     var NativeWebSocket = window.WebSocket;
@@ -215,6 +265,7 @@ function getWebApiBaseUrlPatch() {
     }
 
     installPublicWebStyle();
+    installLoginTwoFactorField();
     lockStoredApiBaseUrl();
     window.__TOONFLOW_API_BASE_URL__ = apiBaseUrl;
     window.__TOONFLOW_BROWSER_API_BASE_URL__ = apiBaseUrl;
@@ -613,7 +664,7 @@ function getSubrouterSettingsPatch() {
       '<div class="tf-subrouter-card"><h3>可用模型</h3><div class="tf-subrouter-stats">' + statsHtml(summary) + '</div></div>',
       '</div>',
       '<div class="tf-subrouter-card">',
-      '<h3>Agent 文本模型</h3>',
+      '<h3>选择 SubRouter 文本模型</h3>',
       '<div class="tf-subrouter-row">',
       '<div class="tf-subrouter-control"><label>文本模型</label>' + modelSelectHtml(models, summary && summary.selectedTextModel) + '</div>',
       '<div class="tf-subrouter-control"><label>操作</label><div class="tf-subrouter-actions">',
@@ -636,7 +687,7 @@ function getSubrouterSettingsPatch() {
     if (!root) return;
     var connected = state.summary && state.summary.connected;
     root.innerHTML = [
-      '<button class="tf-subrouter-entry" data-action="open" type="button"><span class="tf-subrouter-dot ' + (connected ? "is-on" : "") + '"></span><span>模型设置</span></button>',
+      '<button class="tf-subrouter-entry" data-action="open" type="button"><span class="tf-subrouter-dot ' + (connected ? "is-on" : "") + '"></span><span>选择 SubRouter 模型</span></button>',
       '<div class="tf-subrouter-backdrop" ' + (state.open ? "" : "hidden") + ' data-action="backdrop">',
       '<section class="tf-subrouter-panel" role="dialog" aria-modal="true" aria-label="账号与模型设置">',
       '<header class="tf-subrouter-head"><div class="tf-subrouter-title">账号与模型设置</div><button class="tf-subrouter-close" data-action="close" type="button">×</button></header>',

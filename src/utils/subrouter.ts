@@ -17,6 +17,8 @@ export interface SubrouterLoginOptions {
   username: string;
   password: string;
   timeoutMs?: number;
+  turnstileToken?: string;
+  twoFactorCode?: string;
 }
 
 export interface NormalizedModel {
@@ -147,6 +149,24 @@ function buildSubrouterInputValues(account: Pick<StoredAccount, "apiKey" | "base
 function buildCookie(headers: unknown): string {
   const cookies = Array.isArray(headers) ? headers : headers ? [String(headers)] : [];
   return cookies.map((cookie) => String(cookie).split(";")[0]).filter(Boolean).join("; ");
+}
+
+function mergeCookies(...values: string[]): string {
+  const cookies = new Map<string, string>();
+  for (const value of values) {
+    for (const part of String(value || '').split(';')) {
+      const separator = part.indexOf('=');
+      if (separator <= 0) continue;
+      cookies.set(part.slice(0, separator).trim(), part.slice(separator + 1).trim());
+    }
+  }
+  return [...cookies.entries()].map(([name, value]) => `${name}=${value}`).join('; ');
+}
+
+function subrouterAuthError(message: string, code: string): Error & { code: string } {
+  const error = new Error(message) as Error & { code: string };
+  error.code = code;
+  return error;
 }
 
 function bearer(apiKey: string): string {
@@ -318,13 +338,48 @@ function findReusableKey(items: any[]): { key: string; id?: string } | undefined
   return { key: normalizeSubrouterAIKey(key), id: existing.id != null ? String(existing.id) : undefined };
 }
 
-async function loginSubrouterAI(baseUrl: string, username: string, password: string, timeoutMs?: number): Promise<LoginResult> {
-  const client = getAxios(baseUrl, {}, timeoutMs);
-  const res = await client.post("/api/user/login", { username, password });
-  if (res.data?.success === false) throw new Error(res.data?.message || "内置智能路由登录失败");
-  const cookie = buildCookie(res.headers["set-cookie"]);
+async function loginSubrouterAI(options: SubrouterLoginOptions): Promise<LoginResult> {
+  const baseUrl = normalizeBaseUrl(options.baseUrl);
+  const username = options.username;
+  const password = options.password;
+  const client = getAxios(baseUrl, {}, options.timeoutMs);
+  const res = await client.post(
+    "/api/user/login",
+    { username, password },
+    options.turnstileToken?.trim() ? { params: { turnstile: options.turnstileToken.trim() } } : undefined,
+  );
+  if (res.data?.success === false) throw subrouterAuthError(res.data?.message || "内置智能路由登录失败", "SUBROUTER_LOGIN_FAILED");
+  let data = res.data;
+  let user = extractUser(data);
+  let cookie = buildCookie(res.headers["set-cookie"]);
+  const body = data?.data || data || {};
+  const requiresTwoFactor = body?.require_2fa ?? body?.require2fa ?? data?.require_2fa ?? data?.require2fa;
+  if (requiresTwoFactor) {
+    if (!options.twoFactorCode?.trim()) {
+      throw subrouterAuthError("该 SubRouter 账号启用了双重验证，请输入验证码后继续", "SUBROUTER_TWO_FACTOR_REQUIRED");
+    }
+    if (!cookie) {
+      throw subrouterAuthError("双重验证会话已失效，请重新登录", "SUBROUTER_TWO_FACTOR_SESSION_EXPIRED");
+    }
+    let verification;
+    try {
+      verification = await client.post(
+        "/api/user/login/2fa",
+        { code: options.twoFactorCode.trim() },
+        { headers: { Cookie: cookie } },
+      );
+    } catch (error) {
+      throw subrouterAuthError(getErrorMessage(error) || "双重验证码错误", "SUBROUTER_TWO_FACTOR_INVALID");
+    }
+    if (verification.data?.success === false) {
+      throw subrouterAuthError(verification.data?.message || "双重验证码错误", "SUBROUTER_TWO_FACTOR_INVALID");
+    }
+    cookie = mergeCookies(cookie, buildCookie(verification.headers["set-cookie"]));
+    data = verification.data;
+    const verifiedUser = extractUser(data);
+    if (verifiedUser.id != null || verifiedUser.username || verifiedUser.email) user = verifiedUser;
+  }
   if (!cookie) throw new Error("内置智能路由登录成功但未返回会话信息");
-  const user = extractUser(res.data);
   const externalUserId = user.id != null ? String(user.id) : undefined;
   const distributor = extractSubrouterAIDistributor(res.data);
 
@@ -411,6 +466,7 @@ async function ensureSubrouterAISelfDistributorKey(account: StoredAccount): Prom
   const res = await client.post("/api/user/self/distributor/token/create", {
     name,
     key_group_id: 0,
+    group: "subrouter",
     include_official_channels: true,
     official_key_max_discount: 0,
   });
@@ -943,7 +999,7 @@ export async function getStoredSubrouterAccount(userId: number, provider?: Subro
 async function authenticateSubrouter(options: SubrouterLoginOptions): Promise<LoginResult> {
   const baseUrl = normalizeBaseUrl(options.baseUrl);
   return options.provider === "subrouterai"
-    ? await loginSubrouterAI(baseUrl, options.username, options.password, options.timeoutMs)
+    ? await loginSubrouterAI({ ...options, baseUrl })
     : await loginSub2API(baseUrl, options.username, options.password, options.timeoutMs);
 }
 
@@ -987,15 +1043,16 @@ export async function loginAndPrepareSubrouter(options: SubrouterLoginOptions): 
   return prepareSubrouterLogin(login, options.username, options.password);
 }
 
-export async function loginWithDefaultSubrouterProviders(username: string, password: string): Promise<PreparedSubrouterLogin | undefined> {
+export async function loginWithDefaultSubrouterProviders(username: string, password: string, options: Pick<SubrouterLoginOptions, "turnstileToken" | "twoFactorCode"> = {}): Promise<PreparedSubrouterLogin | undefined> {
   const providers = await getDefaultSubrouterLoginProviders();
   let lastAuthError: unknown;
   for (const provider of providers) {
     let login: LoginResult;
     try {
-      login = await authenticateSubrouter({ ...provider, username, password, timeoutMs: 10000 });
+      login = await authenticateSubrouter({ ...provider, username, password, timeoutMs: 10000, ...options });
     } catch (err) {
       lastAuthError = err;
+      if (String((err as { code?: string })?.code || '').startsWith('SUBROUTER_TWO_FACTOR_')) throw err;
       continue;
     }
     return prepareSubrouterLogin(login, username, password);
