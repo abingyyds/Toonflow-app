@@ -294,7 +294,7 @@ function extractSubrouterAIDistributor(data: any): SubrouterAIDistributor | unde
   if (!belongs) return undefined;
 
   const slug = String(rawDist.slug || body.distributor_slug || body.distributorSlug || "").trim();
-  if (!id || !slug) throw new Error("用户属于分站，但 SubRouterAI 未返回分站 slug");
+  if (!id || !slug) throw new Error("当前账号属于分销站点，但模型服务未返回站点标识");
 
   return {
     id,
@@ -356,7 +356,7 @@ async function loginSubrouterAI(options: SubrouterLoginOptions): Promise<LoginRe
   const requiresTwoFactor = body?.require_2fa ?? body?.require2fa ?? data?.require_2fa ?? data?.require2fa;
   if (requiresTwoFactor) {
     if (!options.twoFactorCode?.trim()) {
-      throw subrouterAuthError("该 SubRouter 账号启用了双重验证，请输入验证码后继续", "SUBROUTER_TWO_FACTOR_REQUIRED");
+      throw subrouterAuthError("该账号启用了双重验证，请输入验证码后继续", "SUBROUTER_TWO_FACTOR_REQUIRED");
     }
     if (!cookie) {
       throw subrouterAuthError("双重验证会话已失效，请重新登录", "SUBROUTER_TWO_FACTOR_SESSION_EXPIRED");

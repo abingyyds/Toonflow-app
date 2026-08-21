@@ -124,7 +124,7 @@ function getWebApiBaseUrlPatch() {
         if (!password) return;
         var field = document.createElement("div");
         field.className = "tf-login-2fa";
-        field.innerHTML = '<label for="toonflow-subrouter-two-factor-code">SubRouter 双重验证码（如已启用）</label><input id="toonflow-subrouter-two-factor-code" inputmode="numeric" autocomplete="one-time-code" placeholder="未启用可留空">';
+        field.innerHTML = '<label for="toonflow-subrouter-two-factor-code">双重验证码（如已启用）</label><input id="toonflow-subrouter-two-factor-code" inputmode="numeric" autocomplete="one-time-code" placeholder="未启用可留空">';
         var item = password.closest(".t-form__item") || password.parentElement;
         if (item && item.parentNode) item.parentNode.insertBefore(field, item.nextSibling);
       }
@@ -664,7 +664,7 @@ function getSubrouterSettingsPatch() {
       '<div class="tf-subrouter-card"><h3>可用模型</h3><div class="tf-subrouter-stats">' + statsHtml(summary) + '</div></div>',
       '</div>',
       '<div class="tf-subrouter-card">',
-      '<h3>选择 SubRouter 文本模型</h3>',
+      '<h3>选择文本模型</h3>',
       '<div class="tf-subrouter-row">',
       '<div class="tf-subrouter-control"><label>文本模型</label>' + modelSelectHtml(models, summary && summary.selectedTextModel) + '</div>',
       '<div class="tf-subrouter-control"><label>操作</label><div class="tf-subrouter-actions">',
@@ -687,7 +687,7 @@ function getSubrouterSettingsPatch() {
     if (!root) return;
     var connected = state.summary && state.summary.connected;
     root.innerHTML = [
-      '<button class="tf-subrouter-entry" data-action="open" type="button"><span class="tf-subrouter-dot ' + (connected ? "is-on" : "") + '"></span><span>选择 SubRouter 模型</span></button>',
+      '<button class="tf-subrouter-entry" data-action="open" type="button"><span class="tf-subrouter-dot ' + (connected ? "is-on" : "") + '"></span><span>选择模型</span></button>',
       '<div class="tf-subrouter-backdrop" ' + (state.open ? "" : "hidden") + ' data-action="backdrop">',
       '<section class="tf-subrouter-panel" role="dialog" aria-modal="true" aria-label="账号与模型设置">',
       '<header class="tf-subrouter-head"><div class="tf-subrouter-title">账号与模型设置</div><button class="tf-subrouter-close" data-action="close" type="button">×</button></header>',

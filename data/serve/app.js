@@ -237048,7 +237048,7 @@ function extractSubrouterAIDistributor(data) {
   const belongs = rawBelongs == null ? id > 0 : Boolean(rawBelongs);
   if (!belongs) return void 0;
   const slug = String(rawDist.slug || body.distributor_slug || body.distributorSlug || "").trim();
-  if (!id || !slug) throw new Error("\u7528\u6237\u5C5E\u4E8E\u5206\u7AD9\uFF0C\u4F46 SubRouterAI \u672A\u8FD4\u56DE\u5206\u7AD9 slug");
+  if (!id || !slug) throw new Error("\u5F53\u524D\u8D26\u53F7\u5C5E\u4E8E\u5206\u9500\u7AD9\u70B9\uFF0C\u4F46\u6A21\u578B\u670D\u52A1\u672A\u8FD4\u56DE\u7AD9\u70B9\u6807\u8BC6");
   return {
     id,
     slug,
@@ -237101,7 +237101,7 @@ async function loginSubrouterAI(options) {
   const requiresTwoFactor = body?.require_2fa ?? body?.require2fa ?? data?.require_2fa ?? data?.require2fa;
   if (requiresTwoFactor) {
     if (!options.twoFactorCode?.trim()) {
-      throw subrouterAuthError("\u8BE5 SubRouter \u8D26\u53F7\u542F\u7528\u4E86\u53CC\u91CD\u9A8C\u8BC1\uFF0C\u8BF7\u8F93\u5165\u9A8C\u8BC1\u7801\u540E\u7EE7\u7EED", "SUBROUTER_TWO_FACTOR_REQUIRED");
+      throw subrouterAuthError("\u8BE5\u8D26\u53F7\u542F\u7528\u4E86\u53CC\u91CD\u9A8C\u8BC1\uFF0C\u8BF7\u8F93\u5165\u9A8C\u8BC1\u7801\u540E\u7EE7\u7EED", "SUBROUTER_TWO_FACTOR_REQUIRED");
     }
     if (!cookie) {
       throw subrouterAuthError("\u53CC\u91CD\u9A8C\u8BC1\u4F1A\u8BDD\u5DF2\u5931\u6548\uFF0C\u8BF7\u91CD\u65B0\u767B\u5F55", "SUBROUTER_TWO_FACTOR_SESSION_EXPIRED");
@@ -273704,7 +273704,7 @@ function getWebApiBaseUrlPatch() {
         if (!password) return;
         var field = document.createElement("div");
         field.className = "tf-login-2fa";
-        field.innerHTML = '<label for="toonflow-subrouter-two-factor-code">SubRouter \u53CC\u91CD\u9A8C\u8BC1\u7801\uFF08\u5982\u5DF2\u542F\u7528\uFF09</label><input id="toonflow-subrouter-two-factor-code" inputmode="numeric" autocomplete="one-time-code" placeholder="\u672A\u542F\u7528\u53EF\u7559\u7A7A">';
+        field.innerHTML = '<label for="toonflow-subrouter-two-factor-code">\u53CC\u91CD\u9A8C\u8BC1\u7801\uFF08\u5982\u5DF2\u542F\u7528\uFF09</label><input id="toonflow-subrouter-two-factor-code" inputmode="numeric" autocomplete="one-time-code" placeholder="\u672A\u542F\u7528\u53EF\u7559\u7A7A">';
         var item = password.closest(".t-form__item") || password.parentElement;
         if (item && item.parentNode) item.parentNode.insertBefore(field, item.nextSibling);
       }
@@ -274243,7 +274243,7 @@ function getSubrouterSettingsPatch() {
       '<div class="tf-subrouter-card"><h3>\u53EF\u7528\u6A21\u578B</h3><div class="tf-subrouter-stats">' + statsHtml(summary) + '</div></div>',
       '</div>',
       '<div class="tf-subrouter-card">',
-      '<h3>\u9009\u62E9 SubRouter \u6587\u672C\u6A21\u578B</h3>',
+      '<h3>\u9009\u62E9\u6587\u672C\u6A21\u578B</h3>',
       '<div class="tf-subrouter-row">',
       '<div class="tf-subrouter-control"><label>\u6587\u672C\u6A21\u578B</label>' + modelSelectHtml(models, summary && summary.selectedTextModel) + '</div>',
       '<div class="tf-subrouter-control"><label>\u64CD\u4F5C</label><div class="tf-subrouter-actions">',
@@ -274266,7 +274266,7 @@ function getSubrouterSettingsPatch() {
     if (!root) return;
     var connected = state.summary && state.summary.connected;
     root.innerHTML = [
-      '<button class="tf-subrouter-entry" data-action="open" type="button"><span class="tf-subrouter-dot ' + (connected ? "is-on" : "") + '"></span><span>\u9009\u62E9 SubRouter \u6A21\u578B</span></button>',
+      '<button class="tf-subrouter-entry" data-action="open" type="button"><span class="tf-subrouter-dot ' + (connected ? "is-on" : "") + '"></span><span>\u9009\u62E9\u6A21\u578B</span></button>',
       '<div class="tf-subrouter-backdrop" ' + (state.open ? "" : "hidden") + ' data-action="backdrop">',
       '<section class="tf-subrouter-panel" role="dialog" aria-modal="true" aria-label="\u8D26\u53F7\u4E0E\u6A21\u578B\u8BBE\u7F6E">',
       '<header class="tf-subrouter-head"><div class="tf-subrouter-title">\u8D26\u53F7\u4E0E\u6A21\u578B\u8BBE\u7F6E</div><button class="tf-subrouter-close" data-action="close" type="button">\xD7</button></header>',
